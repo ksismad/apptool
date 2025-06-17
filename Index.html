@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>App ID Analyzer (Multi-Select Source 1 & 2, Excel Date Handling)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
+    <style>
+        body { font-family:sans-serif; background:#f9fafb; margin:0; }
+        .container { max-width:1000px; margin:30px auto; background:#fff; border-radius:10px; box-shadow:0 8px 32px #0001; padding:24px;}
+        .header { text-align:center; margin-bottom:18px;}
+        .header h1 { margin:0; font-size:2rem;}
+        .upload-section { display:flex; gap:18px; margin-bottom:20px; flex-wrap:wrap;}
+        .upload-box { flex:1; background:#f3f4f6; border-radius:10px; padding:18px; text-align:center; border:2px dashed #e5e7eb; min-width:260px; position:relative;}
+        .upload-box.duplicate { border-color:#ef4444; background:#fee2e2 !important;}
+        .duplicate-error-msg { color:#ef4444; font-weight:600; margin:8px 0 0 0; }
+        .upload-btn { margin-top:10px; border:none; background:#6366f1; color:#fff; border-radius:6px; padding:8px 20px; font-size:1rem; cursor:pointer;}
+        .upload-btn:hover { background:#4338ca;}
+        .file-info { margin-top:8px; color:#059669; font-weight:500;}
+        .file-input { display:none; }
+        .options, .manual-section { display:flex; gap:18px; margin-bottom:14px; align-items:center;}
+        .manual-section label { font-size:1rem;}
+        .col-select { margin-bottom:7px; }
+        .analyze-btn { padding:10px 30px; background:#10b981; color:#fff; border:none; border-radius:8px; font-size:1.12rem; font-weight:600; cursor:pointer; }
+        .analyze-btn:disabled { background:#a7f3d0; color:#222; cursor:not-allowed;}
+        .results { margin-top:20px; }
+        .stat-card { background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 12px 14px; border-left: 5px solid #4f46e5; margin-bottom:10px;}
+        .stat-card.duplicate { border-left-color: #f59e0b; }
+        .stat-card.missing { border-left-color: #ef4444; }
+        .stat-card.match { border-left-color: #10b981; }
+        .stat-number { font-size:1.2rem; font-weight:700;}
+        .stat-label { color:#6b7280; font-size:0.99rem;}
+        .table-container { background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; margin-bottom: 15px;}
+        .table-header { background: #f3f4f6; font-weight: 600; padding: 10px 14px; border-bottom: 1px solid #eee; display:flex; align-items:center;}
+        .open-full-btn { margin-left:auto; background:#6366f1; color:#fff; border:none; border-radius:5px; padding:5px 14px; font-size:0.96rem; cursor:pointer;}
+        .open-full-btn:hover { background:#3730a3;}
+        .table-wrapper { overflow-x:auto; max-height:300px;}
+        table { width:100%; border-collapse:collapse;}
+        th, td { padding:7px 10px; border-bottom:1px solid #eee; font-size:0.98rem;}
+        th { background:#f3f4f6; position:sticky; top:0; z-index:1; cursor:pointer; user-select:none;}
+        th.sort-asc:after { content:" ▲"; }
+        th.sort-desc:after { content:" ▼"; }
+        tr.highlight-duplicate { background:#fef3c7;}
+        tr.highlight-missing { background:#fee2e2;}
+        tr.highlight-mismatch { background:#fecaca;}
+        .status-badge { padding:3px 8px; border-radius:10px; font-size:0.89em; font-weight:600;}
+        .status-badge.match { background:#d1fae5; color:#065f46;}
+        .status-badge.amount-mismatch { background:#fee2e2; color:#991b1b;}
+        .export-section { text-align:center; margin-top:12px;}
+        .export-btn { background:#6366f1; color:white; border:none; padding:8px 18px; border-radius:7px; margin:0 9px; font-size:1rem; cursor:pointer;}
+        .export-btn:hover { background:#3730a3;}
+        .hidden { display:none;}
+        .loading { text-align:center; padding:22px; color:#6b7280;}
+        .error { background:#fee2e2; color:#dc2626; padding:12px; border-radius:8px; margin:10px 0; border-left:4px solid #dc2626;}
+        .branding-label { font-weight:600; color:#374151; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>App ID Analyzer (Multi-Select Source 1 & 2, Excel Date Handling)</h1>
+        <p>
+            Select multiple Source 1 files in one go (multi-select box), and they will be distributed as A, B, C etc.<br>
+            Likewise, select multiple Source 2 files (they will be merged together; date values such as "45721" will be auto-converted).<br>
+            All other features as usual.
+        </p>
+    </div>
+    <div id="source1-multi" class="upload-section">
+        <div class="upload-box" id="multi-upload-box">
+            <span class="branding-label">Source 1 (Multi-Select)</span>
+            <p>Select multiple Excel files for Source 1 (A, B, C...)</p>
+            <input type="file" id="file1-multi" class="file-input" accept=".xlsx,.xls" multiple />
+            <button class="upload-btn" onclick="document.getElementById('file1-multi').click()">Choose Files</button>
+            <div id="file1-multi-info" class="file-info hidden"></div>
+        </div>
+    </div>
+    <div id="source1-dynamic"></div>
+    <div class="upload-section">
+        <div class="upload-box" id="multi-upload-box-2">
+            <span class="branding-label">Source 2 (Multi-Select)</span>
+            <p>Select one or more Excel files for Source 2 (will be merged).</p>
+            <input type="file" id="file2-multi" class="file-input" accept=".xlsx,.xls" multiple />
+            <button class="upload-btn" onclick="document.getElementById('file2-multi').click()">Choose Files</button>
+            <div id="file2-multi-info" class="file-info hidden"></div>
+        </div>
+    </div>
+    <div id="source2-dynamic"></div>
+    <div class="manual-section" style="flex-wrap:wrap;">
+        <label><input type="checkbox" id="includeUnpaid1" checked /> Include Unpaid (Source 1)</label>
+        <label><input type="checkbox" id="gstApply" checked /> Apply GST @18% (Source 1)</label>
+        <label>GST Round: 
+            <select id="gstRound">
+                <option value="0" selected>0 decimals</option>
+                <option value="2">2 decimals</option>
+            </select>
+        </label>
+        <button id="analyzeBtn" class="analyze-btn" onclick="analyzeNow()" disabled>🔍 Analyze</button>
+    </div>
+    <div id="results" class="results hidden"></div>
+</div>
+<script>
+// --- Excel serial date to string (dd-mm-yyyy) ---
+function excelSerialToDateString(serial) {
+    if (typeof serial !== "number") return serial;
+    if (serial < 10000) return serial; // not a date, just a number
+    // Excel wrongly thinks 1900 is a leap year, so add -1 if serial >= 60
+    var utc_days = Math.floor(serial - 25569);
+    var utc_value = utc_days * 86400; // seconds
+    const date = new Date(utc_value * 1000);
+    // Fix time part if decimal present
+    var frac_day = serial - Math.floor(serial);
+    if (frac_day) {
+        var totalSeconds = Math.round(frac_day * 24 * 60 * 60);
+        date.setSeconds(date.getSeconds() + totalSeconds);
+    }
+    // Format dd-mm-yyyy
+    return date
+        ? date.toLocaleDateString('en-GB').replace(/\//g, '-')
+        : serial;
+}
+
+// --- Patch: When reading date, convert Excel numeric serials to string ---
+function safeDateDisplay(val) {
+    if (typeof val === "number") return excelSerialToDateString(val);
+    // Sometimes date is stored as string "45721" (not number)
+    if (/^\d{5,6}$/.test(val)) return excelSerialToDateString(Number(val));
+    return val;
+}
+
+// -- Core Variables
+let source1Files = [];
+let source2Files = [];
+let analysisResults = null;
+let missingSort = { col: null, dir: 'asc' }, matchSort = { col: null, dir: 'asc' };
+
+// --- Date detection logic
+function detectDateCol(rows) {
+    if (!rows || !rows.length) return null;
+    const dateRegexes = [
+        /^\d{2}[\/\-]\d{2}[\/\-]\d{4}$/,
+        /^\d{2}[\/\-]\d{2}[\/\-]\d{2}$/,
+        /^\d{4}[\/\-]\d{2}[\/\-]\d{2}$/,
+        /^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/
+    ];
+    let numCols = Math.max(...rows.map(r => r.length || 0));
+    let scores = Array(numCols).fill(0);
+    for(let c=0; c<numCols; ++c) {
+        for(let r=0; r<Math.min(rows.length, 15); ++r) {
+            let v = rows[r][c];
+            if (typeof v !== "string" && typeof v !== "number") continue;
+            v = String(v).trim();
+            if (!v) continue;
+            for(let rx of dateRegexes) {
+                if (rx.test(v)) { scores[c]++; break; }
+            }
+        }
+    }
+    let maxScore = Math.max(...scores);
+    if (maxScore === 0) return null;
+    return scores.findIndex(s => s === maxScore);
+}
+
+function brandingLabel(idx) {
+    return String.fromCharCode(65 + idx); // A, B, C, ...
+}
+
+document.getElementById('file1-multi').addEventListener('change', function(e) {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    document.getElementById('file1-multi-info').textContent = `${files.length} file(s) selected`;
+    document.getElementById('file1-multi-info').classList.remove('hidden');
+    document.getElementById('source1-dynamic').innerHTML = '';
+    source1Files = [];
+    let fileReadCount = 0;
+    files.forEach((file, idx) => {
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            try {
+                const workbook = XLSX.read(ev.target.result, { type: 'binary' });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                const headers = jsonData[0] || [];
+                let cols = autoDetectColumns(headers, jsonData.slice(1, 16));
+                let appIdCol = cols.appId;
+                let appIds = [];
+                if (typeof appIdCol === "number" && appIdCol >= 0) {
+                    appIds = jsonData.slice(1)
+                        .map(row => row[appIdCol] ? String(row[appIdCol]).trim() : null)
+                        .filter(v=>v && v!=="");
+                }
+                source1Files.push({
+                    file, data:jsonData, headers, cols, branding: brandingLabel(idx),
+                    appIds, duplicateOf:null
+                });
+                renderManualCols(idx, headers, cols, file.name);
+                fileReadCount++;
+                if (fileReadCount === files.length) {
+                    checkSource1Duplicates();
+                    checkReadyToAnalyze();
+                }
+            } catch (error) {
+                showError(`Error reading Source 1${brandingLabel(idx)}: ${error.message}`);
+            }
+        };
+        reader.readAsBinaryString(file);
+    });
+});
+
+document.getElementById('file2-multi').addEventListener('change', function(e) {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    document.getElementById('file2-multi-info').textContent = `${files.length} file(s) selected`;
+    document.getElementById('file2-multi-info').classList.remove('hidden');
+    document.getElementById('source2-dynamic').innerHTML = '';
+    source2Files = [];
+    let fileReadCount = 0;
+    files.forEach((file, idx) => {
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            try {
+                const workbook = XLSX.read(ev.target.result, { type: 'binary' });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
+                const headers = worksheet[0] || [];
+                let cols = autoDetectColumns(headers, worksheet.slice(1, 16));
+                source2Files.push({
+                    file, data: worksheet, headers, cols
+                });
+                renderManualColsSource2(idx, headers, cols, file.name);
+                fileReadCount++;
+                if (fileReadCount === files.length) {
+                    checkReadyToAnalyze();
+                }
+            } catch (error) { showError(`Error reading Source 2: ${error.message}`); }
+        };
+        reader.readAsBinaryString(file);
+    });
+});
+
+function renderManualCols(idx, headers, cols, fname) {
+    let box = document.createElement('div');
+    box.className = 'upload-box';
+    box.id = `source1-box-${idx}`;
+    box.innerHTML = `
+        <div>
+            <span class="branding-label">Source 1${brandingLabel(idx)}</span>
+        </div>
+        <div class="file-info" style="margin-bottom:7px;">${fname}</div>
+        <div id="manual-cols-${idx}"></div>
+        <div id="duplicate-err-${idx}" class="duplicate-error-msg hidden"></div>
+    `;
+    document.getElementById('source1-dynamic').appendChild(box);
+    let html = '';
+    html += `<div class='col-select'><label>App ID Column: <select id="appIdCol1-${idx}"></select></label></div>`;
+    html += `<div class='col-select'><label>Amount Column: <select id="amountCol1-${idx}"></select></label></div>`;
+    html += `<div class='col-select'><label>Paid/Unpaid Column: <select id="paidCol1-${idx}"><option value="">Not Available</option></select></label></div>`;
+    html += `<div class='col-select'><label>Date Column: <select id="dateCol1-${idx}"></select></label></div>`;
+    document.getElementById(`manual-cols-${idx}`).innerHTML = html;
+    populateManualSelect(`appIdCol1-${idx}`, headers, cols.appId);
+    populateManualSelect(`amountCol1-${idx}`, headers, cols.amount);
+    populateManualSelect(`paidCol1-${idx}`, headers, cols.paid, true);
+    populateManualSelect(`dateCol1-${idx}`, headers, cols.date, true);
+    document.getElementById(`appIdCol1-${idx}`).addEventListener('change', function() {
+        let appIdCol = parseInt(this.value);
+        let f = source1Files[idx];
+        if (!f) return;
+        f.cols.appId = appIdCol;
+        let appIds = [];
+        if (typeof appIdCol === "number" && appIdCol >= 0) {
+            appIds = f.data.slice(1)
+                .map(row => row[appIdCol] ? String(row[appIdCol]).trim() : null)
+                .filter(v=>v && v!=="");
+        }
+        f.appIds = appIds;
+        checkSource1Duplicates();
+        checkReadyToAnalyze();
+    });
+}
+
+function renderManualColsSource2(idx, headers, cols, fname) {
+    let box = document.createElement('div');
+    box.className = 'upload-box';
+    box.id = `source2-box-${idx}`;
+    box.innerHTML = `
+        <div>
+            <span class="branding-label">Source 2${headers.length > 0 ? ' (' + fname + ')' : ''}</span>
+        </div>
+        <div class="file-info" style="margin-bottom:7px;">${fname}</div>
+        <div id="manual-cols-source2-${idx}"></div>
+    `;
+    document.getElementById('source2-dynamic').appendChild(box);
+    let html = '';
+    html += `<div class='col-select'><label>App ID Column: <select id="appIdCol2-${idx}"></select></label></div>`;
+    html += `<div class='col-select'><label>Amount Column: <select id="amountCol2-${idx}"></select></label></div>`;
+    html += `<div class='col-select'><label>Paid/Unpaid Column: <select id="paidCol2-${idx}"><option value="">Not Available</option></select></label></div>`;
+    html += `<div class='col-select'><label>Date Column: <select id="dateCol2-${idx}"></select></label></div>`;
+    document.getElementById(`manual-cols-source2-${idx}`).innerHTML = html;
+    populateManualSelect(`appIdCol2-${idx}`, headers, cols.appId);
+    populateManualSelect(`amountCol2-${idx}`, headers, cols.amount);
+    populateManualSelect(`paidCol2-${idx}`, headers, cols.paid, true);
+    populateManualSelect(`dateCol2-${idx}`, headers, cols.date, true);
+}
+
+function populateManualSelect(selId, headers, selectedIdx, allowBlank=false) {
+    const sel = document.getElementById(selId);
+    sel.innerHTML = allowBlank ? '<option value="">Not Available</option>' : '';
+    headers.forEach((h,i)=>{
+        let opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = h || `(Column ${i+1})`;
+        if (i===selectedIdx) opt.selected = true;
+        sel.appendChild(opt);
+    });
+}
+
+function autoDetectColumns(headers, dataRows) {
+    let lower = headers.map(h => (typeof h === "string" ? h.toLowerCase() : ""));
+    let id = lower.findIndex(h => h && h.includes('app') && h.includes('id'));
+    if (id === -1) id = lower.findIndex(h => h && h.includes('id'));
+    let amt = lower.findIndex(h => h && (h.includes('amount') || h.includes('amt')));
+    let paid = lower.findIndex(h => h && (h.includes('paid') || h.includes('status') || h.includes('unpaid')));
+    let date = detectDateCol(dataRows || []);
+    return { appId: id, amount: amt, paid: paid >= 0 ? paid : null, date: date };
+}
+
+function checkSource1Duplicates() {
+    source1Files.forEach((f, idx) => {
+        if (!f) return;
+        f.duplicateOf = null;
+        document.getElementById(`source1-box-${idx}`)?.classList.remove('duplicate');
+        document.getElementById(`duplicate-err-${idx}`)?.classList.add('hidden');
+    });
+    for(let i=0; i<source1Files.length; ++i) {
+        let fileA = source1Files[i];
+        if (!fileA || !Array.isArray(fileA.appIds) || fileA.appIds.length === 0) continue;
+        for(let j=0; j<i; ++j) {
+            let fileB = source1Files[j];
+            if (!fileB || !Array.isArray(fileB.appIds) || fileB.appIds.length === 0) continue;
+            let setB = new Set(fileB.appIds);
+            let overlap = fileA.appIds.find(appId => setB.has(appId));
+            if (overlap) {
+                fileA.duplicateOf = fileB.branding;
+                let box = document.getElementById(`source1-box-${i}`);
+                let err = document.getElementById(`duplicate-err-${i}`);
+                if (box && err) {
+                    box.classList.add('duplicate');
+                    err.textContent = `❌ App ID overlap detected: This file shares App ID "${overlap}" with Source 1${fileB.branding}. Please upload files with mutually exclusive App IDs.`;
+                    err.classList.remove('hidden');
+                }
+                break;
+            }
+        }
+    }
+    checkReadyToAnalyze();
+}
+
+function checkReadyToAnalyze() {
+    let ready = source1Files.filter(f=>f).every(f=>f.data && f.headers && !f.duplicateOf)
+        && source2Files.filter(f=>f).length > 0;
+    document.getElementById('analyzeBtn').disabled = !ready;
+}
+function collectManualSelections() {
+    source1Files.forEach((f,idx) => {
+        if (!f) return;
+        const appIdCol = parseInt(document.getElementById(`appIdCol1-${idx}`).value);
+        const amountCol = parseInt(document.getElementById(`amountCol1-${idx}`).value);
+        const paidColVal = document.getElementById(`paidCol1-${idx}`).value;
+        const dateColVal = document.getElementById(`dateCol1-${idx}`).value;
+        const paidCol = paidColVal === "" ? null : parseInt(paidColVal);
+        const dateCol = dateColVal === "" ? null : parseInt(dateColVal);
+        f.cols = { appId: appIdCol, amount: amountCol, paid: paidCol, date: dateCol };
+        let appIds = [];
+        if (typeof appIdCol === "number" && appIdCol >= 0) {
+            appIds = f.data.slice(1)
+                .map(row => row[appIdCol] ? String(row[appIdCol]).trim() : null)
+                .filter(v=>v && v!=="");
+        }
+        f.appIds = appIds;
+    });
+    source2Files.forEach((f,idx) => {
+        if (!f) return;
+        const appIdCol = parseInt(document.getElementById(`appIdCol2-${idx}`).value);
+        const amountCol = parseInt(document.getElementById(`amountCol2-${idx}`).value);
+        const paidColVal = document.getElementById(`paidCol2-${idx}`).value;
+        const dateColVal = document.getElementById(`dateCol2-${idx}`).value;
+        const paidCol = paidColVal === "" ? null : parseInt(paidColVal);
+        const dateCol = dateColVal === "" ? null : parseInt(dateColVal);
+        f.cols = { appId: appIdCol, amount: amountCol, paid: paidCol, date: dateCol };
+    });
+    checkSource1Duplicates();
+}
+function analyzeNow() {
+    collectManualSelections();
+    missingSort = {col:null,dir:'asc'}; matchSort = {col:null,dir:'asc'};
+    showLoading();
+    setTimeout(() => {
+        try {
+            let mergedSource1 = [];
+            let brandingMarkers = [];
+            source1Files.forEach((f,idx) => {
+                if (!f) return;
+                brandingMarkers.push(f.branding);
+                const rows = f.data.slice(1).map((row,i) => ({
+                    rowNum: i+2,
+                    branding: f.branding,
+                    appId: row[f.cols.appId] ? String(row[f.cols.appId]).trim() : null,
+                    amount: parseFloat(row[f.cols.amount]) || 0,
+                    paid: f.cols.paid!==null ? row[f.cols.paid] : null,
+                    date: f.cols.date!==null ? safeDateDisplay(row[f.cols.date]) : ""
+                }));
+                mergedSource1 = mergedSource1.concat(rows);
+            });
+            mergedSource1 = mergedSource1.filter(item => item.appId && item.appId!=="");
+            // Merge all source2 files
+            let mergedSource2 = [];
+            source2Files.forEach((f,idx) => {
+                if (!f) return;
+                const rows = f.data.slice(1).map((row,i) => ({
+                    rowNum: i+2,
+                    appId: row[f.cols.appId] ? String(row[f.cols.appId]).trim() : null,
+                    amount: parseFloat(row[f.cols.amount]) || 0,
+                    paid: f.cols.paid!==null ? row[f.cols.paid] : null,
+                    date: f.cols.date!==null ? safeDateDisplay(row[f.cols.date]) : ""
+                }));
+                mergedSource2 = mergedSource2.concat(rows);
+            });
+            mergedSource2 = mergedSource2.filter(item => item.appId && item.appId!=="");
+            const config = {
+                includeUnpaid1: document.getElementById('includeUnpaid1').checked,
+                applyGST: document.getElementById('gstApply').checked,
+                gstRound: parseInt(document.getElementById('gstRound').value,10)
+            };
+            analysisResults = analyzeData(mergedSource1, mergedSource2, config);
+            displayResults(analysisResults, brandingMarkers);
+        } catch(error) { showError("Analysis error: "+error.message); }
+    }, 200);
+}
+function showLoading() {
+    const resultsDiv = document.getElementById('results');
+    resultsDiv.innerHTML = `<div class="loading">Analyzing data...</div>`;
+    resultsDiv.classList.remove('hidden');
+}
+function showError(msg) {
+    const resultsDiv = document.getElementById('results');
+    resultsDiv.innerHTML = `<div class="error">${msg}</div>`;
+    resultsDiv.classList.remove('hidden');
+}
+function addGST(amount, applyGST, decimals) {
+    if (!applyGST) return amount;
+    let gstAmount = amount * 1.18;
+    if (decimals === 0) return Math.floor(gstAmount);
+    return Math.floor(gstAmount * 100) / 100;
+}
+function analyzeData(source1Data, source2Data, config) {
+    if (source1Data.length && source1Data[0].paid !== undefined && !config.includeUnpaid1) {
+        source1Data = source1Data.filter(item => String(item.paid).toLowerCase() === 'paid');
+    }
+    source1Data.forEach(item => {
+        item.amount = addGST(item.amount, config.applyGST, config.gstRound);
+    });
+    const duplicates1 = findDuplicates(source1Data);
+    const duplicates2 = findDuplicates(source2Data);
+    const totalAmount1 = source1Data.reduce((sum, item) => sum + item.amount, 0);
+    const totalAmount2 = source2Data.reduce((sum, item) => sum + item.amount, 0);
+    const source1Map = _.groupBy(source1Data, 'appId');
+    const source2Map = _.groupBy(source2Data, 'appId');
+    const allAppIds = _.union(Object.keys(source1Map), Object.keys(source2Map));
+    const comparison = [], missing = [];
+    let totalDifference=0, matchingAmount1=0, matchingAmount2=0;
+    allAppIds.forEach(appId => {
+        const inSource1 = source1Map[appId], inSource2 = source2Map[appId];
+        if (inSource1 && inSource2) {
+            const amount1 = inSource1.reduce((s,i)=>s+i.amount,0);
+            const amount2 = inSource2.reduce((s,i)=>s+i.amount,0);
+            const date1 = inSource1.map(i=>i.date).join(', ');
+            const date2 = inSource2.map(i=>i.date).join(', ');
+            const difference = Math.abs(amount1-amount2);
+            totalDifference += difference;
+            matchingAmount1 += amount1;
+            matchingAmount2 += amount2;
+            comparison.push({
+                appId, status: difference>0.01?'Amount Mismatch':'Match',
+                amount1, amount2, difference,
+                branding: inSource1[0].branding || "",
+                paid1: inSource1[0].paid, paid2: inSource2[0].paid,
+                rows1: inSource1.map(i=>i.rowNum).join(', '),
+                rows2: inSource2.map(i=>i.rowNum).join(', '),
+                date1, date2
+            });
+        } else if (inSource1&&!inSource2) {
+            const amount = inSource1.reduce((s,i)=>s+i.amount,0);
+            const date1 = inSource1.map(i=>i.date).join(', ');
+            missing.push({ appId, missingFrom:'Source 2', presentInRows:inSource1.map(i=>i.rowNum).join(', '), amount, branding: inSource1[0].branding || "", paid:inSource1[0].paid, date1, date2:"" });
+        } else if (!inSource1&&inSource2) {
+            const amount = inSource2.reduce((s,i)=>s+i.amount,0);
+            const date2 = inSource2.map(i=>i.date).join(', ');
+            missing.push({ appId, missingFrom:'Source 1', presentInRows:inSource2.map(i=>i.rowNum).join(', '), amount, branding: "", paid:inSource2[0].paid, date1:"", date2 });
+        }
+    });
+    return {
+        source1: { total:source1Data.length, unique:Object.keys(source1Map).length, duplicates:duplicates1, totalAmount:totalAmount1, matchingAmount:matchingAmount1 },
+        source2: { total:source2Data.length, unique:Object.keys(source2Map).length, duplicates:duplicates2, totalAmount:totalAmount2, matchingAmount:matchingAmount2 },
+        comparison, missing, totalDifference
+    };
+}
+function findDuplicates(data) {
+    const grouped = _.groupBy(data, 'appId'), duplicates=[];
+    Object.entries(grouped).forEach(([appId,items])=>{
+        if(items.length>1) {
+            duplicates.push({
+                appId,
+                count:items.length,
+                rows:items.map(i=>i.rowNum).join(', '),
+                branding: items[0].branding || "",
+                amounts:items.map(i=>i.amount).join(', '),
+                paid:items.map(i=>i.paid||'N/A').join(', ')
+            });
+        }
+    });
+    return duplicates;
+}
+function formatCurrency(num) {
+    return 'Rs. ' + num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function sortMatching(col) {
+    if (matchSort.col === col) matchSort.dir = (matchSort.dir==='asc'?'desc':'asc');
+    else { matchSort.col=col; matchSort.dir='asc'; }
+    displayResults(analysisResults);
+}
+window.sortMatching = sortMatching;
+function sortMissing(col) {
+    if (missingSort.col === col) missingSort.dir = (missingSort.dir==='asc'?'desc':'asc');
+    else { missingSort.col=col; missingSort.dir='asc'; }
+    displayResults(analysisResults);
+}
+window.sortMissing = sortMissing;
+function renderMatchingTable(comparison) {
+    let sortedMatching = comparison.slice();
+    if (matchSort.col) {
+        sortedMatching.sort((a, b) => {
+            let valA = a[matchSort.col], valB = b[matchSort.col];
+            if (typeof valA === "string") valA = valA.toLowerCase();
+            if (typeof valB === "string") valB = valB.toLowerCase();
+            if (valA < valB) return matchSort.dir === 'asc' ? -1 : 1;
+            if (valA > valB) return matchSort.dir === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }
+    return `<table><thead>
+    <tr>
+        <th onclick="sortMatching('appId')" class="${matchSort.col==='appId'?('sort-'+matchSort.dir):''}">App ID</th>
+        <th onclick="sortMatching('branding')" class="${matchSort.col==='branding'?('sort-'+matchSort.dir):''}">Branding</th>
+        <th onclick="sortMatching('status')" class="${matchSort.col==='status'?('sort-'+matchSort.dir):''}">Status</th>
+        <th onclick="sortMatching('amount1')" class="${matchSort.col==='amount1'?('sort-'+matchSort.dir):''}">Amount (Src 1)</th>
+        <th onclick="sortMatching('date1')" class="${matchSort.col==='date1'?('sort-'+matchSort.dir):''}">Date (Src 1)</th>
+        <th onclick="sortMatching('amount2')" class="${matchSort.col==='amount2'?('sort-'+matchSort.dir):''}">Amount (Src 2)</th>
+        <th onclick="sortMatching('date2')" class="${matchSort.col==='date2'?('sort-'+matchSort.dir):''}">Date (Src 2)</th>
+        <th onclick="sortMatching('difference')" class="${matchSort.col==='difference'?('sort-'+matchSort.dir):''}">Difference</th>
+        <th onclick="sortMatching('rows1')" class="${matchSort.col==='rows1'?('sort-'+matchSort.dir):''}">Rows (1)</th>
+        <th onclick="sortMatching('rows2')" class="${matchSort.col==='rows2'?('sort-'+matchSort.dir):''}">Rows (2)</th>
+        <th onclick="sortMatching('paid1')" class="${matchSort.col==='paid1'?('sort-'+matchSort.dir):''}">Paid 1</th>
+        <th onclick="sortMatching('paid2')" class="${matchSort.col==='paid2'?('sort-'+matchSort.dir):''}">Paid 2</th>
+    </tr></thead>
+    <tbody>
+    ${sortedMatching.map(row => `
+        <tr class="${row.status === 'Amount Mismatch' ? 'highlight-mismatch' : ''}">
+        <td>${row.appId}</td>
+        <td>${row.branding || ""}</td>
+        <td><span class="status-badge ${row.status === 'Match' ? 'match' : 'amount-mismatch'}">${row.status}</span></td>
+        <td>${formatCurrency(row.amount1)}</td>
+        <td>${row.date1}</td>
+        <td>${formatCurrency(row.amount2)}</td>
+        <td>${row.date2}</td>
+        <td>${formatCurrency(row.difference)}</td>
+        <td>${row.rows1}</td>
+        <td>${row.rows2}</td>
+        <td>${row.paid1 ?? ''}</td>
+        <td>${row.paid2 ?? ''}</td>
+        </tr>
+    `).join('')}
+    </tbody></table>`;
+}
+function renderMissingTable(missing) {
+    let sortedMissing = missing.slice();
+    if (missingSort.col) {
+        sortedMissing.sort((a, b) => {
+            let valA = a[missingSort.col], valB = b[missingSort.col];
+            if (typeof valA === "string") valA = valA.toLowerCase();
+            if (typeof valB === "string") valB = valB.toLowerCase();
+            if (valA < valB) return missingSort.dir === 'asc' ? -1 : 1;
+            if (valA > valB) return missingSort.dir === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }
+    return `<table><thead>
+    <tr>
+        <th onclick="sortMissing('appId')" class="${missingSort.col==='appId'?('sort-'+missingSort.dir):''}">App ID</th>
+        <th onclick="sortMissing('branding')" class="${missingSort.col==='branding'?('sort-'+missingSort.dir):''}">Branding</th>
+        <th onclick="sortMissing('missingFrom')" class="${missingSort.col==='missingFrom'?('sort-'+missingSort.dir):''}">Missing From</th>
+        <th onclick="sortMissing('presentInRows')" class="${missingSort.col==='presentInRows'?('sort-'+missingSort.dir):''}">Present In Rows</th>
+        <th onclick="sortMissing('amount')" class="${missingSort.col==='amount'?('sort-'+missingSort.dir):''}">Amount</th>
+        <th onclick="sortMissing('date1')" class="${missingSort.col==='date1'?('sort-'+missingSort.dir):''}">Date (Src 1)</th>
+        <th onclick="sortMissing('date2')" class="${missingSort.col==='date2'?('sort-'+missingSort.dir):''}">Date (Src 2)</th>
+        <th onclick="sortMissing('paid')" class="${missingSort.col==='paid'?('sort-'+missingSort.dir):''}">Paid</th>
+    </tr></thead>
+    <tbody>
+    ${sortedMissing.map(row => `<tr class="highlight-missing"><td>${row.appId}</td><td>${row.branding || ""}</td><td>${row.missingFrom}</td><td>${row.presentInRows}</td><td>${formatCurrency(row.amount)}</td><td>${row.date1}</td><td>${row.date2}</td><td>${row.paid ?? ''}</td></tr>`).join('')}
+    </tbody></table>`;
+}
+function displayResults(results, brandingMarkers) {
+    const resultsDiv = document.getElementById('results');
+    resultsDiv.classList.remove('hidden');
+    resultsDiv.innerHTML = `
+    <div class="stat-card"><div class="stat-number">${formatCurrency(results.source1.totalAmount)}</div><div class="stat-label">Total Amount (Source 1)</div></div>
+    <div class="stat-card"><div class="stat-number">${formatCurrency(results.source2.totalAmount)}</div><div class="stat-label">Total Amount (Source 2)</div></div>
+    <div class="stat-card match"><div class="stat-number">${formatCurrency(results.source1.matchingAmount)}</div><div class="stat-label">Matching Amount (Source 1)</div></div>
+    <div class="stat-card match"><div class="stat-number">${formatCurrency(results.source2.matchingAmount)}</div><div class="stat-label">Matching Amount (Source 2)</div></div>
+    <div class="stat-card match"><div class="stat-number">${results.source1.unique}</div><div class="stat-label">Unique IDs (Source 1)</div></div>
+    <div class="stat-card match"><div class="stat-number">${results.source2.unique}</div><div class="stat-label">Unique IDs (Source 2)</div></div>
+    <div class="stat-card duplicate"><div class="stat-number">${results.source1.duplicates.length}</div><div class="stat-label">Duplicate IDs (Source 1)</div></div>
+    <div class="stat-card duplicate"><div class="stat-number">${results.source2.duplicates.length}</div><div class="stat-label">Duplicate IDs (Source 2)</div></div>
+    <div class="stat-card missing"><div class="stat-number">${results.missing.length}</div><div class="stat-label">Missing App IDs</div></div>
+    <div class="stat-card"><div class="stat-number">${results.comparison.length}</div><div class="stat-label">Matching App IDs</div></div>
+    <div class="stat-card missing"><div class="stat-number">${results.comparison.filter(c=>c.status==='Amount Mismatch').length}</div><div class="stat-label">Amount Mismatches</div></div>
+    <div class="stat-card"><div class="stat-number">${formatCurrency(results.totalDifference)}</div><div class="stat-label">Total Amount Difference</div></div>
+    <div class="table-container"><div class="table-header">
+        <span>🟢 Matching App IDs</span>
+        <button class="open-full-btn" onclick="openFullViewTab('matching')">Open Full View</button>
+    </div>
+    <div class="table-wrapper" id="matching-table-wrapper">${renderMatchingTable(results.comparison)}</div></div>
+    <div class="table-container"><div class="table-header">
+        <span>🔴 Missing App IDs</span>
+        <button class="open-full-btn" onclick="openFullViewTab('missing')">Open Full View</button>
+    </div>
+    <div class="table-wrapper" id="missing-table-wrapper">${renderMissingTable(results.missing)}</div></div>
+    <div class="export-section">
+        <button class="export-btn" onclick="exportAnalysis('xlsx')">Export Analysis (Excel)</button>
+        <button class="export-btn" onclick="exportAnalysis('csv')">Export Matching (CSV)</button>
+    </div>`;
+}
+function openFullViewTab(type) {
+    let title = type === 'matching'
+        ? 'Matching App IDs (Full View)'
+        : 'Missing App IDs (Full View)';
+    let tableHTML = type === 'matching'
+        ? renderMatchingTable(analysisResults.comparison)
+        : renderMissingTable(analysisResults.missing);
+
+    let win = window.open('', '_blank');
+    win.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>${title}</title>
+            <style>
+                body { font-family:sans-serif; background:#f9fafb; margin:0; padding:0; }
+                .full-container { max-width:1100px;margin:30px auto;background:#fff; border-radius:10px; box-shadow:0 8px 32px #0001; padding:24px;}
+                h2 { text-align:center; }
+                table { width:100%; border-collapse:collapse; margin-top:20px;}
+                th, td { padding:7px 10px; border-bottom:1px solid #eee; font-size:0.98rem;}
+                th { background:#f3f4f6; position:sticky; top:0; z-index:1; cursor:pointer; user-select:none;}
+                tr.highlight-duplicate { background:#fef3c7;}
+                tr.highlight-missing { background:#fee2e2;}
+                tr.highlight-mismatch { background:#fecaca;}
+                .status-badge { padding:3px 8px; border-radius:10px; font-size:0.89em; font-weight:600;}
+                .status-badge.match { background:#d1fae5; color:#065f46;}
+                .status-badge.amount-mismatch { background:#fee2e2; color:#991b1b;}
+                .close-full-btn { margin:20px auto 0 auto; display:block; background:#ef4444; color:#fff; border:none; border-radius:6px; padding:12px 28px; font-size:1.12rem; cursor:pointer;}
+                .close-full-btn:hover { background:#b91c1c; }
+            </style>
+        </head>
+        <body>
+            <div class="full-container">
+                <button class="close-full-btn" onclick="window.close()">Exit Full View</button>
+                <h2>${title}</h2>
+                ${tableHTML}
+            </div>
+        </body>
+        </html>
+    `);
+    win.document.close();
+}
+window.openFullViewTab = openFullViewTab;
+
+function getTimestamp() {
+    const d = new Date();
+    return `${d.getFullYear()}${(d.getMonth()+1).toString().padStart(2,'0')}${d.getDate().toString().padStart(2,'0')}_${d.getHours().toString().padStart(2,'0')}${d.getMinutes().toString().padStart(2,'0')}${d.getSeconds().toString().padStart(2,'0')}`;
+}
+function exportAnalysis(type) {
+    if (!analysisResults) { showError("No analysis results to export."); return; }
+    try {
+        const wb = XLSX.utils.book_new();
+        const statsData = [
+            ["Total Amount (Source 1)", analysisResults.source1.totalAmount],
+            ["Total Amount (Source 2)", analysisResults.source2.totalAmount],
+            ["Matching Amount (Source 1)", analysisResults.source1.matchingAmount],
+            ["Matching Amount (Source 2)", analysisResults.source2.matchingAmount],
+            ["Unique IDs (Source 1)", analysisResults.source1.unique],
+            ["Unique IDs (Source 2)", analysisResults.source2.unique],
+            ["Duplicate IDs (Source 1)", analysisResults.source1.duplicates.length],
+            ["Duplicate IDs (Source 2)", analysisResults.source2.duplicates.length],
+            ["Missing App IDs", analysisResults.missing.length],
+            ["Matching App IDs", analysisResults.comparison.length],
+            ["Amount Mismatches", analysisResults.comparison.filter(c => c.status === 'Amount Mismatch').length],
+            ["Total Amount Difference", analysisResults.totalDifference]
+        ];
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Metric", "Value"], ...statsData]), "Statistics");
+        if (analysisResults.source1.duplicates.length)
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(analysisResults.source1.duplicates), "Duplicates Source 1");
+        if (analysisResults.source2.duplicates.length)
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(analysisResults.source2.duplicates), "Duplicates Source 2");
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(analysisResults.comparison), "Matching");
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(analysisResults.missing), "Missing");
+        const timestamp = getTimestamp();
+        if (type === 'xlsx') {
+            XLSX.writeFile(wb, `AppID_Analysis_${timestamp}.xlsx`);
+        } else {
+            const ws = XLSX.utils.json_to_sheet(analysisResults.comparison);
+            XLSX.writeFile({SheetNames:["Matching"], Sheets:{"Matching": ws}}, `AppID_Matching_${timestamp}.csv`, {bookType: "csv"});
+        }
+    } catch (err) { showError("Export failed: " + err.message); }
+}
+</script>
+</body>
+</html>
