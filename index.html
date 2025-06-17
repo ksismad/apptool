@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>App ID Analyzer (Multi-Select Source 1 & 2, Excel Date Handling)</title>
+    <title>App ID Analyzer (Excel Dates, Multi-Select Source 1 & 2)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
     <style>
@@ -58,10 +58,10 @@
 <body>
 <div class="container">
     <div class="header">
-        <h1>App ID Analyzer (Multi-Select Source 1 & 2, Excel Date Handling)</h1>
+        <h1>App ID Analyzer (Excel Dates, Multi-Select Source 1 & 2)</h1>
         <p>
             Select multiple Source 1 files in one go (multi-select box), and they will be distributed as A, B, C etc.<br>
-            Likewise, select multiple Source 2 files (they will be merged together; date values such as "45721" will be auto-converted).<br>
+            Likewise, select multiple Source 2 files (they will be merged together; Excel date numbers like "45721" will show as <b>dd-mm-yyyy</b> and real dates in output Excel).<br>
             All other features as usual.
         </p>
     </div>
@@ -99,41 +99,46 @@
     <div id="results" class="results hidden"></div>
 </div>
 <script>
-// --- Excel serial date to string (dd-mm-yyyy) ---
-function excelSerialToDateString(serial) {
-    if (typeof serial !== "number") return serial;
-    if (serial < 10000) return serial; // not a date, just a number
-    // Excel wrongly thinks 1900 is a leap year, so add -1 if serial >= 60
+// --- Excel serial date to JS Date ---
+function excelSerialToJSDate(serial) {
+    if (typeof serial !== "number") return null;
+    if (serial < 10000) return null;
     var utc_days = Math.floor(serial - 25569);
-    var utc_value = utc_days * 86400; // seconds
-    const date = new Date(utc_value * 1000);
-    // Fix time part if decimal present
-    var frac_day = serial - Math.floor(serial);
-    if (frac_day) {
-        var totalSeconds = Math.round(frac_day * 24 * 60 * 60);
-        date.setSeconds(date.getSeconds() + totalSeconds);
+    var utc_value = utc_days * 86400;
+    var date_info = new Date(utc_value * 1000);
+    var fractional_day = serial - Math.floor(serial);
+    if (fractional_day) {
+        var totalSeconds = Math.round(fractional_day * 24 * 60 * 60);
+        date_info.setSeconds(date_info.getSeconds() + totalSeconds);
     }
-    // Format dd-mm-yyyy
-    return date
-        ? date.toLocaleDateString('en-GB').replace(/\//g, '-')
-        : serial;
+    return date_info;
 }
-
-// --- Patch: When reading date, convert Excel numeric serials to string ---
-function safeDateDisplay(val) {
-    if (typeof val === "number") return excelSerialToDateString(val);
-    // Sometimes date is stored as string "45721" (not number)
-    if (/^\d{5,6}$/.test(val)) return excelSerialToDateString(Number(val));
-    return val;
+function parseToDate(val) {
+    if (val instanceof Date) return val;
+    if (typeof val === "number" && val > 20000) return excelSerialToJSDate(val);
+    if (typeof val === "string") {
+        // Excel date stored as string serial
+        if (/^\d{5,6}$/.test(val)) return excelSerialToJSDate(Number(val));
+        // Try standard parse
+        let d = new Date(val);
+        if (!isNaN(d.valueOf())) return d;
+        // Try dd-mm-yyyy
+        let m = val.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+        if (m) return new Date(Number(m[3]), Number(m[2])-1, Number(m[1]));
+    }
+    return null;
 }
-
-// -- Core Variables
+function formatDateDisplay(dt) {
+    if (!dt || !(dt instanceof Date) || isNaN(dt.valueOf())) return dt || "";
+    let dd = String(dt.getDate()).padStart(2, '0');
+    let mm = String(dt.getMonth() + 1).padStart(2, '0');
+    let yyyy = dt.getFullYear();
+    return `${dd}-${mm}-${yyyy}`;
+}
 let source1Files = [];
 let source2Files = [];
 let analysisResults = null;
 let missingSort = { col: null, dir: 'asc' }, matchSort = { col: null, dir: 'asc' };
-
-// --- Date detection logic
 function detectDateCol(rows) {
     if (!rows || !rows.length) return null;
     const dateRegexes = [
@@ -159,11 +164,9 @@ function detectDateCol(rows) {
     if (maxScore === 0) return null;
     return scores.findIndex(s => s === maxScore);
 }
-
 function brandingLabel(idx) {
     return String.fromCharCode(65 + idx); // A, B, C, ...
 }
-
 document.getElementById('file1-multi').addEventListener('change', function(e) {
     const files = Array.from(e.target.files);
     if (!files.length) return;
@@ -206,7 +209,6 @@ document.getElementById('file1-multi').addEventListener('change', function(e) {
         reader.readAsBinaryString(file);
     });
 });
-
 document.getElementById('file2-multi').addEventListener('change', function(e) {
     const files = Array.from(e.target.files);
     if (!files.length) return;
@@ -237,7 +239,6 @@ document.getElementById('file2-multi').addEventListener('change', function(e) {
         reader.readAsBinaryString(file);
     });
 });
-
 function renderManualCols(idx, headers, cols, fname) {
     let box = document.createElement('div');
     box.className = 'upload-box';
@@ -277,7 +278,6 @@ function renderManualCols(idx, headers, cols, fname) {
         checkReadyToAnalyze();
     });
 }
-
 function renderManualColsSource2(idx, headers, cols, fname) {
     let box = document.createElement('div');
     box.className = 'upload-box';
@@ -301,7 +301,6 @@ function renderManualColsSource2(idx, headers, cols, fname) {
     populateManualSelect(`paidCol2-${idx}`, headers, cols.paid, true);
     populateManualSelect(`dateCol2-${idx}`, headers, cols.date, true);
 }
-
 function populateManualSelect(selId, headers, selectedIdx, allowBlank=false) {
     const sel = document.getElementById(selId);
     sel.innerHTML = allowBlank ? '<option value="">Not Available</option>' : '';
@@ -313,7 +312,6 @@ function populateManualSelect(selId, headers, selectedIdx, allowBlank=false) {
         sel.appendChild(opt);
     });
 }
-
 function autoDetectColumns(headers, dataRows) {
     let lower = headers.map(h => (typeof h === "string" ? h.toLowerCase() : ""));
     let id = lower.findIndex(h => h && h.includes('app') && h.includes('id'));
@@ -323,7 +321,6 @@ function autoDetectColumns(headers, dataRows) {
     let date = detectDateCol(dataRows || []);
     return { appId: id, amount: amt, paid: paid >= 0 ? paid : null, date: date };
 }
-
 function checkSource1Duplicates() {
     source1Files.forEach((f, idx) => {
         if (!f) return;
@@ -354,7 +351,6 @@ function checkSource1Duplicates() {
     }
     checkReadyToAnalyze();
 }
-
 function checkReadyToAnalyze() {
     let ready = source1Files.filter(f=>f).every(f=>f.data && f.headers && !f.duplicateOf)
         && source2Files.filter(f=>f).length > 0;
@@ -407,7 +403,7 @@ function analyzeNow() {
                     appId: row[f.cols.appId] ? String(row[f.cols.appId]).trim() : null,
                     amount: parseFloat(row[f.cols.amount]) || 0,
                     paid: f.cols.paid!==null ? row[f.cols.paid] : null,
-                    date: f.cols.date!==null ? safeDateDisplay(row[f.cols.date]) : ""
+                    date: f.cols.date!==null ? parseToDate(row[f.cols.date]) : ""
                 }));
                 mergedSource1 = mergedSource1.concat(rows);
             });
@@ -421,7 +417,7 @@ function analyzeNow() {
                     appId: row[f.cols.appId] ? String(row[f.cols.appId]).trim() : null,
                     amount: parseFloat(row[f.cols.amount]) || 0,
                     paid: f.cols.paid!==null ? row[f.cols.paid] : null,
-                    date: f.cols.date!==null ? safeDateDisplay(row[f.cols.date]) : ""
+                    date: f.cols.date!==null ? parseToDate(row[f.cols.date]) : ""
                 }));
                 mergedSource2 = mergedSource2.concat(rows);
             });
@@ -473,8 +469,8 @@ function analyzeData(source1Data, source2Data, config) {
         if (inSource1 && inSource2) {
             const amount1 = inSource1.reduce((s,i)=>s+i.amount,0);
             const amount2 = inSource2.reduce((s,i)=>s+i.amount,0);
-            const date1 = inSource1.map(i=>i.date).join(', ');
-            const date2 = inSource2.map(i=>i.date).join(', ');
+            const date1 = inSource1.map(i=>formatDateDisplay(i.date)).join(', ');
+            const date2 = inSource2.map(i=>formatDateDisplay(i.date)).join(', ');
             const difference = Math.abs(amount1-amount2);
             totalDifference += difference;
             matchingAmount1 += amount1;
@@ -490,11 +486,11 @@ function analyzeData(source1Data, source2Data, config) {
             });
         } else if (inSource1&&!inSource2) {
             const amount = inSource1.reduce((s,i)=>s+i.amount,0);
-            const date1 = inSource1.map(i=>i.date).join(', ');
+            const date1 = inSource1.map(i=>formatDateDisplay(i.date)).join(', ');
             missing.push({ appId, missingFrom:'Source 2', presentInRows:inSource1.map(i=>i.rowNum).join(', '), amount, branding: inSource1[0].branding || "", paid:inSource1[0].paid, date1, date2:"" });
         } else if (!inSource1&&inSource2) {
             const amount = inSource2.reduce((s,i)=>s+i.amount,0);
-            const date2 = inSource2.map(i=>i.date).join(', ');
+            const date2 = inSource2.map(i=>formatDateDisplay(i.date)).join(', ');
             missing.push({ appId, missingFrom:'Source 1', presentInRows:inSource2.map(i=>i.rowNum).join(', '), amount, branding: "", paid:inSource2[0].paid, date1:"", date2 });
         }
     });
@@ -710,16 +706,54 @@ function exportAnalysis(type) {
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(analysisResults.source1.duplicates), "Duplicates Source 1");
         if (analysisResults.source2.duplicates.length)
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(analysisResults.source2.duplicates), "Duplicates Source 2");
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(analysisResults.comparison), "Matching");
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(analysisResults.missing), "Missing");
+        // Matching
+        let matchingRows = analysisResults.comparison.map(row => ({
+            "App ID": row.appId,
+            "Branding": row.branding,
+            "Status": row.status,
+            "Amount (Src 1)": row.amount1,
+            "Date (Src 1)": parseToDateForExcel(row.date1),
+            "Amount (Src 2)": row.amount2,
+            "Date (Src 2)": parseToDateForExcel(row.date2),
+            "Difference": row.difference,
+            "Rows (1)": row.rows1,
+            "Rows (2)": row.rows2,
+            "Paid 1": row.paid1,
+            "Paid 2": row.paid2
+        }));
+        let wsMatching = XLSX.utils.json_to_sheet(matchingRows, {cellDates:true});
+        XLSX.utils.book_append_sheet(wb, wsMatching, "Matching");
+        // Missing
+        let missingRows = analysisResults.missing.map(row => ({
+            "App ID": row.appId,
+            "Branding": row.branding,
+            "Missing From": row.missingFrom,
+            "Present In Rows": row.presentInRows,
+            "Amount": row.amount,
+            "Date (Src 1)": parseToDateForExcel(row.date1),
+            "Date (Src 2)": parseToDateForExcel(row.date2),
+            "Paid": row.paid
+        }));
+        let wsMissing = XLSX.utils.json_to_sheet(missingRows, {cellDates:true});
+        XLSX.utils.book_append_sheet(wb, wsMissing, "Missing");
         const timestamp = getTimestamp();
         if (type === 'xlsx') {
             XLSX.writeFile(wb, `AppID_Analysis_${timestamp}.xlsx`);
         } else {
-            const ws = XLSX.utils.json_to_sheet(analysisResults.comparison);
-            XLSX.writeFile({SheetNames:["Matching"], Sheets:{"Matching": ws}}, `AppID_Matching_${timestamp}.csv`, {bookType: "csv"});
+            XLSX.writeFile({SheetNames:["Matching"], Sheets:{"Matching": wsMatching}}, `AppID_Matching_${timestamp}.csv`, {bookType: "csv"});
         }
     } catch (err) { showError("Export failed: " + err.message); }
+}
+// Converts a dd-mm-yyyy (or comma-separated) to JS Date (for export as Excel date), otherwise returns value as is
+function parseToDateForExcel(val) {
+    if (!val) return "";
+    if (typeof val === "string" && val.includes(',')) {
+        // multi-date, just take the first
+        val = val.split(',')[0].trim();
+    }
+    let d = parseToDate(val);
+    if (d instanceof Date && !isNaN(d.valueOf())) return d;
+    return val;
 }
 </script>
 </body>
