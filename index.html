@@ -343,6 +343,7 @@
             bottom: 0;
             background: rgba(255, 255, 255, 0.8);
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             z-index: 1000;
@@ -354,6 +355,7 @@
             border-top: 5px solid #3498db;
             border-radius: 50%;
             animation: spin 1s linear infinite;
+            margin-bottom: 16px;
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -376,6 +378,20 @@
             white-space: nowrap;
             border-width: 0;
         }
+        /* Fix for file input issue in certain browsers */
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+        .file-input-wrapper input[type=file] {
+            font-size: 100px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
         @media (max-width: 768px) {
             .upload-section, .date-filter-grid, .options-grid { grid-template-columns: 1fr; }
             .stats-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
@@ -385,7 +401,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <div class="user-info" id="user-info"></div>
+            <div class="user-info" id="user-info">User: ksismad | UTC 2025-06-18 20:29:50</div>
             <h1>🔍 App ID Analyzer</h1>
             <p>Advanced multi-file Excel analysis with sorting, full-view, and comprehensive reporting.</p>
         </div>
@@ -395,15 +411,19 @@
                 <div class="upload-box" id="upload-box-1">
                     <h3>📁 Source 1 Files</h3>
                     <p>Select one or more Excel files</p>
-                    <input type="file" id="file-input-1" class="file-input" multiple accept=".xlsx,.xls">
-                    <button class="upload-btn" id="upload-btn-1">Choose Source 1 Files</button>
+                    <div class="file-input-wrapper">
+                        <input type="file" id="file-input-1" class="file-input" multiple accept=".xlsx,.xls">
+                        <button class="upload-btn" id="upload-btn-1">Choose Source 1 Files</button>
+                    </div>
                     <div id="file-info-1" class="file-info hidden"></div>
                 </div>
                 <div class="upload-box" id="upload-box-2">
                     <h3>📁 Source 2 File</h3>
                     <p>Select a single Excel file</p>
-                    <input type="file" id="file-input-2" class="file-input" accept=".xlsx,.xls">
-                    <button class="upload-btn" id="upload-btn-2">Choose Source 2 File</button>
+                    <div class="file-input-wrapper">
+                        <input type="file" id="file-input-2" class="file-input" accept=".xlsx,.xls">
+                        <button class="upload-btn" id="upload-btn-2">Choose Source 2 File</button>
+                    </div>
                     <div id="file-info-2" class="file-info hidden"></div>
                 </div>
             </div>
@@ -604,6 +624,24 @@
                 DOM.analyzeBtn.disabled = !canAnalyze || STATE.isProcessing;
                 DOM.analyzeBtn.textContent = STATE.isProcessing ? '⏳ Processing...' :
                     (canAnalyze ? '🔍 Analyze Data' : '📋 Please complete setup');
+                
+                // Update UI state for file boxes
+                DOM.uploadBox1.classList.toggle('has-files', hasSrc1);
+                DOM.uploadBox2.classList.toggle('has-files', hasSrc2);
+                
+                if (hasSrc1) {
+                    DOM.fileInfo1.textContent = `${STATE.source1Files.length} file(s) selected`;
+                    DOM.fileInfo1.classList.remove('hidden');
+                } else {
+                    DOM.fileInfo1.classList.add('hidden');
+                }
+                
+                if (hasSrc2) {
+                    DOM.fileInfo2.textContent = STATE.source2File.file.name;
+                    DOM.fileInfo2.classList.remove('hidden');
+                } else {
+                    DOM.fileInfo2.classList.add('hidden');
+                }
             }
         };
 
@@ -641,12 +679,56 @@
                 return element.innerHTML;
             },
             updateUserInfo() {
-                const now = new Date();
-                const padTwo = (num) => String(num).padStart(2, '0');
+                // Fixed to display the specified UTC time
+                DOM.userInfo.textContent = `User: ksismad | UTC 2025-06-18 20:29:50`;
+            },
+            renderColumnSelectors(headers, cols, containerId) {
+                const container = document.getElementById(containerId);
+                if (!container || !headers || !headers.length) return;
                 
-                const utcString = `${now.getUTCFullYear()}-${padTwo(now.getUTCMonth() + 1)}-${padTwo(now.getUTCDate())} ${padTwo(now.getUTCHours())}:${padTwo(now.getUTCMinutes())}:${padTwo(now.getUTCSeconds())}`;
+                const createOptions = (key, noneOption = false) => {
+                    let options = headers.map((h, i) => 
+                        `<option value="${i}" ${cols[key] === i ? 'selected' : ''}>${this.sanitizeHtml(h || '')}</option>`
+                    ).join('');
+                    
+                    if (noneOption) {
+                        options = `<option value="">None</option>` + options;
+                    } else {
+                        options = `<option value="">Select...</option>` + options;
+                    }
+                    
+                    return options;
+                };
                 
-                DOM.userInfo.textContent = `User: ksismad | UTC ${utcString}`;
+                const html = `
+                    <div class="options-grid">
+                        <div class="option-group">
+                            <label class="option-label" for="col-appId-${containerId}">App ID Column *</label>
+                            <select class="col-select" id="col-appId-${containerId}" data-col="appId">
+                                ${createOptions('appId')}
+                            </select>
+                        </div>
+                        <div class="option-group">
+                            <label class="option-label" for="col-amount-${containerId}">Amount Column *</label>
+                            <select class="col-select" id="col-amount-${containerId}" data-col="amount">
+                                ${createOptions('amount')}
+                            </select>
+                        </div>
+                        <div class="option-group">
+                            <label class="option-label" for="col-date-${containerId}">Date Column</label>
+                            <select class="col-select" id="col-date-${containerId}" data-col="date">
+                                ${createOptions('date', true)}
+                            </select>
+                        </div>
+                        <div class="option-group">
+                            <label class="option-label" for="col-paid-${containerId}">Paid Status Column</label>
+                            <select class="col-select" id="col-paid-${containerId}" data-col="paid">
+                                ${createOptions('paid', true)}
+                            </select>
+                        </div>
+                    </div>`;
+                
+                return html;
             }
         };
 
@@ -1354,100 +1436,4 @@
                 
                 const dataMap = { 
                     matching: STATE.analysisResults.matching, 
-                    missing: STATE.analysisResults.missing, 
-                    duplicates: [...STATE.analysisResults.duplicates1, ...STATE.analysisResults.duplicates2] 
-                };
-                
-                const data = dataMap[type];
-                if (!data || !data.length) {
-                    UI.showError(`No ${type} data to display`);
-                    return;
-                }
-                
-                // Generate table HTML for the popup window
-                const tableHtml = Analyzer.renderTable(type, data, STATE.analysisResults.sortState[type]);
-                
-                // Create a new window
-                const newWindow = window.open("", "_blank");
-                
-                // Generate the full HTML document for the new window
-                newWindow.document.write(`
-                <!DOCTYPE html>
-                <html lang="en">
-                <head>
-                    <meta charset="UTF-8">
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <title>Full View: ${type}</title>
-                    <style>
-                        body {
-                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-                            padding: 20px;
-                            margin: 0;
-                        }
-                        h1 {
-                            color: #1e293b;
-                            margin-bottom: 20px;
-                        }
-                        table {
-                            width: 100%;
-                            border-collapse: collapse;
-                            margin-bottom: 20px;
-                        }
-                        th, td {
-                            padding: 12px 16px;
-                            text-align: left;
-                            border: 1px solid #e2e8f0;
-                        }
-                        th {
-                            background: #f8fafc;
-                            font-weight: 600;
-                            color: #374151;
-                            position: sticky;
-                            top: 0;
-                        }
-                        tr:nth-child(even) {
-                            background-color: #f8fafc;
-                        }
-                        tr:hover {
-                            background-color: #e9eef6;
-                        }
-                        .highlight-mismatch {
-                            background: #fef2f2;
-                        }
-                        .highlight-missing {
-                            background: #fef3c7;
-                        }
-                        .status-badge {
-                            padding: 4px 8px;
-                            border-radius: 12px;
-                            font-size: 0.75rem;
-                            font-weight: 600;
-                            text-transform: uppercase;
-                        }
-                        .status-badge.match {
-                            background: #d1fae5;
-                            color: #065f46;
-                        }
-                        .status-badge.amount-mismatch {
-                            background: #fee2e2;
-                            color: #991b1b;
-                        }
-                        .export-btn {
-                            padding: 10px 16px;
-                            background: #1e293b;
-                            color: white;
-                            border: none;
-                            border-radius: 4px;
-                            font-weight: 600;
-                            cursor: pointer;
-                            margin-bottom: 20px;
-                        }
-                        .export-btn:hover {
-                            background: #334155;
-                        }
-                        @media print {
-                            .no-print {
-                                display: none;
-                            }
-                            body {
-                                padding
+                    missing: STATE.analysisResults.missing
