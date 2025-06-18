@@ -74,7 +74,7 @@
         .table-title { font-size: 1.125rem; font-weight: 600; color: #1e293b; }
         .table-wrapper { overflow-x: auto; max-height: 500px; overflow-y: auto; }
         table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 0.875rem; }
+        th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 0.875rem; white-space: nowrap; }
         th { background: #f8fafc; font-weight: 600; color: #374151; position: sticky; top: 0; cursor: pointer; user-select: none; }
         th .sort-arrow { display: inline-block; margin-left: 5px; opacity: 0.5; }
         th.sorted .sort-arrow { opacity: 1; }
@@ -102,7 +102,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <div class="user-info">User: ksismad | UTC: 2025-06-18 15:44:18</div>
+            <div class="user-info">User: ksismad | UTC: 2025-06-18 15:50:08</div>
             <h1>🔍 App ID Analyzer</h1>
             <p>Advanced multi-file Excel analysis with sorting, full-view, and comprehensive reporting.</p>
         </div>
@@ -173,10 +173,9 @@
         const DATE_UTILS = {
             excelSerialToUTC(serial) {
                 if (typeof serial !== 'number' || serial < 0) return null;
-                const adjustedSerial = serial > 60 ? serial - 1 : serial;
-                const excelEpoch = Date.UTC(1899, 11, 31);
+                const excelEpoch = Date.UTC(1899, 11, 30);
                 const msPerDay = 86400000;
-                return new Date(excelEpoch + adjustedSerial * msPerDay);
+                return new Date(excelEpoch + serial * msPerDay);
             },
             parseToUTC(val) {
                 if (!val) return null;
@@ -239,7 +238,7 @@
                 row.forEach((cell, i) => { if (DATE_UTILS.parseToUTC(cell)) dateScores[i]++; });
             });
             const bestDateIndex = dateScores.indexOf(Math.max(...dateScores));
-            if (dateScores[bestDateIndex] > 0) cols.date = bestDateIndex;
+            if (bestDateIndex > -1 && dateScores[bestDateIndex] > 0) cols.date = bestDateIndex;
 
             return cols;
         }
@@ -313,16 +312,15 @@
                         appId: id, amount1: amt1, amount2: amt2, difference: Math.abs(amt1 - amt2),
                         status: Math.abs(amt1 - amt2) < 0.01 ? 'Match' : 'Amount Mismatch',
                         branding: items1[0].branding,
-                        dates1: items1.map(i => DATE_UTILS.formatDisplay(i.date)).filter(Boolean),
-                        dates2: items2.map(i => DATE_UTILS.formatDisplay(i.date)).filter(Boolean)
+                        paid1: items1[0].paid, paid2: items2[0].paid,
+                        date1: items1.find(i=>i.date)?.date, date2: items2.find(i=>i.date)?.date
                     });
                 } else {
                     const items = items1 || items2;
                     results.missing.push({
                         appId: id, amount: _.sumBy(items, 'amount'),
                         missingFrom: items1 ? 'Source 2' : 'Source 1',
-                        branding: items[0].branding,
-                        dates: items.map(i => DATE_UTILS.formatDisplay(i.date)).filter(Boolean)
+                        branding: items[0].branding, date: items.find(i=>i.date)?.date,
                     });
                 }
             });
@@ -372,14 +370,13 @@
                 <div class="export-section"><button class="export-btn" id="export-excel-btn">📊 Export Full Report (Excel)</button></div>
             `;
             resultsContainer.classList.remove('hidden');
-            document.getElementById('export-excel-btn').addEventListener('click', exportToExcel);
         }
 
         function renderTable(type, data, sortState = {}) {
             if (!data.length) return '';
             const titles = { matching: '🟢 Matching App IDs', missing: '🔴 Missing App IDs', duplicates: '⚠️ Duplicate App IDs' };
             const headers = {
-                matching: [{k:'appId',n:'App ID'}, {k:'branding',n:'Source'}, {k:'status',n:'Status'}, {k:'amount1',n:'Amount (Src 1)'}, {k:'amount2',n:'Amount (Src 2)'}, {k:'difference',n:'Difference'}],
+                matching: [{k:'appId',n:'App ID'}, {k:'branding',n:'Source'}, {k:'status',n:'Status'}, {k:'amount1',n:'Amount (Src 1)'}, {k:'amount2',n:'Amount (Src 2)'}, {k:'difference',n:'Difference'}, {k:'paid1', n:'Paid (Src 1)'}, {k:'paid2', n:'Paid (Src 2)'}],
                 missing: [{k:'appId',n:'App ID'}, {k:'missingFrom',n:'Missing From'}, {k:'amount',n:'Amount'}, {k:'branding',n:'Source'}],
                 duplicates: [{k:'appId',n:'App ID'}, {k:'source',n:'Source'}, {k:'count',n:'Count'}]
             };
@@ -392,8 +389,8 @@
             }).join('');
 
             const bodyHtml = data.map(r => `<tr class="${typeof rowClass[type] === 'function' ? rowClass[type](r) : rowClass[type]}">
-                ${type === 'matching' ? `<td><strong>${r.appId}</strong></td><td>${r.branding}</td><td><span class="status-badge ${r.status.toLowerCase().replace(' ','-')}">${r.status}</span></td><td>Rs ${r.amount1.toFixed(2)}</td><td>Rs ${r.amount2.toFixed(2)}</td><td>Rs ${r.difference.toFixed(2)}</td>` : ''}
-                ${type === 'missing' ? `<td><strong>${r.appId}</strong></td><td>${r.missingFrom}</td><td>Rs ${r.amount.toFixed(2)}</td><td>${r.branding}</td>` : ''}
+                ${type === 'matching' ? `<td><strong>${r.appId}</strong></td><td>${r.branding || ''}</td><td><span class="status-badge ${r.status.toLowerCase().replace(' ','-')}">${r.status}</span></td><td>Rs ${r.amount1.toFixed(2)}</td><td>Rs ${r.amount2.toFixed(2)}</td><td>Rs ${r.difference.toFixed(2)}</td><td>${r.paid1 || 'N/A'}</td><td>${r.paid2 || 'N/A'}</td>` : ''}
+                ${type === 'missing' ? `<td><strong>${r.appId}</strong></td><td>${r.missingFrom}</td><td>Rs ${r.amount.toFixed(2)}</td><td>${r.branding || ''}</td>` : ''}
                 ${type === 'duplicates' ? `<td><strong>${r.appId}</strong></td><td>${r.source}</td><td>${r.count}</td>` : ''}
             </tr>`).join('');
 
@@ -413,12 +410,12 @@
             const res = analysisResults;
             const duplicates = [...res.duplicates1, ...res.duplicates2];
 
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(res.matching.map(r=>({'App ID': r.appId, 'Source': r.branding, 'Status': r.status, 'Amount Src 1': r.amount1, 'Amount Src 2': r.amount2, 'Difference': r.difference, 'Dates': [...r.dates1, ...r.dates2].join(', ')}))), 'Matching');
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(res.missing.map(r=>({'App ID': r.appId, 'Missing From': r.missingFrom, 'Amount': r.amount, 'Source': r.branding, 'Dates': r.dates.join(', ')}))), 'Missing');
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(res.matching.map(r=>({'App ID': r.appId, 'Source': r.branding, 'Status': r.status, 'Amount Src 1': r.amount1, 'Amount Src 2': r.amount2, 'Difference': r.difference, 'Paid Src 1': r.paid1, 'Paid Src 2': r.paid2, 'Date Src 1': r.date1, 'Date Src 2': r.date2 }))), 'Matching');
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(res.missing.map(r=>({'App ID': r.appId, 'Missing From': r.missingFrom, 'Amount': r.amount, 'Source': r.branding, 'Date': r.date }))), 'Missing');
             if(duplicates.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(duplicates), 'Duplicates');
 
             const timestamp = new Date().toISOString().replace(/[:\-T]/g, '_').slice(0, 17);
-            XLSX.writeFile(wb, `AppID_Analysis_${timestamp}.xlsx`);
+            XLSX.writeFile(wb, `AppID_Analysis_${timestamp}.xlsx`, { cellDates: true });
         }
 
         function openFullView(type) {
@@ -513,27 +510,30 @@
             });
 
             resultsContainer.addEventListener('click', (e) => {
-                if (e.target.matches('th[data-key]')) {
-                    const key = e.target.dataset.key;
-                    const type = e.target.dataset.type;
+                const header = e.target.closest('th[data-key]');
+                if (header) {
+                    const key = header.dataset.key;
+                    const type = header.dataset.type;
                     const currentSort = analysisResults.sortState[type] || {};
                     const dir = (currentSort.key === key && currentSort.dir === 'asc') ? 'desc' : 'asc';
                     
-                    const dataMap = { matching: 'matching', missing: 'missing', duplicates: 'duplicates' };
-                    const dataKey = dataMap[type];
+                    const dataMap = { matching: analysisResults.matching, missing: analysisResults.missing, duplicates: [...analysisResults.duplicates1, ...analysisResults.duplicates2]};
+                    
+                    dataMap[type] = _.orderBy(dataMap[type], [key], [dir]);
                     
                     if (type === 'duplicates') {
-                        const duplicatesData = [...analysisResults.duplicates1, ...analysisResults.duplicates2];
-                        analysisResults.duplicates = _.orderBy(duplicatesData, [key], [dir]);
+                        analysisResults.duplicates1 = dataMap.duplicates.filter(d => d.source === 'Source 1');
+                        analysisResults.duplicates2 = dataMap.duplicates.filter(d => d.source === 'Source 2');
                     } else {
-                        analysisResults[dataKey] = _.orderBy(analysisResults[dataKey], [key], [dir]);
+                        analysisResults[type] = dataMap[type];
                     }
 
                     analysisResults.sortState[type] = { key, dir };
                     renderResults(analysisResults);
                 }
-                if (e.target.matches('.view-btn[data-view-type]')) {
-                    openFullView(e.target.dataset.viewType);
+                const viewButton = e.target.closest('.view-btn[data-view-type]');
+                if (viewButton) {
+                    openFullView(viewButton.dataset.viewType);
                 }
             });
         }
