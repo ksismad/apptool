@@ -37,7 +37,7 @@
         .upload-box { background: #f8fafc; border-radius: 12px; padding: 24px; text-align: center; border: 2px dashed #cbd5e1; transition: all 0.3s ease; }
         .upload-box:hover { border-color: #6366f1; transform: translateY(-2px); }
         .upload-box.has-files { border-color: #10b981; background: #ecfdf5; }
-        .upload-btn { margin-top: 16px; border: none; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: #fff; border-radius: 8px; padding: 12px 24px; font-size: 1rem; font-weight: 600; cursor: pointer; }
+        .upload-btn { margin-top: 16px; border: none; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: #fff; border-radius: 8px; padding: 12px 24px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: transform 0.2s; }
         .upload-btn:hover { transform: translateY(-1px); }
         .file-info { margin-top: 12px; color: #059669; font-weight: 600; padding: 8px 16px; background: #d1fae5; border-radius: 6px; display: inline-block; }
         .file-input { display: none; }
@@ -54,8 +54,10 @@
         .col-select { width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.925rem; background: #fff; }
         .validation-title { font-weight: 600; color: #374151; margin-bottom: 12px; }
         .validation-item { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 0.875rem; }
-        .validation-item.valid { color: #059669; } .validation-item.invalid { color: #dc2626; }
-        .validation-item.valid::before { content: "✅"; } .validation-item.invalid::before { content: "❌"; }
+        .validation-item.valid { color: #059669; }
+        .validation-item.invalid { color: #dc2626; }
+        .validation-item.valid::before { content: "✅"; }
+        .validation-item.invalid::before { content: "❌"; }
         .analyze-btn { width: 100%; padding: 16px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; border-radius: 12px; font-size: 1.125rem; font-weight: 700; cursor: pointer; transition: transform 0.2s; }
         .analyze-btn:hover:not(:disabled) { transform: translateY(-2px); }
         .analyze-btn:disabled { background: #9ca3af; cursor: not-allowed; }
@@ -65,7 +67,9 @@
         .results-meta { font-size: 0.875rem; color: #6b7280; text-align: right; }
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
         .stat-card { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); text-align: center; border-left: 4px solid #6366f1; }
-        .stat-card.success { border-left-color: #10b981; } .stat-card.warning { border-left-color: #f59e0b; } .stat-card.danger { border-left-color: #ef4444; }
+        .stat-card.success { border-left-color: #10b981; }
+        .stat-card.warning { border-left-color: #f59e0b; }
+        .stat-card.danger { border-left-color: #ef4444; }
         .stat-number { font-size: 1.875rem; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
         .stat-label { font-size: 0.875rem; color: #64748b; font-weight: 500; text-transform: uppercase; }
         .stat-meta { font-size: 0.75rem; color: #94a3b8; margin-top: 4px; }
@@ -93,6 +97,7 @@
         .success-msg { color: #059669; background: #ecfdf5; border-color: #059669; }
         .loading { text-align: center; padding: 40px; color: #6b7280; }
         .hidden { display: none !important; }
+        .processing { text-align: center; padding: 20px; color: #6366f1; font-weight: 600; }
         @media (max-width: 768px) {
             .upload-section, .date-filter-grid, .options-grid { grid-template-columns: 1fr; }
             .stats-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
@@ -128,16 +133,46 @@
             <div class="section">
                 <h3 class="section-title">📅 Date Range Filters (UTC-based)</h3>
                 <div class="date-filter-grid">
-                    <div class="date-filter-group"><label class="date-filter-label">Source 1 Range</label><div class="date-range"><input type="date" class="date-input" id="dateFrom1"><span>to</span><input type="date" class="date-input" id="dateTo1"></div></div>
-                    <div class="date-filter-group"><label class="date-filter-label">Source 2 Range</label><div class="date-range"><input type="date" class="date-input" id="dateFrom2"><span>to</span><input type="date" class="date-input" id="dateTo2"></div></div>
+                    <div class="date-filter-group">
+                        <label class="date-filter-label">Source 1 Range</label>
+                        <div class="date-range">
+                            <input type="date" class="date-input" id="dateFrom1">
+                            <span>to</span>
+                            <input type="date" class="date-input" id="dateTo1">
+                        </div>
+                    </div>
+                    <div class="date-filter-group">
+                        <label class="date-filter-label">Source 2 Range</label>
+                        <div class="date-range">
+                            <input type="date" class="date-input" id="dateFrom2">
+                            <span>to</span>
+                            <input type="date" class="date-input" id="dateTo2">
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <div class="section">
                 <h3 class="section-title">⚙️ Analysis Options</h3>
                 <div class="options-grid">
-                    <div class="option-group"><label class="option-label">Payment Filter</label><div class="checkbox-group"><input type="checkbox" id="includeUnpaid1"><label for="includeUnpaid1">Include unpaid from Source 1</label></div></div>
-                    <div class="option-group"><label class="option-label">GST Calculation</label><div class="checkbox-group"><input type="checkbox" id="applyGST"><label for="applyGST">Apply 18% GST to amounts</label></div><div class="checkbox-group"><input type="checkbox" id="gstRound"><label for="gstRound">Round final amounts</label></div></div>
+                    <div class="option-group">
+                        <label class="option-label">Payment Filter</label>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="includeUnpaid1">
+                            <label for="includeUnpaid1">Include unpaid from Source 1</label>
+                        </div>
+                    </div>
+                    <div class="option-group">
+                        <label class="option-label">GST Calculation</label>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="applyGST">
+                            <label for="applyGST">Apply 18% GST to amounts</label>
+                        </div>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="gstRound">
+                            <label for="gstRound">Round final amounts</label>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -169,10 +204,20 @@
         const analyzeBtn = document.getElementById('analyze-btn');
         const resultsContainer = document.getElementById('results');
 
-        // === CORE DATE UTILITIES (ROBUST VERSION) ===
+        // === UTILITY FUNCTIONS ===
+        function safeNumber(val, defaultVal = 0) {
+            const num = parseFloat(val);
+            return isNaN(num) || !isFinite(num) ? defaultVal : num;
+        }
+
+        function safeString(val, defaultVal = '') {
+            return (val === null || val === undefined) ? defaultVal : String(val);
+        }
+
+        // === CORE DATE UTILITIES ===
         const DATE_UTILS = {
             excelSerialToDate(serial) {
-                if(typeof serial !== 'number') return null;
+                if (typeof serial !== 'number' || !isFinite(serial)) return null;
                 return new Date((serial - 25569) * 86400000);
             },
             parseToDate(val) {
@@ -195,7 +240,7 @@
             },
             parseDateInput: v => v ? new Date(v) : null,
             getEndOfDay(d) {
-                if(!d) return null;
+                if (!d) return null;
                 const eod = new Date(d);
                 eod.setUTCHours(23, 59, 59, 999);
                 return eod;
@@ -208,7 +253,7 @@
                 const hasSrc1 = source1Files.length > 0;
                 const hasSrc2 = source2File !== null;
                 const src1ColsOk = hasSrc1 && source1Files.every(f => f.cols.appId !== null && f.cols.amount !== null);
-                const src2ColsOk = hasSrc2 && source2File.cols.appId !== null && source2File.cols.amount !== null;
+                const src2ColsOk = hasSrc2 && source2File.cols && source2File.cols.appId !== null && source2File.cols.amount !== null;
                 
                 document.getElementById('validation-items').innerHTML = [
                     { text: `Source 1 files selected (${source1Files.length})`, valid: hasSrc1 },
@@ -227,33 +272,48 @@
         function autoDetectColumns(headers, sample) {
             const cols = { appId: null, amount: null, date: null, paid: null };
             const lcHeaders = headers.map(h => String(h || '').toLowerCase());
-            cols.appId = lcHeaders.findIndex(h => h.includes('app') && h.includes('id'));
-            cols.amount = lcHeaders.findIndex(h => h.includes('amount') || h.includes('total'));
-            cols.paid = lcHeaders.findIndex(h => h.includes('paid') || h.includes('status'));
-            if (cols.appId === -1) cols.appId = null;
-            if (cols.amount === -1) cols.amount = null;
-            if (cols.paid === -1) cols.paid = null;
             
+            const appIdIdx = lcHeaders.findIndex(h => h.includes('app') && h.includes('id'));
+            const amountIdx = lcHeaders.findIndex(h => h.includes('amount') || h.includes('total'));
+            const paidIdx = lcHeaders.findIndex(h => h.includes('paid') || h.includes('status'));
+            
+            cols.appId = appIdIdx !== -1 ? appIdIdx : null;
+            cols.amount = amountIdx !== -1 ? amountIdx : null;
+            cols.paid = paidIdx !== -1 ? paidIdx : null;
+            
+            // Find best date column
             const dateScores = Array(headers.length).fill(0);
             sample.slice(0, 15).forEach(row => {
-                row.forEach((cell, i) => { if (DATE_UTILS.parseToDate(cell)) dateScores[i]++; });
+                if (Array.isArray(row)) {
+                    row.forEach((cell, i) => {
+                        if (DATE_UTILS.parseToDate(cell)) dateScores[i]++;
+                    });
+                }
             });
             const bestDateIndex = dateScores.indexOf(Math.max(...dateScores));
-            if (bestDateIndex > -1 && dateScores[bestDateIndex] > 0) cols.date = bestDateIndex;
+            if (bestDateIndex > -1 && dateScores[bestDateIndex] > 0) {
+                cols.date = bestDateIndex;
+            }
 
             return cols;
         }
 
         function processFileData(data, cols) {
             const processed = [];
+            if (!Array.isArray(data) || data.length < 2) return processed;
+            
             for (let i = 1; i < data.length; i++) {
                 const row = data[i];
-                if (!row || row[cols.appId] === undefined || row[cols.appId] === null) continue;
+                if (!Array.isArray(row) || !row[cols.appId]) continue;
+                
+                const appId = safeString(row[cols.appId]).trim();
+                if (!appId) continue;
+                
                 processed.push({
                     rowNum: i + 1,
-                    appId: String(row[cols.appId]).trim(),
-                    amount: parseFloat(row[cols.amount]) || 0,
-                    paid: cols.paid !== null ? row[cols.paid] : null,
+                    appId: appId,
+                    amount: safeNumber(row[cols.amount]),
+                    paid: cols.paid !== null ? safeString(row[cols.paid]) : null,
                     date: cols.date !== null ? DATE_UTILS.parseToDate(row[cols.date]) : null
                 });
             }
@@ -272,27 +332,47 @@
                         from2: DATE_UTILS.parseDateInput(document.getElementById('dateFrom2').value),
                         to2: DATE_UTILS.getEndOfDay(DATE_UTILS.parseDateInput(document.getElementById('dateTo2').value))
                     };
+                    
                     const includeUnpaid = document.getElementById('includeUnpaid1').checked;
                     const applyGST = document.getElementById('applyGST').checked;
                     const roundGST = document.getElementById('gstRound').checked;
 
-                    let data1 = source1Files.flatMap(f => {
+                    // Process source 1 files
+                    let data1 = [];
+                    source1Files.forEach(f => {
                         const processed = processFileData(f.data, f.cols);
                         processed.forEach(item => item.branding = f.branding);
-                        return processed;
+                        data1 = data1.concat(processed);
                     });
-                    let data2 = processFileData(source2File.data, source2File.cols);
+                    
+                    // Process source 2 file
+                    const data2 = processFileData(source2File.data, source2File.cols);
 
-                    let filtered1 = (filters.from1 || filters.to1) ? data1.filter(d => d.date && (!filters.from1 || d.date >= filters.from1) && (!filters.to1 || d.date <= filters.to1)) : data1;
-                    let filtered2 = (filters.from2 || filters.to2) ? data2.filter(d => d.date && (!filters.from2 || d.date >= filters.from2) && (!filters.to2 || d.date <= filters.to2)) : data2;
+                    // Apply date filters
+                    let filtered1 = (filters.from1 || filters.to1) 
+                        ? data1.filter(d => d.date && (!filters.from1 || d.date >= filters.from1) && (!filters.to1 || d.date <= filters.to1)) 
+                        : data1;
+                    let filtered2 = (filters.from2 || filters.to2) 
+                        ? data2.filter(d => d.date && (!filters.from2 || d.date >= filters.from2) && (!filters.to2 || d.date <= filters.to2)) 
+                        : data2;
 
-                    let final1 = includeUnpaid ? filtered1 : filtered1.filter(d => String(d.paid || '').toLowerCase() === 'paid');
-                    final1.forEach(d => { if (applyGST) d.amount = roundGST ? Math.round(d.amount * 1.18) : d.amount * 1.18; });
+                    // Apply payment filter
+                    let final1 = includeUnpaid 
+                        ? filtered1 
+                        : filtered1.filter(d => String(d.paid || '').toLowerCase() === 'paid');
+                    
+                    // Apply GST
+                    if (applyGST) {
+                        final1.forEach(d => {
+                            d.amount = roundGST ? Math.round(d.amount * 1.18) : d.amount * 1.18;
+                        });
+                    }
                     
                     analysisResults = performComparison(final1, filtered2, {includeUnpaid, applyGST, roundGST});
                     renderResults(analysisResults);
-                    showSuccess('Analysis completed!');
+                    showSuccess('Analysis completed successfully!');
                 } catch (e) {
+                    console.error('Analysis error:', e);
                     showError(`Analysis failed: ${e.message}`);
                     resultsContainer.classList.add('hidden');
                 }
@@ -300,86 +380,222 @@
         }
 
         function performComparison(d1, d2, options) {
-            const map1 = _.groupBy(d1, 'appId'), map2 = _.groupBy(d2, 'appId');
+            const map1 = _.groupBy(d1, 'appId');
+            const map2 = _.groupBy(d2, 'appId');
             const allIds = _.union(Object.keys(map1), Object.keys(map2));
             const results = { matching: [], missing: [], duplicates1: [], duplicates2: [], options, sortState: {} };
             
             allIds.forEach(id => {
-                const items1 = map1[id], items2 = map2[id];
+                const items1 = map1[id];
+                const items2 = map2[id];
+                
                 if (items1 && items2) {
-                    const amt1 = _.sumBy(items1, 'amount'), amt2 = _.sumBy(items2, 'amount');
+                    const amt1 = _.sumBy(items1, 'amount');
+                    const amt2 = _.sumBy(items2, 'amount');
+                    const diff = Math.abs(amt1 - amt2);
+                    
                     results.matching.push({
-                        appId: id, amount1: amt1, amount2: amt2, difference: Math.abs(amt1 - amt2),
-                        status: Math.abs(amt1 - amt2) < 0.01 ? 'Match' : 'Amount Mismatch',
-                        branding: items1[0].branding,
-                        date1: items1.find(i=>i.date)?.date, date2: items2.find(i=>i.date)?.date
+                        appId: id,
+                        amount1: safeNumber(amt1),
+                        amount2: safeNumber(amt2),
+                        difference: safeNumber(diff),
+                        status: diff < 0.01 ? 'Match' : 'Amount Mismatch',
+                        branding: items1[0]?.branding || '',
+                        date1: items1.find(i => i.date)?.date,
+                        date2: items2.find(i => i.date)?.date
                     });
                 } else {
                     const items = items1 || items2;
+                    const amount = _.sumBy(items, 'amount');
+                    
                     results.missing.push({
-                        appId: id, amount: _.sumBy(items, 'amount'),
+                        appId: id,
+                        amount: safeNumber(amount),
                         missingFrom: items1 ? 'Source 2' : 'Source 1',
-                        branding: items[0].branding, date: items.find(i=>i.date)?.date,
-                        paid: items[0].paid
+                        branding: items[0]?.branding || '',
+                        date: items.find(i => i.date)?.date,
+                        paid: items[0]?.paid
                     });
                 }
             });
-            Object.keys(map1).forEach(id => { if (map1[id].length > 1) results.duplicates1.push({ appId: id, count: map1[id].length, source: 'Source 1' }); });
-            Object.keys(map2).forEach(id => { if (map2[id].length > 1) results.duplicates2.push({ appId: id, count: map2[id].length, source: 'Source 2' }); });
+
+            // Find duplicates
+            Object.keys(map1).forEach(id => {
+                if (map1[id].length > 1) {
+                    results.duplicates1.push({
+                        appId: id,
+                        count: map1[id].length,
+                        source: 'Source 1'
+                    });
+                }
+            });
+            
+            Object.keys(map2).forEach(id => {
+                if (map2[id].length > 1) {
+                    results.duplicates2.push({
+                        appId: id,
+                        count: map2[id].length,
+                        source: 'Source 2'
+                    });
+                }
+            });
             
             results.stats = {
-                total1: _.sumBy(d1, 'amount'), total2: _.sumBy(d2, 'amount'),
-                matching1: _.sumBy(results.matching, 'amount1'), matching2: _.sumBy(results.matching, 'amount2'),
-                totalDiff: _.sumBy(results.matching, 'difference'),
-                count1: d1.length, count2: d2.length,
-                unique1: Object.keys(map1).length, unique2: Object.keys(map2).length
+                total1: safeNumber(_.sumBy(d1, 'amount')),
+                total2: safeNumber(_.sumBy(d2, 'amount')),
+                matching1: safeNumber(_.sumBy(results.matching, 'amount1')),
+                matching2: safeNumber(_.sumBy(results.matching, 'amount2')),
+                totalDiff: safeNumber(_.sumBy(results.matching, 'difference')),
+                count1: d1.length,
+                count2: d2.length,
+                unique1: Object.keys(map1).length,
+                unique2: Object.keys(map2).length
             };
             results.analysisTime = new Date().toISOString();
             return results;
         }
 
         // === UI RENDERING ===
-        function showError(msg) { document.getElementById('error-container').innerHTML = `<div class="error-msg">${msg}</div>`; }
-        function showSuccess(msg) { document.getElementById('error-container').innerHTML = `<div class="success-msg">${msg}</div>`; setTimeout(()=>document.getElementById('error-container').innerHTML= '', 3000); }
+        function showError(msg) {
+            document.getElementById('error-container').innerHTML = `<div class="error-msg">${msg}</div>`;
+        }
+        
+        function showSuccess(msg) {
+            document.getElementById('error-container').innerHTML = `<div class="success-msg">${msg}</div>`;
+            setTimeout(() => {
+                document.getElementById('error-container').innerHTML = '';
+            }, 3000);
+        }
 
         function renderColumnSelectors(parent, headers, cols) {
+            const headerOptions = headers.map((h, i) => 
+                `<option value="${i}" ${cols.appId === i || cols.amount === i || cols.date === i || cols.paid === i ? 'selected' : ''}>${h || `Column ${i+1}`}</option>`
+            ).join('');
+            
             parent.innerHTML = `
                 <div class="options-grid">
-                    <div class="option-group"><label class="option-label">App ID Column *</label><select class="col-select" data-col="appId"><option value="">Select...</option>${headers.map((h,i)=>`<option value="${i}" ${cols.appId === i ? 'selected' : ''}>${h || `Column ${i+1}`}</option>`).join('')}</select></div>
-                    <div class="option-group"><label class="option-label">Amount Column *</label><select class="col-select" data-col="amount"><option value="">Select...</option>${headers.map((h,i)=>`<option value="${i}" ${cols.amount === i ? 'selected' : ''}>${h || `Column ${i+1}`}</option>`).join('')}</select></div>
-                    <div class="option-group"><label class="option-label">Date Column</label><select class="col-select" data-col="date"><option value="">None</option>${headers.map((h,i)=>`<option value="${i}" ${cols.date === i ? 'selected' : ''}>${h || `Column ${i+1}`}</option>`).join('')}</select></div>
-                    <div class="option-group"><label class="option-label">Paid Status Column</label><select class="col-select" data-col="paid"><option value="">None</option>${headers.map((h,i)=>`<option value="${i}" ${cols.paid === i ? 'selected' : ''}>${h || `Column ${i+1}`}</option>`).join('')}</select></div>
+                    <div class="option-group">
+                        <label class="option-label">App ID Column *</label>
+                        <select class="col-select" data-col="appId">
+                            <option value="">Select...</option>
+                            ${headerOptions}
+                        </select>
+                    </div>
+                    <div class="option-group">
+                        <label class="option-label">Amount Column *</label>
+                        <select class="col-select" data-col="amount">
+                            <option value="">Select...</option>
+                            ${headerOptions}
+                        </select>
+                    </div>
+                    <div class="option-group">
+                        <label class="option-label">Date Column</label>
+                        <select class="col-select" data-col="date">
+                            <option value="">None</option>
+                            ${headerOptions}
+                        </select>
+                    </div>
+                    <div class="option-group">
+                        <label class="option-label">Paid Status Column</label>
+                        <select class="col-select" data-col="paid">
+                            <option value="">None</option>
+                            ${headerOptions}
+                        </select>
+                    </div>
                 </div>`;
+            
+            // Set correct selected values
+            parent.querySelectorAll('.col-select').forEach(select => {
+                const col = select.dataset.col;
+                if (cols[col] !== null) {
+                    select.value = cols[col];
+                }
+            });
         }
 
         function renderResults(res) {
             const duplicates = [...res.duplicates1, ...res.duplicates2];
             resultsContainer.innerHTML = `
-                <div class="results-header"><h2 class="results-title">📊 Analysis Results</h2><div class="results-meta">Time: ${new Date(res.analysisTime).toLocaleString('en-GB', { timeZone: 'UTC' })}</div></div>
+                <div class="results-header">
+                    <h2 class="results-title">📊 Analysis Results</h2>
+                    <div class="results-meta">Time: ${new Date(res.analysisTime).toLocaleString('en-GB', { timeZone: 'UTC' })}</div>
+                </div>
                 <div class="stats-grid">
-                    <div class="stat-card"><div class="stat-number">Rs ${res.stats.total1.toFixed(2)}</div><div class="stat-label">Total Src 1</div><div class="stat-meta">${res.stats.count1} entries</div></div>
-                    <div class="stat-card"><div class="stat-number">Rs ${res.stats.total2.toFixed(2)}</div><div class="stat-label">Total Src 2</div><div class="stat-meta">${res.stats.count2} entries</div></div>
-                    <div class="stat-card success"><div class="stat-number">${res.matching.length}</div><div class="stat-label">Matching IDs</div></div>
-                    <div class="stat-card ${res.stats.totalDiff > 0.01 ? 'warning' : 'success'}"><div class="stat-number">Rs ${res.stats.totalDiff.toFixed(2)}</div><div class="stat-label">Total Difference</div></div>
-                    <div class="stat-card ${res.missing.length > 0 ? 'danger' : 'success'}"><div class="stat-number">${res.missing.length}</div><div class="stat-label">Missing IDs</div></div>
-                    <div class="stat-card ${duplicates.length > 0 ? 'danger' : 'success'}"><div class="stat-number">${duplicates.length}</div><div class="stat-label">Duplicate IDs</div></div>
+                    <div class="stat-card">
+                        <div class="stat-number">Rs ${res.stats.total1.toFixed(2)}</div>
+                        <div class="stat-label">Total Src 1</div>
+                        <div class="stat-meta">${res.stats.count1} entries</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">Rs ${res.stats.total2.toFixed(2)}</div>
+                        <div class="stat-label">Total Src 2</div>
+                        <div class="stat-meta">${res.stats.count2} entries</div>
+                    </div>
+                    <div class="stat-card success">
+                        <div class="stat-number">${res.matching.length}</div>
+                        <div class="stat-label">Matching IDs</div>
+                    </div>
+                    <div class="stat-card ${res.stats.totalDiff > 0.01 ? 'warning' : 'success'}">
+                        <div class="stat-number">Rs ${res.stats.totalDiff.toFixed(2)}</div>
+                        <div class="stat-label">Total Difference</div>
+                    </div>
+                    <div class="stat-card ${res.missing.length > 0 ? 'danger' : 'success'}">
+                        <div class="stat-number">${res.missing.length}</div>
+                        <div class="stat-label">Missing IDs</div>
+                    </div>
+                    <div class="stat-card ${duplicates.length > 0 ? 'danger' : 'success'}">
+                        <div class="stat-number">${duplicates.length}</div>
+                        <div class="stat-label">Duplicate IDs</div>
+                    </div>
                 </div>
                 ${renderTable('matching', res.matching, res.sortState.matching)}
                 ${renderTable('missing', res.missing, res.sortState.missing)}
                 ${renderTable('duplicates', duplicates, res.sortState.duplicates)}
-                <div class="export-section"><button class="export-btn" id="export-excel-btn">📊 Export Full Report (Excel)</button></div>`;
+                <div class="export-section">
+                    <button class="export-btn" id="export-excel-btn">📊 Export Full Report (Excel)</button>
+                </div>`;
             resultsContainer.classList.remove('hidden');
         }
 
         function renderTable(type, data, sortState = {}) {
             if (!data.length) return '';
-            const titles = { matching: '🟢 Matching App IDs', missing: '🔴 Missing App IDs', duplicates: '⚠️ Duplicate App IDs' };
-            const headers = {
-                matching: [{k:'appId',n:'App ID'}, {k:'branding',n:'Source'}, {k:'status',n:'Status'}, {k:'amount1',n:'Amount (Src 1)'}, {k:'amount2',n:'Amount (Src 2)'}, {k:'difference',n:'Difference'}, {k:'date1',n:'Date (Src 1)'}, {k:'date2',n:'Date (Src 2)'}],
-                missing: [{k:'appId',n:'App ID'}, {k:'missingFrom',n:'Missing From'}, {k:'amount',n:'Amount'}, {k:'paid', n:'Paid Status'}, {k:'branding',n:'Source'}],
-                duplicates: [{k:'appId',n:'App ID'}, {k:'source',n:'Source'}, {k:'count',n:'Count'}]
+            
+            const titles = {
+                matching: '🟢 Matching App IDs',
+                missing: '🔴 Missing App IDs',
+                duplicates: '⚠️ Duplicate App IDs'
             };
-            const rowClass = { matching: r => r.status !== 'Match' ? 'highlight-mismatch' : '', missing: 'highlight-missing', duplicates: 'highlight-mismatch' };
+            
+            const headers = {
+                matching: [
+                    {k:'appId', n:'App ID'},
+                    {k:'branding', n:'Source'},
+                    {k:'status', n:'Status'},
+                    {k:'amount1', n:'Amount (Src 1)'},
+                    {k:'amount2', n:'Amount (Src 2)'},
+                    {k:'difference', n:'Difference'},
+                    {k:'date1', n:'Date (Src 1)'},
+                    {k:'date2', n:'Date (Src 2)'}
+                ],
+                missing: [
+                    {k:'appId', n:'App ID'},
+                    {k:'missingFrom', n:'Missing From'},
+                    {k:'amount', n:'Amount'},
+                    {k:'paid', n:'Paid Status'},
+                    {k:'branding', n:'Source'}
+                ],
+                duplicates: [
+                    {k:'appId', n:'App ID'},
+                    {k:'source', n:'Source'},
+                    {k:'count', n:'Count'}
+                ]
+            };
+            
+            const rowClass = {
+                matching: r => r.status !== 'Match' ? 'highlight-mismatch' : '',
+                missing: 'highlight-missing',
+                duplicates: 'highlight-mismatch'
+            };
             
             const headerHtml = headers[type].map(h => {
                 const isSorted = sortState.key === h.k;
@@ -388,42 +604,105 @@
             }).join('');
 
             const bodyHtml = data.map(r => {
-                const rowContent = {
-                    matching: `<td><strong>${r.appId}</strong></td><td>${r.branding || ''}</td><td><span class="status-badge ${r.status.toLowerCase().replace(' ','-')}">${r.status}</span></td><td>Rs ${r.amount1.toFixed(2)}</td><td>Rs ${r.amount2.toFixed(2)}</td><td>Rs ${r.difference.toFixed(2)}</td><td>${DATE_UTILS.formatDisplay(r.date1)}</td><td>${DATE_UTILS.formatDisplay(r.date2)}</td>`,
-                    missing: `<td><strong>${r.appId}</strong></td><td>${r.missingFrom}</td><td>Rs ${r.amount.toFixed(2)}</td><td>${r.paid === null || r.paid === undefined ? 'N/A' : r.paid}</td><td>${r.branding || ''}</td>`,
-                    duplicates: `<td><strong>${r.appId}</strong></td><td>${r.source}</td><td>${r.count}</td>`
-                };
-                return `<tr class="${typeof rowClass[type] === 'function' ? rowClass[type](r) : rowClass[type]}">${rowContent[type]}</tr>`;
+                let rowContent = '';
+                const rowClassStr = typeof rowClass[type] === 'function' ? rowClass[type](r) : rowClass[type];
+                
+                if (type === 'matching') {
+                    rowContent = `
+                        <td><strong>${safeString(r.appId)}</strong></td>
+                        <td>${safeString(r.branding)}</td>
+                        <td><span class="status-badge ${r.status.toLowerCase().replace(' ', '-')}">${r.status}</span></td>
+                        <td>Rs ${safeNumber(r.amount1).toFixed(2)}</td>
+                        <td>Rs ${safeNumber(r.amount2).toFixed(2)}</td>
+                        <td>Rs ${safeNumber(r.difference).toFixed(2)}</td>
+                        <td>${DATE_UTILS.formatDisplay(r.date1)}</td>
+                        <td>${DATE_UTILS.formatDisplay(r.date2)}</td>`;
+                } else if (type === 'missing') {
+                    rowContent = `
+                        <td><strong>${safeString(r.appId)}</strong></td>
+                        <td>${safeString(r.missingFrom)}</td>
+                        <td>Rs ${safeNumber(r.amount).toFixed(2)}</td>
+                        <td>${r.paid === null || r.paid === undefined ? 'N/A' : safeString(r.paid)}</td>
+                        <td>${safeString(r.branding)}</td>`;
+                } else if (type === 'duplicates') {
+                    rowContent = `
+                        <td><strong>${safeString(r.appId)}</strong></td>
+                        <td>${safeString(r.source)}</td>
+                        <td>${safeNumber(r.count)}</td>`;
+                }
+                
+                return `<tr class="${rowClassStr}">${rowContent}</tr>`;
             }).join('');
 
-            return `<div class="table-container">
-                <div class="table-header"><span class="table-title">${titles[type]} (${data.length})</span><button class="view-btn" data-view-type="${type}">Open Full View</button></div>
-                <div class="table-wrapper"><table><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table></div>
-            </div>`;
+            return `
+                <div class="table-container">
+                    <div class="table-header">
+                        <span class="table-title">${titles[type]} (${data.length})</span>
+                        <button class="view-btn" data-view-type="${type}">Open Full View</button>
+                    </div>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead><tr>${headerHtml}</tr></thead>
+                            <tbody>${bodyHtml}</tbody>
+                        </table>
+                    </div>
+                </div>`;
         }
         
         // === EXPORT & VIEW ===
         function exportToExcel() {
             if (!analysisResults) return;
-            const wb = XLSX.utils.book_new();
-            const res = analysisResults;
-            const duplicates = [...res.duplicates1, ...res.duplicates2];
-
-            const wsMatching = XLSX.utils.json_to_sheet(res.matching.map(r=>({'App ID': r.appId, 'Source': r.branding, 'Status': r.status, 'Amount Src 1': r.amount1, 'Amount Src 2': r.amount2, 'Difference': r.difference, 'Date Src 1': r.date1, 'Date Src 2': r.date2 })));
-            addDateFormatting(wsMatching, ['G', 'H']);
-            XLSX.utils.book_append_sheet(wb, wsMatching, 'Matching');
             
-            const wsMissing = XLSX.utils.json_to_sheet(res.missing.map(r=>({'App ID': r.appId, 'Missing From': r.missingFrom, 'Amount': r.amount, 'Paid Status': r.paid, 'Source': r.branding, 'Date': r.date })));
-            addDateFormatting(wsMissing, ['F']);
-            XLSX.utils.book_append_sheet(wb, wsMissing, 'Missing');
-            
-            if(duplicates.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(duplicates), 'Duplicates');
+            try {
+                const wb = XLSX.utils.book_new();
+                const res = analysisResults;
+                const duplicates = [...res.duplicates1, ...res.duplicates2];
 
-            const timestamp = new Date().toISOString().replace(/[:\-T]/g, '_').slice(0, 17);
-            XLSX.writeFile(wb, `AppID_Analysis_${timestamp}.xlsx`);
+                // Matching sheet
+                const matchingData = res.matching.map(r => ({
+                    'App ID': r.appId,
+                    'Source': r.branding,
+                    'Status': r.status,
+                    'Amount Src 1': safeNumber(r.amount1),
+                    'Amount Src 2': safeNumber(r.amount2),
+                    'Difference': safeNumber(r.difference),
+                    'Date Src 1': r.date1,
+                    'Date Src 2': r.date2
+                }));
+                const wsMatching = XLSX.utils.json_to_sheet(matchingData);
+                addDateFormatting(wsMatching, ['G', 'H']);
+                XLSX.utils.book_append_sheet(wb, wsMatching, 'Matching');
+                
+                // Missing sheet
+                const missingData = res.missing.map(r => ({
+                    'App ID': r.appId,
+                    'Missing From': r.missingFrom,
+                    'Amount': safeNumber(r.amount),
+                    'Paid Status': r.paid || 'N/A',
+                    'Source': r.branding,
+                    'Date': r.date
+                }));
+                const wsMissing = XLSX.utils.json_to_sheet(missingData);
+                addDateFormatting(wsMissing, ['F']);
+                XLSX.utils.book_append_sheet(wb, wsMissing, 'Missing');
+                
+                // Duplicates sheet
+                if (duplicates.length) {
+                    const wsDuplicates = XLSX.utils.json_to_sheet(duplicates);
+                    XLSX.utils.book_append_sheet(wb, wsDuplicates, 'Duplicates');
+                }
+
+                const timestamp = new Date().toISOString().replace(/[:\-T]/g, '_').slice(0, 17);
+                XLSX.writeFile(wb, `AppID_Analysis_${timestamp}.xlsx`);
+                showSuccess('Report exported successfully!');
+            } catch (error) {
+                showError(`Export failed: ${error.message}`);
+            }
         }
         
         function addDateFormatting(worksheet, dateColumns) {
+            if (!worksheet['!ref']) return;
+            
             const range = XLSX.utils.decode_range(worksheet['!ref']);
             for (let R = range.s.r + 1; R <= range.e.r; ++R) {
                 dateColumns.forEach(colLetter => {
@@ -439,53 +718,100 @@
 
         function openFullView(type) {
             if (!analysisResults) return;
+            
             const res = analysisResults;
             const duplicates = [...res.duplicates1, ...res.duplicates2];
-            const dataMap = { matching: res.matching, missing: res.missing, duplicates };
+            const dataMap = {
+                matching: res.matching,
+                missing: res.missing,
+                duplicates
+            };
             const data = dataMap[type];
+            
             if (!data || !data.length) return;
 
             const tableHtml = renderTable(type, data, res.sortState[type]);
             const newWindow = window.open("", "_blank");
-            newWindow.document.write(`<html><head><title>Full View: ${type}</title><style>body{font-family:sans-serif;padding:20px} table{width:100%;border-collapse:collapse} th,td{padding:8px;border:1px solid #ddd;text-align:left;white-space:nowrap;}</style></head><body>${tableHtml}</body></html>`);
-            newWindow.document.close();
+            if (newWindow) {
+                newWindow.document.write(`
+                    <html>
+                        <head>
+                            <title>Full View: ${type}</title>
+                            <style>
+                                body { font-family: sans-serif; padding: 20px; }
+                                table { width: 100%; border-collapse: collapse; }
+                                th, td { padding: 8px; border: 1px solid #ddd; text-align: left; white-space: nowrap; }
+                                th { background: #f5f5f5; font-weight: bold; }
+                                .highlight-mismatch { background: #fef2f2; }
+                                .highlight-missing { background: #fef3c7; }
+                                .status-badge { padding: 2px 6px; border-radius: 4px; font-size: 0.8em; }
+                                .status-badge.match { background: #d1fae5; color: #065f46; }
+                                .status-badge.amount-mismatch { background: #fee2e2; color: #991b1b; }
+                            </style>
+                        </head>
+                        <body>${tableHtml}</body>
+                    </html>`);
+                newWindow.document.close();
+            }
         }
 
         // === EVENT LISTENERS SETUP ===
-        async function handleFileInput(files, targetId, isMulti) {
+        async function handleFileSelection(files, isSource1) {
             if (!files.length) return;
 
+            const targetId = isSource1 ? '1' : '2';
             const uploadBox = document.getElementById(`upload-box-${targetId}`);
             const fileInfo = document.getElementById(`file-info-${targetId}`);
-            const dynamicContainer = document.getElementById(isMulti ? 'source1-dynamic' : 'source2-manual');
+            const dynamicContainer = document.getElementById(isSource1 ? 'source1-dynamic' : 'source2-manual');
 
+            // Update UI
             uploadBox.classList.add('has-files');
-            fileInfo.textContent = isMulti ? `${files.length} file(s) selected` : files[0].name;
+            fileInfo.textContent = isSource1 ? `${files.length} file(s) selected` : files[0].name;
             fileInfo.classList.remove('hidden');
-            dynamicContainer.innerHTML = '<div class="loading">🔄 Processing file(s)...</div>';
-            if (isMulti) source1Files = []; else source2File = null;
+            dynamicContainer.innerHTML = '<div class="processing">🔄 Processing files...</div>';
 
-            const fileReadPromises = files.map((file, index) => new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    try {
-                        const workbook = XLSX.read(event.target.result, { type: 'binary', cellDates: true });
-                        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-                        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
-                        const headers = jsonData[0] || [];
-                        const sample = jsonData.slice(1, 16);
-                        const cols = autoDetectColumns(headers, sample);
-                        resolve({ file, data: jsonData, headers, cols, branding: String.fromCharCode(65 + index) });
-                    } catch (err) { reject(new Error(`Error parsing ${file.name}: ${err.message}`)); }
-                };
-                reader.onerror = () => reject(new Error(`Failed to read ${file.name}`));
-                reader.readAsArrayBuffer(file);
-            }));
+            // Reset data
+            if (isSource1) {
+                source1Files = [];
+            } else {
+                source2File = null;
+            }
 
             try {
-                const results = await Promise.all(fileReadPromises);
+                const filePromises = Array.from(files).map((file, index) => {
+                    return new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            try {
+                                const workbook = XLSX.read(event.target.result, { type: 'binary', cellDates: true });
+                                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
+                                const headers = jsonData[0] || [];
+                                const sample = jsonData.slice(1, 16);
+                                const cols = autoDetectColumns(headers, sample);
+                                
+                                resolve({
+                                    file,
+                                    data: jsonData,
+                                    headers,
+                                    cols,
+                                    branding: String.fromCharCode(65 + index)
+                                });
+                            } catch (err) {
+                                reject(new Error(`Failed to parse ${file.name}: ${err.message}`));
+                            }
+                        };
+                        reader.onerror = () => reject(new Error(`Failed to read ${file.name}`));
+                        reader.readAsArrayBuffer(file);
+                    });
+                });
+
+                const results = await Promise.all(filePromises);
+                
+                // Clear processing message
                 dynamicContainer.innerHTML = '';
-                if (isMulti) {
+
+                if (isSource1) {
                     source1Files = results;
                     results.forEach(fileData => {
                         const container = document.createElement('div');
@@ -493,10 +819,14 @@
                         container.innerHTML = `<h4 class="section-title">📄 Column Mapping for ${fileData.file.name}</h4>`;
                         renderColumnSelectors(container, fileData.headers, fileData.cols);
                         dynamicContainer.appendChild(container);
-                        container.querySelectorAll('.col-select').forEach(sel => sel.addEventListener('change', (ev) => {
-                            fileData.cols[ev.target.dataset.col] = ev.target.value === '' ? null : +ev.target.value;
-                            ValidationState.update();
-                        }));
+                        
+                        // Add event listeners
+                        container.querySelectorAll('.col-select').forEach(sel => {
+                            sel.addEventListener('change', (ev) => {
+                                fileData.cols[ev.target.dataset.col] = ev.target.value === '' ? null : parseInt(ev.target.value);
+                                ValidationState.update();
+                            });
+                        });
                     });
                 } else {
                     source2File = results[0];
@@ -506,36 +836,61 @@
                     renderColumnSelectors(container, source2File.headers, source2File.cols);
                     dynamicContainer.appendChild(container);
                     dynamicContainer.classList.remove('hidden');
-                    container.querySelectorAll('.col-select').forEach(sel => sel.addEventListener('change', (ev) => {
-                        source2File.cols[ev.target.dataset.col] = ev.target.value === '' ? null : +ev.target.value;
-                        ValidationState.update();
-                    }));
+                    
+                    // Add event listeners
+                    container.querySelectorAll('.col-select').forEach(sel => {
+                        sel.addEventListener('change', (ev) => {
+                            source2File.cols[ev.target.dataset.col] = ev.target.value === '' ? null : parseInt(ev.target.value);
+                            ValidationState.update();
+                        });
+                    });
                 }
-            } catch (err) {
-                showError(err.message);
+
+                ValidationState.update();
+                
+            } catch (error) {
+                showError(error.message);
                 dynamicContainer.innerHTML = '';
-            } finally {
                 ValidationState.update();
             }
         }
 
         function setupEventListeners() {
+            // File upload buttons
             document.getElementById('upload-btn-1').addEventListener('click', () => fileInput1.click());
             document.getElementById('upload-btn-2').addEventListener('click', () => fileInput2.click());
+            
+            // Analyze button
             analyzeBtn.addEventListener('click', analyzeData);
 
-            fileInput1.addEventListener('change', (e) => handleFileInput(Array.from(e.target.files), '1', true));
-            fileInput2.addEventListener('change', (e) => handleFileInput(Array.from(e.target.files), '2', false));
+            // File inputs
+            fileInput1.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleFileSelection(e.target.files, true);
+                }
+            });
 
+            fileInput2.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleFileSelection(e.target.files, false);
+                }
+            });
+
+            // Results interactions
             resultsContainer.addEventListener('click', (e) => {
+                // Table sorting
                 const header = e.target.closest('th[data-key]');
-                if (header) {
+                if (header && analysisResults) {
                     const key = header.dataset.key;
                     const type = header.dataset.type;
                     const currentSort = analysisResults.sortState[type] || {};
                     const dir = (currentSort.key === key && currentSort.dir === 'asc') ? 'desc' : 'asc';
                     
-                    const dataMap = { matching: analysisResults.matching, missing: analysisResults.missing, duplicates: [...analysisResults.duplicates1, ...analysisResults.duplicates2]};
+                    const dataMap = {
+                        matching: analysisResults.matching,
+                        missing: analysisResults.missing,
+                        duplicates: [...analysisResults.duplicates1, ...analysisResults.duplicates2]
+                    };
                     
                     dataMap[type] = _.orderBy(dataMap[type], [key], [dir]);
                     
@@ -548,16 +903,26 @@
 
                     analysisResults.sortState[type] = { key, dir };
                     renderResults(analysisResults);
+                    return;
                 }
-                const viewButton = e.target.closest('.view-btn[data-view-type]');
-                if (viewButton) openFullView(viewButton.dataset.viewType);
                 
+                // Full view button
+                const viewButton = e.target.closest('.view-btn[data-view-type]');
+                if (viewButton) {
+                    openFullView(viewButton.dataset.viewType);
+                    return;
+                }
+                
+                // Export button
                 const exportButton = e.target.closest('#export-excel-btn');
-                if (exportButton) exportToExcel();
+                if (exportButton) {
+                    exportToExcel();
+                    return;
+                }
             });
         }
         
-        function updateUserInfo(){
+        function updateUserInfo() {
             const now = new Date();
             const utcString = now.toISOString().slice(0, 19).replace('T', ' ');
             document.getElementById('user-info').textContent = `User: ksismad | UTC ${utcString}`;
@@ -567,6 +932,9 @@
         setupEventListeners();
         ValidationState.update();
         updateUserInfo();
+        
+        // Update time every second
+        setInterval(updateUserInfo, 1000);
     });
     </script>
 </body>
