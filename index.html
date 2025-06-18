@@ -169,35 +169,52 @@
         const analyzeBtn = document.getElementById('analyze-btn');
         const resultsContainer = document.getElementById('results');
 
-        // === CORE DATE UTILITIES ===
+        // === CORE DATE UTILITIES (ROBUST VERSION) ===
         const DATE_UTILS = {
-            excelSerialToUTC(serial) {
-                if (typeof serial !== 'number' || serial < 0) return null;
-                const excelEpoch = Date.UTC(1899, 11, 30);
-                const msPerDay = 86400000;
-                return new Date(excelEpoch + serial * msPerDay);
+            excelSerialToDate(serial) {
+                // This formula is a robust way to convert Excel serial numbers (from 1900 epoch)
+                // to a JS Date object, correctly handling the 1900 leap year bug.
+                // 25569 is the number of days between 1970-01-01 (JS epoch) and 1900-01-01 (Excel epoch).
+                if(typeof serial !== 'number') return null;
+                return new Date((serial - 25569) * 86400000);
             },
-            parseToUTC(val) {
-                if (!val) return null;
-                if (val instanceof Date) return new Date(Date.UTC(val.getUTCFullYear(), val.getUTCMonth(), val.getUTCDate()));
-                if (typeof val === 'number' && val > 20000) return this.excelSerialToUTC(val);
-                const str = String(val).trim();
-                if (/^\d{5,}(\.\d+)?$/.test(str)) return this.excelSerialToUTC(parseFloat(str));
-                let match;
-                if (match = str.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/)) return new Date(Date.UTC(+match[3], +match[2] - 1, +match[1]));
-                if (match = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/)) return new Date(Date.UTC(+match[1], +match[2] - 1, +match[3]));
-                const d = new Date(str);
-                return isNaN(d.valueOf()) ? null : new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+            parseToDate(val) {
+                if (!val && val !== 0) return null;
+
+                // Handle numbers (likely Excel serial dates)
+                if (typeof val === 'number') {
+                    if (val > 60) { // Excel serial dates are large numbers
+                        return this.excelSerialToDate(val);
+                    }
+                    return null; // Don't interpret small numbers as dates
+                }
+                
+                // Handle strings
+                if (typeof val === 'string') {
+                    const str = val.trim();
+                    if (!str) return null;
+                    
+                    // Check for ISO format (YYYY-MM-DD) or common variations
+                    let d = new Date(str);
+                    if (!isNaN(d.valueOf())) {
+                        return d;
+                    }
+                }
+                
+                return null; // Return null if no valid date found
             },
             formatDisplay(d) {
                 if (!d || isNaN(d.valueOf())) return "";
-                return `${String(d.getUTCDate()).padStart(2,'0')}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${d.getUTCFullYear()}`;
+                const date = new Date(d); // Ensure it's a date object
+                return `${String(date.getUTCDate()).padStart(2,'0')}-${String(date.getUTCMonth()+1).padStart(2,'0')}-${date.getUTCFullYear()}`;
             },
             parseDateInput(v) {
-                return v ? new Date(Date.UTC(new Date(v).getFullYear(), new Date(v).getMonth(), new Date(v).getDate())) : null;
+                return v ? new Date(v) : null;
             },
             getEndOfDay(d) {
-                return d ? new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 23, 59, 59, 999)) : null;
+                if(!d) return null;
+                d.setUTCHours(23, 59, 59, 999);
+                return d;
             }
         };
 
@@ -235,7 +252,7 @@
             
             const dateScores = Array(headers.length).fill(0);
             sample.slice(0, 15).forEach(row => {
-                row.forEach((cell, i) => { if (DATE_UTILS.parseToUTC(cell)) dateScores[i]++; });
+                row.forEach((cell, i) => { if (DATE_UTILS.parseToDate(cell)) dateScores[i]++; });
             });
             const bestDateIndex = dateScores.indexOf(Math.max(...dateScores));
             if (bestDateIndex > -1 && dateScores[bestDateIndex] > 0) cols.date = bestDateIndex;
@@ -253,7 +270,7 @@
                     appId: String(row[cols.appId]).trim(),
                     amount: parseFloat(row[cols.amount]) || 0,
                     paid: cols.paid !== null ? row[cols.paid] : null,
-                    date: cols.date !== null ? DATE_UTILS.parseToUTC(row[cols.date]) : null
+                    date: cols.date !== null ? DATE_UTILS.parseToDate(row[cols.date]) : null
                 });
             }
             return processed;
@@ -390,7 +407,7 @@
 
             const bodyHtml = data.map(r => `<tr class="${typeof rowClass[type] === 'function' ? rowClass[type](r) : rowClass[type]}">
                 ${type === 'matching' ? `<td><strong>${r.appId}</strong></td><td>${r.branding || ''}</td><td><span class="status-badge ${r.status.toLowerCase().replace(' ','-')}">${r.status}</span></td><td>Rs ${r.amount1.toFixed(2)}</td><td>Rs ${r.amount2.toFixed(2)}</td><td>Rs ${r.difference.toFixed(2)}</td>` : ''}
-                ${type === 'missing' ? `<td><strong>${r.appId}</strong></td><td>${r.missingFrom}</td><td>Rs ${r.amount.toFixed(2)}</td><td>${r.paid || 'N/A'}</td><td>${r.branding || ''}</td>` : ''}
+                ${type === 'missing' ? `<td><strong>${r.appId}</strong></td><td>${r.missingFrom}</td><td>Rs ${r.amount.toFixed(2)}</td><td>${r.paid === null || r.paid === undefined ? 'N/A' : r.paid}</td><td>${r.branding || ''}</td>` : ''}
                 ${type === 'duplicates' ? `<td><strong>${r.appId}</strong></td><td>${r.source}</td><td>${r.count}</td>` : ''}
             </tr>`).join('');
 
@@ -421,7 +438,7 @@
             if(duplicates.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(duplicates), 'Duplicates');
 
             const timestamp = new Date().toISOString().replace(/[:\-T]/g, '_').slice(0, 17);
-            XLSX.writeFile(wb, `AppID_Analysis_${timestamp}.xlsx`, { cellDates: true });
+            XLSX.writeFile(wb, `AppID_Analysis_${timestamp}.xlsx`);
         }
         
         function addDateFormatting(worksheet, dateColumns) {
@@ -430,9 +447,9 @@
                 dateColumns.forEach(colLetter => {
                     const cellAddress = colLetter + (R + 1);
                     const cell = worksheet[cellAddress];
-                    if (cell && cell.v) {
+                    if (cell && cell.v instanceof Date) {
                         cell.t = 'd';
-                        cell.z = 'dd-mm-yyyy';
+                        cell.z = 'dd-mm-yyyy'; // Apply the desired format
                     }
                 });
             }
@@ -474,9 +491,9 @@
                     const reader = new FileReader();
                     reader.onload = (event) => {
                         try {
-                            const workbook = XLSX.read(event.target.result, { type: 'binary' });
+                            const workbook = XLSX.read(event.target.result, { type: 'binary', cellDates: true });
                             const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-                            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false }); // raw:false helps with dates
                             const headers = jsonData[0] || [];
                             const sample = jsonData.slice(1, 16);
                             const cols = autoDetectColumns(headers, sample);
@@ -495,7 +512,7 @@
                         processedCount++;
                         if (processedCount === files.length) ValidationState.update();
                     };
-                    reader.readAsBinaryString(file);
+                    reader.readAsArrayBuffer(file);
                 });
             });
 
@@ -508,9 +525,9 @@
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     try {
-                        const workbook = XLSX.read(event.target.result, { type: 'binary' });
+                        const workbook = XLSX.read(event.target.result, { type: 'binary', cellDates: true });
                         const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-                        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
                         const headers = jsonData[0] || [];
                         const sample = jsonData.slice(1, 16);
                         const cols = autoDetectColumns(headers, sample);
@@ -526,7 +543,7 @@
                         ValidationState.update();
                     } catch (err) { showError(`Error reading ${file.name}: ${err.message}`); }
                 };
-                reader.readAsBinaryString(file);
+                reader.readAsArrayBuffer(file);
             });
 
             resultsContainer.addEventListener('click', (e) => {
