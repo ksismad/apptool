@@ -219,10 +219,41 @@
             box-shadow: 0 20px 25px -5px rgba(16, 185, 129, 0.4);
         }
         .analyze-btn:disabled {
-            background: #9ca3af;
+            background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
             cursor: not-allowed;
             transform: none;
-            box-shadow: none;
+            box-shadow: 0 4px 6px -1px rgba(156, 163, 175, 0.3);
+            color: #f3f4f6;
+        }
+        
+        .validation-status {
+            background: #f3f4f6;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            border: 1px solid #e5e7eb;
+        }
+        .validation-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 0.875rem;
+        }
+        .validation-item:last-child {
+            margin-bottom: 0;
+        }
+        .validation-item.valid {
+            color: #059669;
+        }
+        .validation-item.invalid {
+            color: #dc2626;
+        }
+        .validation-item.valid::before {
+            content: "✅";
+        }
+        .validation-item.invalid::before {
+            content: "❌";
         }
         
         .stats-grid {
@@ -402,7 +433,7 @@
 <div class="container">
     <div class="header">
         <div class="user-info">
-            User: ksismad | UTC: 2025-06-18 14:39:56
+            User: ksismad | UTC: 2025-06-18 14:51:38
         </div>
         <h1>App ID Analyzer</h1>
         <p>
@@ -483,8 +514,18 @@
         <div id="source1-dynamic"></div>
         <div id="source2-manual" class="hidden"></div>
 
+        <!-- Validation Status Panel -->
+        <div id="validation-status" class="validation-status">
+            <div id="validation-items">
+                <div class="validation-item invalid">Select Source 1 files</div>
+                <div class="validation-item invalid">Select Source 2 file</div>
+                <div class="validation-item invalid">Configure Source 1 columns</div>
+                <div class="validation-item invalid">Configure Source 2 columns</div>
+            </div>
+        </div>
+
         <button id="analyze-btn" class="analyze-btn" disabled onclick="analyzeData()">
-            🔍 Analyze Data
+            📋 Please Select Files and Configure Columns
         </button>
 
         <div id="error-container"></div>
@@ -616,6 +657,83 @@ let source1Files = [];
 let source2File = null;
 let analysisResults = null;
 
+// === VALIDATION STATE ===
+const ValidationState = {
+    hasSource1Files: false,
+    hasSource2File: false,
+    source1ColumnsValid: false,
+    source2ColumnsValid: false,
+    
+    update() {
+        // Check Source 1 files
+        this.hasSource1Files = source1Files.length > 0;
+        
+        // Check Source 2 file
+        this.hasSource2File = source2File !== null;
+        
+        // Check Source 1 columns
+        this.source1ColumnsValid = source1Files.length > 0 && 
+            source1Files.every(file => 
+                file.cols.appId !== null && file.cols.amount !== null
+            );
+        
+        // Check Source 2 columns
+        this.source2ColumnsValid = source2File !== null && 
+            source2File.cols.appId !== null && 
+            source2File.cols.amount !== null;
+        
+        this.render();
+        this.updateButton();
+    },
+    
+    render() {
+        const container = document.getElementById('validation-items');
+        
+        const items = [
+            {
+                text: `Source 1 files (${source1Files.length} selected)`,
+                valid: this.hasSource1Files
+            },
+            {
+                text: 'Source 2 file',
+                valid: this.hasSource2File
+            },
+            {
+                text: 'Source 1 columns configured',
+                valid: this.source1ColumnsValid
+            },
+            {
+                text: 'Source 2 columns configured',
+                valid: this.source2ColumnsValid
+            }
+        ];
+        
+        container.innerHTML = items.map(item => 
+            `<div class="validation-item ${item.valid ? 'valid' : 'invalid'}">${item.text}</div>`
+        ).join('');
+    },
+    
+    updateButton() {
+        const button = document.getElementById('analyze-btn');
+        const canAnalyze = this.hasSource1Files && this.hasSource2File && 
+                          this.source1ColumnsValid && this.source2ColumnsValid;
+        
+        button.disabled = !canAnalyze;
+        
+        if (canAnalyze) {
+            button.textContent = '🔍 Analyze Data';
+        } else {
+            let missingItems = [];
+            if (!this.hasSource1Files) missingItems.push('Source 1 files');
+            if (!this.hasSource2File) missingItems.push('Source 2 file');
+            if (!this.source1ColumnsValid && this.hasSource1Files) missingItems.push('Source 1 columns');
+            if (!this.source2ColumnsValid && this.hasSource2File) missingItems.push('Source 2 columns');
+            
+            button.textContent = `📋 Missing: ${missingItems.join(', ')}`;
+        }
+    }
+};
+
 // === COLUMN DETECTION ===
 function autoDetectColumns(headers, sampleRows) {
     const cols = { appId: null, amount: null, date: null, paid: null };
@@ -623,7 +741,7 @@ function autoDetectColumns(headers, sampleRows) {
     // Detect App ID column
     for (let i = 0; i < headers.length; i++) {
         const header = String(headers[i] || '').toLowerCase();
-        if (header.includes('app') && header.includes('id')) {
+        if (header.includes('app') && (header.includes('id') || header.includes('code'))) {
             cols.appId = i;
             break;
         }
@@ -632,7 +750,7 @@ function autoDetectColumns(headers, sampleRows) {
     // Detect Amount column
     for (let i = 0; i < headers.length; i++) {
         const header = String(headers[i] || '').toLowerCase();
-        if (header.includes('amount') || header.includes('total') || header.includes('sum')) {
+        if (header.includes('amount') || header.includes('total') || header.includes('sum') || header.includes('price')) {
             cols.amount = i;
             break;
         }
@@ -644,7 +762,7 @@ function autoDetectColumns(headers, sampleRows) {
     // Detect Paid column
     for (let i = 0; i < headers.length; i++) {
         const header = String(headers[i] || '').toLowerCase();
-        if (header.includes('paid') || header.includes('status')) {
+        if (header.includes('paid') || header.includes('status') || header.includes('payment')) {
             cols.paid = i;
             break;
         }
@@ -757,29 +875,6 @@ function showError(message) {
     }, 5000);
 }
 
-function updateAnalyzeButton() {
-    const analyzeBtn = document.getElementById('analyze-btn');
-    const hasSource1 = source1Files.length > 0;
-    const hasSource2 = source2File !== null;
-    
-    // Check if all required columns are selected
-    const source1Valid = source1Files.every(file => 
-        file.cols.appId !== null && file.cols.amount !== null
-    );
-    const source2Valid = source2File && 
-        source2File.cols.appId !== null && source2File.cols.amount !== null;
-    
-    const canAnalyze = hasSource1 && hasSource2 && source1Valid && source2Valid;
-    
-    analyzeBtn.disabled = !canAnalyze;
-    
-    if (canAnalyze) {
-        analyzeBtn.textContent = '🔍 Analyze Data';
-    } else {
-        analyzeBtn.textContent = 'Please select files and configure columns';
-    }
-}
-
 function renderColumnSelection(index, headers, cols, filename) {
     const container = document.getElementById('source1-dynamic');
     
@@ -788,16 +883,18 @@ function renderColumnSelection(index, headers, cols, filename) {
             <h4>📄 ${filename} (Source 1${String.fromCharCode(65 + index)})</h4>
             <div class="options-grid">
                 <div class="option-group">
-                    <label class="option-label">App ID Column</label>
+                    <label class="option-label">App ID Column *</label>
                     <select class="col-select" data-col="appId">
+                        <option value="">Please select...</option>
                         ${headers.map((h, i) => 
                             `<option value="${i}" ${i === cols.appId ? 'selected' : ''}>${h || `Column ${i + 1}`}</option>`
                         ).join('')}
                     </select>
                 </div>
                 <div class="option-group">
-                    <label class="option-label">Amount Column</label>
+                    <label class="option-label">Amount Column *</label>
                     <select class="col-select" data-col="amount">
+                        <option value="">Please select...</option>
                         ${headers.map((h, i) => 
                             `<option value="${i}" ${i === cols.amount ? 'selected' : ''}>${h || `Column ${i + 1}`}</option>`
                         ).join('')}
@@ -835,8 +932,10 @@ function renderColumnSelection(index, headers, cols, filename) {
             const colType = this.dataset.col;
             const colIndex = this.value === '' ? null : parseInt(this.value);
             
+            console.log(`Source 1 File ${fileIndex} - ${colType} column changed to:`, colIndex);
+            
             source1Files[fileIndex].cols[colType] = colIndex;
-            updateAnalyzeButton();
+            ValidationState.update();
         });
     });
 }
@@ -849,16 +948,18 @@ function renderSource2ColumnSelection(headers, cols) {
             <h4>📄 Source 2 Column Mapping</h4>
             <div class="options-grid">
                 <div class="option-group">
-                    <label class="option-label">App ID Column</label>
+                    <label class="option-label">App ID Column *</label>
                     <select id="source2-appid" class="col-select">
+                        <option value="">Please select...</option>
                         ${headers.map((h, i) => 
                             `<option value="${i}" ${i === cols.appId ? 'selected' : ''}>${h || `Column ${i + 1}`}</option>`
                         ).join('')}
                     </select>
                 </div>
                 <div class="option-group">
-                    <label class="option-label">Amount Column</label>
+                    <label class="option-label">Amount Column *</label>
                     <select id="source2-amount" class="col-select">
+                        <option value="">Please select...</option>
                         ${headers.map((h, i) => 
                             `<option value="${i}" ${i === cols.amount ? 'selected' : ''}>${h || `Column ${i + 1}`}</option>`
                         ).join('')}
@@ -895,8 +996,11 @@ function renderSource2ColumnSelection(headers, cols) {
         select.addEventListener('change', function() {
             const colType = this.id.replace('source2-', '');
             const colIndex = this.value === '' ? null : parseInt(this.value);
+            
+            console.log(`Source 2 - ${colType} column changed to:`, colIndex);
+            
             source2File.cols[colType] = colIndex;
-            updateAnalyzeButton();
+            ValidationState.update();
         });
     });
 }
@@ -952,7 +1056,7 @@ document.getElementById('file1-multi').addEventListener('change', function(e) {
                 filesProcessed++;
                 if (filesProcessed === files.length) {
                     console.log('All Source 1 files processed');
-                    updateAnalyzeButton();
+                    ValidationState.update();
                 }
             } catch (error) {
                 console.error(`Error reading file ${file.name}:`, error);
@@ -1000,7 +1104,7 @@ document.getElementById('file2').addEventListener('change', function(e) {
             };
             
             renderSource2ColumnSelection(headers, cols);
-            updateAnalyzeButton();
+            ValidationState.update();
         } catch (error) {
             console.error(`Error reading file ${file.name}:`, error);
             showError(`Error reading ${file.name}: ${error.message}`);
@@ -1411,77 +1515,4 @@ function exportToCSV(type) {
     let headers = [];
     
     if (type === 'matching') {
-        headers = ['App ID', 'Source', 'Status', 'Amount (Source 1)', 'Amount (Source 2)', 'Difference', 'Dates (Source 1)', 'Dates (Source 2)'];
-        csv = headers.join(',') + '\n';
-        
-        data.forEach(row => {
-            const csvRow = [
-                `"${row.appId}"`,
-                `"${row.branding}"`,
-                `"${row.status}"`,
-                row.amount1,
-                row.amount2,
-                row.difference,
-                `"${row.dates1.map(d => d.display).join(', ')}"`,
-                `"${row.dates2.map(d => d.display).join(', ')}"`,
-            ];
-            csv += csvRow.join(',') + '\n';
-        });
-    } else {
-        headers = ['App ID', 'Missing From', 'Amount', 'Source', 'Dates', 'Present In Rows'];
-        csv = headers.join(',') + '\n';
-        
-        data.forEach(row => {
-            const csvRow = [
-                `"${row.appId}"`,
-                `"${row.missingFrom}"`,
-                row.amount,
-                `"${row.branding}"`,
-                `"${row.dates.map(d => d.display).join(', ')}"`,
-                `"${row.rows}"`
-            ];
-            csv += csvRow.join(',') + '\n';
-        });
-    }
-    
-    const timestamp = new Date().toISOString().replace(/[\-\:\.]/g, '').slice(0, 15);
-    const filename = `AppID_${type === 'matching' ? 'Matching' : 'Missing'}_${timestamp}.csv`;
-    
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.setAttribute('hidden', '');
-    a.setAttribute('href', url);
-    a.setAttribute('download', filename);
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-}
-
-// === UTILITY FUNCTIONS ===
-function formatCurrency(amount) {
-    return 'Rs. ' + amount.toLocaleString('en-IN', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-    });
-}
-
-function openFullView(type) {
-    // This function can be implemented to open a new tab with full data
-    console.log('Opening full view for:', type);
-}
-
-// === INITIALIZATION ===
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('App initialized for user: ksismad at 2025-06-18 14:39:56 UTC');
-    updateAnalyzeButton();
-});
-
-// Test the date utility functions
-console.log('Testing date conversion:');
-console.log('Excel serial 45721.00011574074 ->', DATE_UTILS.excelSerialToUTC(45721.00011574074));
-console.log('Formatted display:', DATE_UTILS.formatDisplay(DATE_UTILS.excelSerialToUTC(45721.00011574074)));
-</script>
-</body>
-</html>
+        headers = ['App ID', 
