@@ -357,16 +357,15 @@
 
         // === UI RENDERING ===
         function showError(msg) { document.getElementById('error-container').innerHTML = `<div class="error-msg">${msg}</div>`; }
-        function showSuccess(msg) { document.getElementById('error-container').innerHTML = `<div class="success-msg">${msg}</div>`; setTimeout(()=>document.getElementById('error-container').innerHTML=[...]
+        function showSuccess(msg) { document.getElementById('error-container').innerHTML = `<div class="success-msg">${msg}</div>`; setTimeout(()=>document.getElementById('error-container').innerHTML = '', 3000) }
 
-        function renderColumnSelectors(parent, headers, cols) {
+        function renderColumnSelectors(headers, cols) {
             const createOptions = (key, noneOption = false) => {
                 let options = noneOption ? '<option value="">None</option>' : '<option value="">Select...</option>';
                 options += headers.map((h, i) => `<option value="${i}" ${cols[key] === i ? 'selected' : ''}>${h || ''}</option>`).join('');
                 return options;
             }
-
-            parent.innerHTML = `
+            return `
                 <div class="options-grid">
                     <div class="option-group"><label class="option-label">App ID Column *</label><select class="col-select" data-col="appId">${createOptions('appId')}</select></div>
                     <div class="option-group"><label class="option-label">Amount Column *</label><select class="col-select" data-col="amount">${createOptions('amount')}</select></div>
@@ -508,7 +507,7 @@
                             const container = document.createElement('div');
                             container.className = 'section';
                             container.innerHTML = `<h4 class="section-title">📄 Column Mapping for ${file.name}</h4>`;
-                            renderColumnSelectors(container, headers, cols);
+                            container.innerHTML += renderColumnSelectors(headers, cols);
                             document.getElementById('source1-dynamic').appendChild(container);
                             container.querySelectorAll('.col-select').forEach(sel => sel.addEventListener('change', (ev) => {
                                 fileData.cols[ev.target.dataset.col] = ev.target.value === '' ? null : +ev.target.value;
@@ -540,7 +539,7 @@
                         source2File = { file, data: jsonData, headers, cols };
                         const container = document.getElementById('source2-manual');
                         container.innerHTML = `<div class="section"><h4 class="section-title">📄 Column Mapping for ${file.name}</h4></div>`;
-                        renderColumnSelectors(container.firstElementChild, headers, cols);
+                        container.firstElementChild.innerHTML += renderColumnSelectors(headers, cols);
                         container.classList.remove('hidden');
                         container.querySelectorAll('.col-select').forEach(sel => sel.addEventListener('change', (ev) => {
                             source2File.cols[ev.target.dataset.col] = ev.target.value === '' ? null : +ev.target.value;
