@@ -102,7 +102,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <div class="user-info">User: ksismad | UTC: 2025-06-18 15:50:08</div>
+            <div class="user-info">User: ksismad | UTC: 2025-06-18 15:59:46</div>
             <h1>🔍 App ID Analyzer</h1>
             <p>Advanced multi-file Excel analysis with sorting, full-view, and comprehensive reporting.</p>
         </div>
@@ -534,6 +534,9 @@
                 const viewButton = e.target.closest('.view-btn[data-view-type]');
                 if (viewButton) {
                     openFullView(viewButton.dataset.viewType);
+                }
+                if (e.target.closest('#export-excel-btn')) {
+                    exportToExcel();
                 }
             });
         }
