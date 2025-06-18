@@ -31,68 +31,351 @@
         }
         .header h1 { margin: 0 0 12px 0; font-size: 2.25rem; }
         .header p { margin: 0; opacity: 0.9; font-size: 1rem; line-height: 1.6; }
-        .user-info { position: absolute; top: 20px; right: 24px; background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px; font-size: 0.875rem; backdrop-filter: blur(10px); }
+        .user-info { 
+            position: absolute; 
+            top: 20px; 
+            right: 24px; 
+            background: rgba(255,255,255,0.2); 
+            padding: 8px 16px; 
+            border-radius: 20px; 
+            font-size: 0.875rem; 
+        }
+        @supports (backdrop-filter: blur(10px)) {
+            .user-info {
+                backdrop-filter: blur(10px);
+            }
+        }
         .main-content { padding: 32px; }
-        .upload-section { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
-        .upload-box { background: #f8fafc; border-radius: 12px; padding: 24px; text-align: center; border: 2px dashed #cbd5e1; transition: all 0.3s ease; }
+        .upload-section { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 24px; 
+            margin-bottom: 32px; 
+        }
+        .upload-box { 
+            background: #f8fafc; 
+            border-radius: 12px; 
+            padding: 24px; 
+            text-align: center; 
+            border: 2px dashed #cbd5e1; 
+            transition: all 0.3s ease; 
+        }
         .upload-box:hover { border-color: #6366f1; transform: translateY(-2px); }
         .upload-box.has-files { border-color: #10b981; background: #ecfdf5; }
-        .upload-btn { margin-top: 16px; border: none; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: #fff; border-radius: 8px; padding: 12px 24px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .upload-btn { 
+            margin-top: 16px; 
+            border: none; 
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); 
+            color: #fff; 
+            border-radius: 8px; 
+            padding: 12px 24px; 
+            font-size: 1rem; 
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
         .upload-btn:hover { transform: translateY(-1px); }
-        .file-info { margin-top: 12px; color: #059669; font-weight: 600; padding: 8px 16px; background: #d1fae5; border-radius: 6px; display: inline-block; }
+        .file-info { 
+            margin-top: 12px; 
+            color: #059669; 
+            font-weight: 600; 
+            padding: 8px 16px; 
+            background: #d1fae5; 
+            border-radius: 6px; 
+            display: inline-block; 
+        }
         .file-input { display: none; }
-        .section { background: #f8fafc; border-radius: 12px; padding: 24px; margin-bottom: 32px; border: 1px solid #e2e8f0; }
-        .section-title { font-size: 1.125rem; font-weight: 600; color: #1e293b; margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px; }
+        .section { 
+            background: #f8fafc; 
+            border-radius: 12px; 
+            padding: 24px; 
+            margin-bottom: 32px; 
+            border: 1px solid #e2e8f0; 
+        }
+        .section-title { 
+            font-size: 1.125rem; 
+            font-weight: 600; 
+            color: #1e293b; 
+            margin: 0 0 16px 0; 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+        }
         .date-filter-grid, .options-grid { display: grid; gap: 24px; }
         .date-filter-grid { grid-template-columns: 1fr 1fr; }
         .options-grid { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
-        .option-group, .date-filter-group { background: #fff; padding: 16px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .option-label, .date-filter-label { font-weight: 600; color: #374151; margin-bottom: 8px; display: block; }
-        .date-range { display: flex; align-items: center; gap: 12px; }
-        .date-input { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.925rem; flex: 1; }
-        .checkbox-group { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-        .col-select { width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.925rem; background: #fff; }
-        .validation-title { font-weight: 600; color: #374151; margin-bottom: 12px; }
-        .validation-item { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 0.875rem; }
-        .validation-item.valid { color: #059669; } .validation-item.invalid { color: #dc2626; }
-        .validation-item.valid::before { content: "✅"; } .validation-item.invalid::before { content: "❌"; }
-        .analyze-btn { width: 100%; padding: 16px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; border-radius: 12px; font-size: 1.125rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+        .option-group, .date-filter-group { 
+            background: #fff; 
+            padding: 16px; 
+            border-radius: 8px; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+        }
+        .option-label, .date-filter-label { 
+            font-weight: 600; 
+            color: #374151; 
+            margin-bottom: 8px; 
+            display: block; 
+        }
+        .date-range { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+        }
+        .date-input { 
+            padding: 8px 12px; 
+            border: 1px solid #d1d5db; 
+            border-radius: 6px; 
+            font-size: 0.925rem; 
+            flex: 1; 
+        }
+        .checkbox-group { 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            margin-bottom: 8px; 
+        }
+        .col-select { 
+            width: 100%; 
+            padding: 8px 12px; 
+            border: 1px solid #d1d5db; 
+            border-radius: 6px; 
+            font-size: 0.925rem; 
+            background: #fff; 
+        }
+        .validation-title { 
+            font-weight: 600; 
+            color: #374151; 
+            margin-bottom: 12px; 
+        }
+        .validation-item { 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            margin-bottom: 8px; 
+            font-size: 0.875rem; 
+        }
+        .validation-item.valid { color: #059669; } 
+        .validation-item.invalid { color: #dc2626; }
+        .validation-item.valid::before { content: "✅"; } 
+        .validation-item.invalid::before { content: "❌"; }
+        .analyze-btn { 
+            width: 100%; 
+            padding: 16px; 
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%); 
+            color: white; 
+            border: none; 
+            border-radius: 12px; 
+            font-size: 1.125rem; 
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
         .analyze-btn:hover:not(:disabled) { transform: translateY(-2px); }
         .analyze-btn:disabled { background: #9ca3af; cursor: not-allowed; }
         .results { margin-top: 32px; }
-        .results-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding: 16px; background: #f8fafc; border-radius: 8px; }
-        .results-title { font-size: 1.5rem; font-weight: 700; color: #1e293b; margin: 0; }
-        .results-meta { font-size: 0.875rem; color: #6b7280; text-align: right; }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
-        .stat-card { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); text-align: center; border-left: 4px solid #6366f1; }
-        .stat-card.success { border-left-color: #10b981; } .stat-card.warning { border-left-color: #f59e0b; } .stat-card.danger { border-left-color: #ef4444; }
-        .stat-number { font-size: 1.875rem; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
-        .stat-label { font-size: 0.875rem; color: #64748b; font-weight: 500; text-transform: uppercase; }
-        .stat-meta { font-size: 0.75rem; color: #94a3b8; margin-top: 4px; }
-        .table-container { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin-bottom: 24px; }
-        .table-header { background: #f8fafc; padding: 16px 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
-        .table-title { font-size: 1.125rem; font-weight: 600; color: #1e293b; }
-        .table-wrapper { overflow-x: auto; max-height: 500px; overflow-y: auto; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 0.875rem; white-space: nowrap; }
-        th { background: #f8fafc; font-weight: 600; color: #374151; position: sticky; top: 0; cursor: pointer; user-select: none; }
-        th .sort-arrow { display: inline-block; margin-left: 5px; opacity: 0.5; }
+        .results-header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 24px; 
+            padding: 16px; 
+            background: #f8fafc; 
+            border-radius: 8px; 
+        }
+        .results-title { 
+            font-size: 1.5rem; 
+            font-weight: 700; 
+            color: #1e293b; 
+            margin: 0; 
+        }
+        .results-meta { 
+            font-size: 0.875rem; 
+            color: #6b7280; 
+            text-align: right; 
+        }
+        .stats-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+            gap: 16px; 
+            margin-bottom: 32px; 
+        }
+        .stat-card { 
+            background: #fff; 
+            padding: 20px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); 
+            text-align: center; 
+            border-left: 4px solid #6366f1; 
+        }
+        .stat-card.success { border-left-color: #10b981; } 
+        .stat-card.warning { border-left-color: #f59e0b; } 
+        .stat-card.danger { border-left-color: #ef4444; }
+        .stat-number { 
+            font-size: 1.875rem; 
+            font-weight: 700; 
+            color: #1e293b; 
+            margin-bottom: 4px; 
+        }
+        .stat-label { 
+            font-size: 0.875rem; 
+            color: #64748b; 
+            font-weight: 500; 
+            text-transform: uppercase; 
+        }
+        .stat-meta { 
+            font-size: 0.75rem; 
+            color: #94a3b8; 
+            margin-top: 4px; 
+        }
+        .table-container { 
+            background: #fff; 
+            border-radius: 12px; 
+            overflow: hidden; 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); 
+            margin-bottom: 24px; 
+        }
+        .table-header { 
+            background: #f8fafc; 
+            padding: 16px 24px; 
+            border-bottom: 1px solid #e2e8f0; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
+        .table-title { 
+            font-size: 1.125rem; 
+            font-weight: 600; 
+            color: #1e293b; 
+        }
+        .table-wrapper { 
+            overflow-x: auto; 
+            max-height: 500px; 
+            overflow-y: auto; 
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+        }
+        th, td { 
+            padding: 12px 16px; 
+            text-align: left; 
+            border-bottom: 1px solid #e2e8f0; 
+            font-size: 0.875rem; 
+            white-space: nowrap; 
+        }
+        th { 
+            background: #f8fafc; 
+            font-weight: 600; 
+            color: #374151; 
+            position: sticky; 
+            top: 0; 
+            cursor: pointer; 
+            user-select: none; 
+        }
+        th .sort-arrow { 
+            display: inline-block; 
+            margin-left: 5px; 
+            opacity: 0.5; 
+        }
         th.sorted .sort-arrow { opacity: 1; }
         tr:hover { background: #f8fafc; }
         .highlight-mismatch { background: #fef2f2; }
         .highlight-missing { background: #fef3c7; }
-        .status-badge { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
-        .status-badge.match { background: #d1fae5; color: #065f46; }
-        .status-badge.amount-mismatch { background: #fee2e2; color: #991b1b; }
-        .export-section { display: flex; gap: 16px; justify-content: center; margin-top: 32px; flex-wrap: wrap; }
-        .export-btn, .view-btn { padding: 12px 24px; background: #1e293b; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-        .export-btn:hover, .view-btn:hover { background: #334155; transform: translateY(-1px); }
+        .status-badge { 
+            padding: 4px 8px; 
+            border-radius: 12px; 
+            font-size: 0.75rem; 
+            font-weight: 600; 
+            text-transform: uppercase; 
+        }
+        .status-badge.match { 
+            background: #d1fae5; 
+            color: #065f46; 
+        }
+        .status-badge.amount-mismatch { 
+            background: #fee2e2; 
+            color: #991b1b; 
+        }
+        .export-section { 
+            display: flex; 
+            gap: 16px; 
+            justify-content: center; 
+            margin-top: 32px; 
+            flex-wrap: wrap; 
+        }
+        .export-btn, .view-btn { 
+            padding: 12px 24px; 
+            background: #1e293b; 
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            font-weight: 600; 
+            cursor: pointer; 
+            transition: all 0.2s; 
+        }
+        .export-btn:hover, .view-btn:hover { 
+            background: #334155; 
+            transform: translateY(-1px); 
+        }
         .view-btn { background: #4f46e5; }
-        .error-msg, .success-msg { padding: 12px 16px; border-radius: 8px; margin: 16px 0; border-left-width: 4px; border-left-style: solid; }
-        .error-msg { color: #dc2626; background: #fef2f2; border-color: #dc2626; }
-        .success-msg { color: #059669; background: #ecfdf5; border-color: #059669; }
-        .loading { text-align: center; padding: 40px; color: #6b7280; }
+        .error-msg, .success-msg { 
+            padding: 12px 16px; 
+            border-radius: 8px; 
+            margin: 16px 0; 
+            border-left-width: 4px; 
+            border-left-style: solid; 
+        }
+        .error-msg { 
+            color: #dc2626; 
+            background: #fef2f2; 
+            border-color: #dc2626; 
+        }
+        .success-msg { 
+            color: #059669; 
+            background: #ecfdf5; 
+            border-color: #059669; 
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .loading { 
+            text-align: center; 
+            padding: 40px; 
+            color: #6b7280; 
+        }
         .hidden { display: none !important; }
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
         @media (max-width: 768px) {
             .upload-section, .date-filter-grid, .options-grid { grid-template-columns: 1fr; }
             .stats-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
@@ -128,16 +411,46 @@
             <div class="section">
                 <h3 class="section-title">📅 Date Range Filters (UTC-based)</h3>
                 <div class="date-filter-grid">
-                    <div class="date-filter-group"><label class="date-filter-label">Source 1 Range</label><div class="date-range"><input type="date" class="date-input" id="dateFrom1"><span>to</span><input type="date" class="date-input" id="dateTo1"></div></div>
-                    <div class="date-filter-group"><label class="date-filter-label">Source 2 Range</label><div class="date-range"><input type="date" class="date-input" id="dateFrom2"><span>to</span><input type="date" class="date-input" id="dateTo2"></div></div>
+                    <div class="date-filter-group">
+                        <label class="date-filter-label" for="dateFrom1">Source 1 Range</label>
+                        <div class="date-range">
+                            <input type="date" class="date-input" id="dateFrom1">
+                            <span>to</span>
+                            <input type="date" class="date-input" id="dateTo1">
+                        </div>
+                    </div>
+                    <div class="date-filter-group">
+                        <label class="date-filter-label" for="dateFrom2">Source 2 Range</label>
+                        <div class="date-range">
+                            <input type="date" class="date-input" id="dateFrom2">
+                            <span>to</span>
+                            <input type="date" class="date-input" id="dateTo2">
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <div class="section">
                 <h3 class="section-title">⚙️ Analysis Options</h3>
                 <div class="options-grid">
-                    <div class="option-group"><label class="option-label">Payment Filter</label><div class="checkbox-group"><input type="checkbox" id="includeUnpaid1"><label for="includeUnpaid1">Include "Unpaid" from Source 1</label></div></div>
-                    <div class="option-group"><label class="option-label">GST Calculation</label><div class="checkbox-group"><input type="checkbox" id="applyGST"><label for="applyGST">Apply 18% GST to Source 1</label></div><div class="checkbox-group"><input type="checkbox" id="gstRound"><label for="gstRound">Round GST Amount</label></div></div>
+                    <div class="option-group">
+                        <label class="option-label" for="includeUnpaid1">Payment Filter</label>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="includeUnpaid1">
+                            <label for="includeUnpaid1">Include unpaid entries from Source 1</label>
+                        </div>
+                    </div>
+                    <div class="option-group">
+                        <label class="option-label" for="applyGST">GST Calculation</label>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="applyGST">
+                            <label for="applyGST">Apply 18% GST to Source 1 amounts</label>
+                        </div>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="gstRound">
+                            <label for="gstRound">Round GST amounts</label>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -156,36 +469,99 @@
         </div>
     </div>
 
+    <div id="loading-overlay" class="loading-overlay hidden">
+        <div class="loading-spinner" aria-label="Loading..."></div>
+        <p>Processing data, please wait...</p>
+    </div>
+
     <script>
     document.addEventListener('DOMContentLoaded', () => {
         // === GLOBAL STATE ===
-        let source1Files = [];
-        let source2File = null;
-        let analysisResults = null;
+        const STATE = {
+            source1Files: [],
+            source2File: null,
+            analysisResults: null,
+            isProcessing: false
+        };
 
         // === DOM ELEMENTS ===
-        const fileInput1 = document.getElementById('file-input-1');
-        const fileInput2 = document.getElementById('file-input-2');
-        const analyzeBtn = document.getElementById('analyze-btn');
-        const resultsContainer = document.getElementById('results');
+        const DOM = {
+            fileInput1: document.getElementById('file-input-1'),
+            fileInput2: document.getElementById('file-input-2'),
+            uploadBtn1: document.getElementById('upload-btn-1'),
+            uploadBtn2: document.getElementById('upload-btn-2'),
+            analyzeBtn: document.getElementById('analyze-btn'),
+            resultsContainer: document.getElementById('results'),
+            errorContainer: document.getElementById('error-container'),
+            loadingOverlay: document.getElementById('loading-overlay'),
+            uploadBox1: document.getElementById('upload-box-1'),
+            uploadBox2: document.getElementById('upload-box-2'),
+            fileInfo1: document.getElementById('file-info-1'),
+            fileInfo2: document.getElementById('file-info-2'),
+            source1Dynamic: document.getElementById('source1-dynamic'),
+            source2Manual: document.getElementById('source2-manual'),
+            validationItems: document.getElementById('validation-items'),
+            userInfo: document.getElementById('user-info'),
+            dateFrom1: document.getElementById('dateFrom1'),
+            dateTo1: document.getElementById('dateTo1'),
+            dateFrom2: document.getElementById('dateFrom2'),
+            dateTo2: document.getElementById('dateTo2'),
+            includeUnpaid1: document.getElementById('includeUnpaid1'),
+            applyGST: document.getElementById('applyGST'),
+            gstRound: document.getElementById('gstRound')
+        };
 
         // === CORE DATE UTILITIES (ROBUST VERSION) ===
         const DATE_UTILS = {
             excelSerialToDate(serial) {
                 if(typeof serial !== 'number') return null;
+                // Excel's epoch starts on 1900-01-01, but Excel has a leap year bug
+                // where it incorrectly treats 1900 as a leap year
                 return new Date((serial - 25569) * 86400000);
             },
             parseToDate(val) {
-                if (!val && val !== 0) return null;
+                if (val === null || val === undefined) return null;
+                
+                // Handle numeric Excel dates
                 if (typeof val === 'number') {
                     return val > 60 ? this.excelSerialToDate(val) : null;
                 }
+                
+                // Handle string dates with various formats
                 if (typeof val === 'string') {
                     const str = val.trim();
                     if (!str) return null;
+                    
+                    // Try standard Date constructor first
                     let d = new Date(str);
                     if (!isNaN(d.valueOf())) return d;
+                    
+                    // Try common formats: DD-MM-YYYY, MM/DD/YYYY, etc.
+                    const formats = [
+                        /(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})/, // DD/MM/YYYY or DD-MM-YYYY
+                        /(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})/, // YYYY/MM/DD or YYYY-MM-DD
+                    ];
+                    
+                    for (let format of formats) {
+                        const match = str.match(format);
+                        if (match) {
+                            if (format === formats[0]) { // DD/MM/YYYY
+                                const [_, day, month, year] = match;
+                                d = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                            } else { // YYYY/MM/DD
+                                const [_, year, month, day] = match;
+                                d = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                            }
+                            if (!isNaN(d.valueOf())) return d;
+                        }
+                    }
                 }
+                
+                // Handle Date objects
+                if (val instanceof Date) {
+                    return !isNaN(val.valueOf()) ? val : null;
+                }
+                
                 return null;
             },
             formatDisplay(d) {
@@ -193,359 +569,885 @@
                 const date = new Date(d);
                 return `${String(date.getUTCDate()).padStart(2,'0')}-${String(date.getUTCMonth()+1).padStart(2,'0')}-${date.getUTCFullYear()}`;
             },
-            parseDateInput(v) { return v ? new Date(v) : null; },
+            parseDateInput(v) { 
+                return v ? new Date(v) : null; 
+            },
             getEndOfDay(d) {
-                if(!d) return null;
-                d.setUTCHours(23, 59, 59, 999);
-                return d;
+                if (!d) return null;
+                const endOfDay = new Date(d);
+                endOfDay.setUTCHours(23, 59, 59, 999);
+                return endOfDay;
             }
         };
 
         // === VALIDATION & UI UPDATE LOGIC ===
         const ValidationState = {
             update() {
-                const hasSrc1 = source1Files.length > 0;
-                const hasSrc2 = source2File !== null;
-                const src1ColsOk = hasSrc1 && source1Files.every(f => f.cols.appId !== null && f.cols.amount !== null);
-                const src2ColsOk = hasSrc2 && source2File.cols.appId !== null && source2File.cols.amount !== null;
+                const hasSrc1 = STATE.source1Files.length > 0;
+                const hasSrc2 = STATE.source2File !== null;
+                const src1ColsOk = hasSrc1 && STATE.source1Files.every(f => 
+                    f.cols.appId !== null && f.cols.amount !== null);
+                const src2ColsOk = hasSrc2 && 
+                    STATE.source2File.cols.appId !== null && 
+                    STATE.source2File.cols.amount !== null;
                 
-                document.getElementById('validation-items').innerHTML = [
-                    { text: `Source 1 files selected (${source1Files.length})`, valid: hasSrc1 },
+                DOM.validationItems.innerHTML = [
+                    { text: `Source 1 files selected (${STATE.source1Files.length})`, valid: hasSrc1 },
                     { text: 'Source 2 file selected', valid: hasSrc2 },
                     { text: 'Source 1 columns configured', valid: src1ColsOk },
                     { text: 'Source 2 columns configured', valid: src2ColsOk }
-                ].map(item => `<div class="validation-item ${item.valid ? 'valid' : 'invalid'}">${item.text}</div>`).join('');
+                ].map(item => `<div class="validation-item ${item.valid ? 'valid' : 'invalid'}" 
+                     aria-label="${item.valid ? 'Valid' : 'Invalid'}: ${item.text}">
+                     ${item.text}</div>`).join('');
                 
                 const canAnalyze = hasSrc1 && hasSrc2 && src1ColsOk && src2ColsOk;
-                analyzeBtn.disabled = !canAnalyze;
-                analyzeBtn.textContent = canAnalyze ? '🔍 Analyze Data' : '📋 Please complete setup';
+                DOM.analyzeBtn.disabled = !canAnalyze || STATE.isProcessing;
+                DOM.analyzeBtn.textContent = STATE.isProcessing ? '⏳ Processing...' :
+                    (canAnalyze ? '🔍 Analyze Data' : '📋 Please complete setup');
+            }
+        };
+
+        // === UI HELPER FUNCTIONS ===
+        const UI = {
+            showLoading() {
+                STATE.isProcessing = true;
+                DOM.loadingOverlay.classList.remove('hidden');
+                ValidationState.update();
+            },
+            hideLoading() {
+                STATE.isProcessing = false;
+                DOM.loadingOverlay.classList.add('hidden');
+                ValidationState.update();
+            },
+            showError(msg, timeout = 0) { 
+                DOM.errorContainer.innerHTML = `<div class="error-msg" role="alert">${this.sanitizeHtml(msg)}</div>`;
+                if (timeout > 0) {
+                    setTimeout(() => {
+                        DOM.errorContainer.innerHTML = '';
+                    }, timeout);
+                }
+            },
+            showSuccess(msg, timeout = 3000) { 
+                DOM.errorContainer.innerHTML = `<div class="success-msg" role="alert">${this.sanitizeHtml(msg)}</div>`;
+                if (timeout > 0) {
+                    setTimeout(() => {
+                        DOM.errorContainer.innerHTML = '';
+                    }, timeout);
+                }
+            },
+            sanitizeHtml(text) {
+                const element = document.createElement('div');
+                element.textContent = text;
+                return element.innerHTML;
+            },
+            updateUserInfo() {
+                const now = new Date();
+                const padTwo = (num) => String(num).padStart(2, '0');
+                
+                const utcString = `${now.getUTCFullYear()}-${padTwo(now.getUTCMonth() + 1)}-${padTwo(now.getUTCDate())} ${padTwo(now.getUTCHours())}:${padTwo(now.getUTCMinutes())}:${padTwo(now.getUTCSeconds())}`;
+                
+                DOM.userInfo.textContent = `User: ksismad | UTC ${utcString}`;
             }
         };
 
         // === FILE PROCESSING & ANALYSIS ===
-        function autoDetectColumns(headers) {
-            const cols = { appId: null, amount: null, date: null, paid: null };
-            const lcHeaders = headers.map(h => String(h || '').toLowerCase());
+        const FileProcessor = {
+            autoDetectColumns(headers) {
+                const cols = { appId: null, amount: null, date: null, paid: null };
+                
+                if (!headers || !headers.length) {
+                    return cols;
+                }
+                
+                // Convert headers to lowercase strings for case-insensitive matching
+                const lcHeaders = headers.map(h => String(h || '').toLowerCase());
+                
+                // App ID detection (look for variations of "app id", "application id", etc.)
+                const appIdKeywords = ['app id', 'appid', 'application id', 'id'];
+                let appIdIndex = lcHeaders.findIndex(h => 
+                    appIdKeywords.some(keyword => h.includes(keyword)));
+                
+                // Amount detection (look for variations of "amount", "total", "price", etc.)
+                const amountKeywords = ['amount', 'total', 'price', 'fee', 'cost'];
+                let amountIndex = lcHeaders.findIndex(h => 
+                    amountKeywords.some(keyword => h.includes(keyword)));
+                
+                // Paid status detection
+                const paidKeywords = ['paid', 'payment status', 'status'];
+                let paidIndex = lcHeaders.findIndex(h => 
+                    paidKeywords.some(keyword => h.includes(keyword)));
+                
+                // Date detection using multiple strategies
+                const dateKeywords = ['date', 'created', 'timestamp'];
+                let dateIndex = lcHeaders.findIndex(h => 
+                    dateKeywords.some(keyword => h.includes(keyword)));
+                
+                // Assign detected columns
+                cols.appId = appIdIndex !== -1 ? appIdIndex : null;
+                cols.amount = amountIndex !== -1 ? amountIndex : null;
+                cols.paid = paidIndex !== -1 ? paidIndex : null;
+                cols.date = dateIndex !== -1 ? dateIndex : null;
+                
+                // Secondary detection strategies if primary fails
+                if (cols.appId === null) {
+                    // Look for columns that might contain IDs (typically have "id" in name)
+                    cols.appId = lcHeaders.findIndex(h => /\bid\b/.test(h));
+                }
+                
+                if (cols.amount === null) {
+                    // Look for columns that might contain monetary values (₹, $, etc.)
+                    cols.amount = lcHeaders.findIndex(h => /(\$|₹|€|£|rs|inr)/.test(h));
+                }
+                
+                return cols;
+            },
             
-            let appIdIndex = lcHeaders.findIndex(h => h.includes('app') && h.includes('id'));
-            let amountIndex = lcHeaders.findIndex(h => h.includes('amount') || h.includes('total'));
-            let paidIndex = lcHeaders.findIndex(h => h.includes('paid') || h.includes('status'));
-
-            cols.appId = appIdIndex !== -1 ? appIdIndex : null;
-            cols.amount = amountIndex !== -1 ? amountIndex : null;
-            cols.paid = paidIndex !== -1 ? paidIndex : null;
-            
-            // Simplified date detection for robustness
-            const dateScores = Array(headers.length).fill(0);
-            // Heuristic: find columns that look like dates
-            lcHeaders.forEach((h, i) => {
-                if (h.includes('date')) dateScores[i] += 5;
-            });
-            const bestDateIndex = dateScores.indexOf(Math.max(...dateScores));
-            if (bestDateIndex > -1 && dateScores[bestDateIndex] > 0) cols.date = bestDateIndex;
-
-            return cols;
-        }
-
-        function processFileData(data, cols) {
-            const processed = [];
-            for (let i = 1; i < data.length; i++) {
-                const row = data[i];
-                if (!row || row[cols.appId] === undefined || row[cols.appId] === null) continue;
-                processed.push({
-                    rowNum: i + 1,
-                    appId: String(row[cols.appId]).trim(),
-                    amount: parseFloat(row[cols.amount]) || 0,
-                    paid: cols.paid !== null ? row[cols.paid] : null,
-                    date: cols.date !== null ? DATE_UTILS.parseToDate(row[cols.date]) : null
-                });
-            }
-            return processed;
-        }
-
-        function analyzeData() {
-            resultsContainer.innerHTML = '<div class="loading">🔄 Analyzing data...</div>';
-            resultsContainer.classList.remove('hidden');
-            
-            setTimeout(() => {
-                try {
-                    const filters = {
-                        from1: DATE_UTILS.parseDateInput(document.getElementById('dateFrom1').value),
-                        to1: DATE_UTILS.getEndOfDay(DATE_UTILS.parseDateInput(document.getElementById('dateTo1').value)),
-                        from2: DATE_UTILS.parseDateInput(document.getElementById('dateFrom2').value),
-                        to2: DATE_UTILS.getEndOfDay(DATE_UTILS.parseDateInput(document.getElementById('dateTo2').value))
-                    };
-                    const includeUnpaid = document.getElementById('includeUnpaid1').checked;
-                    const applyGST = document.getElementById('applyGST').checked;
-                    const roundGST = document.getElementById('gstRound').checked;
-
-                    let data1 = [];
-                    source1Files.forEach(f => {
-                        const processed = processFileData(f.data, f.cols);
-                        processed.forEach(item => item.branding = f.branding);
-                        data1 = data1.concat(processed);
-                    });
-                    let data2 = processFileData(source2File.data, source2File.cols);
-
-                    let filtered1 = (filters.from1 || filters.to1) ? data1.filter(d => d.date && (!filters.from1 || d.date >= filters.from1) && (!filters.to1 || d.date <= filters.to1)) : data1;
-                    let filtered2 = (filters.from2 || filters.to2) ? data2.filter(d => d.date && (!filters.from2 || d.date >= filters.from2) && (!filters.to2 || d.date <= filters.to2)) : data2;
-
-                    let final1 = includeUnpaid ? filtered1 : filtered1.filter(d => String(d.paid || '').toLowerCase() === 'paid');
-                    final1.forEach(d => { if (applyGST) d.amount = roundGST ? Math.round(d.amount * 1.18) : d.amount * 1.18; });
+            processFileData(data, cols) {
+                const processed = [];
+                
+                if (!data || !data.length || data.length < 2) {
+                    return processed;
+                }
+                
+                for (let i = 1; i < data.length; i++) {
+                    const row = data[i];
                     
-                    analysisResults = performComparison(final1, filtered2, {includeUnpaid, applyGST, roundGST});
-                    renderResults(analysisResults);
-                    showSuccess('Analysis completed!');
-                } catch (e) {
-                    showError(`Analysis failed: ${e.message}`);
-                    resultsContainer.classList.add('hidden');
+                    // Skip empty rows
+                    if (!row || row.length === 0) continue;
+                    
+                    // Skip rows without an App ID
+                    if (cols.appId === null || row[cols.appId] === undefined || row[cols.appId] === null) continue;
+                    
+                    // Process row data
+                    const processedRow = {
+                        rowNum: i + 1,
+                        appId: String(row[cols.appId]).trim(),
+                        amount: this.parseAmount(row[cols.amount]),
+                        paid: cols.paid !== null ? this.parsePaidStatus(row[cols.paid]) : null,
+                        date: cols.date !== null ? DATE_UTILS.parseToDate(row[cols.date]) : null
+                    };
+                    
+                    processed.push(processedRow);
                 }
-            }, 100);
-        }
-
-        function performComparison(d1, d2, options) {
-            const map1 = _.groupBy(d1, 'appId'), map2 = _.groupBy(d2, 'appId');
-            const allIds = _.union(Object.keys(map1), Object.keys(map2));
-            const results = { matching: [], missing: [], duplicates1: [], duplicates2: [], options, sortState: {} };
+                
+                return processed;
+            },
             
-            allIds.forEach(id => {
-                const items1 = map1[id], items2 = map2[id];
-                if (items1 && items2) {
-                    const amt1 = _.sumBy(items1, 'amount'), amt2 = _.sumBy(items2, 'amount');
-                    results.matching.push({ appId: id, amount1: amt1, amount2: amt2, difference: Math.abs(amt1 - amt2), status: Math.abs(amt1 - amt2) < 0.01 ? 'Match' : 'Amount Mismatch', branding: items1[0].branding, date1: items1.find(i=>i.date)?.date, date2: items2.find(i=>i.date)?.date });
-                } else {
-                    const items = items1 || items2;
-                    results.missing.push({ appId: id, amount: _.sumBy(items, 'amount'), missingFrom: items1 ? 'Source 2' : 'Source 1', branding: items[0].branding, date: items.find(i=>i.date)?.date, paid: items[0].paid });
+            parseAmount(value) {
+                if (value === null || value === undefined || value === '') {
+                    return 0;
                 }
-            });
-            Object.keys(map1).forEach(id => { if (map1[id].length > 1) results.duplicates1.push({ appId: id, count: map1[id].length, source: 'Source 1' }); });
-            Object.keys(map2).forEach(id => { if (map2[id].length > 1) results.duplicates2.push({ appId: id, count: map2[id].length, source: 'Source 2' }); });
+                
+                // If it's already a number, return it
+                if (typeof value === 'number') {
+                    return isNaN(value) ? 0 : value;
+                }
+                
+                // If it's a string, try to extract numerical value
+                if (typeof value === 'string') {
+                    // Remove currency symbols, commas, and other non-numeric chars except decimal point
+                    const cleanedValue = value.replace(/[^\d.-]/g, '');
+                    const numberValue = parseFloat(cleanedValue);
+                    
+                    return isNaN(numberValue) ? 0 : numberValue;
+                }
+                
+                return 0;
+            },
             
-            results.stats = { total1: _.sumBy(d1, 'amount'), total2: _.sumBy(d2, 'amount'), matching1: _.sumBy(results.matching, 'amount1'), matching2: _.sumBy(results.matching, 'amount2'), totalDiff: _.sumBy(results.matching, 'difference'), count1: d1.length, count2: d2.length, unique1: Object.keys(map1).length, unique2: Object.keys(map2).length };
-            results.analysisTime = new Date().toISOString();
-            return results;
-        }
-
-        // === UI RENDERING ===
-        function showError(msg) { document.getElementById('error-container').innerHTML = `<div class="error-msg">${msg}</div>`; }
-        function showSuccess(msg) { document.getElementById('error-container').innerHTML = `<div class="success-msg">${msg}</div>`; setTimeout(()=>document.getElementById('error-container').innerHTML = '', 3000); }
-
-        function renderColumnSelectors(headers, cols) {
-            const createOptions = (key, noneOption = false) => headers.map((h, i) => `<option value="${i}" ${cols[key] === i ? 'selected' : ''}>${h || ''}</option>`).join('');
-            return `
-                <div class="options-grid">
-                    <div class="option-group"><label class="option-label">App ID Column *</label><select class="col-select" data-col="appId"><option value="">Select...</option>${createOptions('appId')}</select></div>
-                    <div class="option-group"><label class="option-label">Amount Column *</label><select class="col-select" data-col="amount"><option value="">Select...</option>${createOptions('amount')}</select></div>
-                    <div class="option-group"><label class="option-label">Date Column</label><select class="col-select" data-col="date"><option value="">None</option>${createOptions('date', true)}</select></div>
-                    <div class="option-group"><label class="option-label">Paid Status Column</label><select class="col-select" data-col="paid"><option value="">None</option>${createOptions('paid', true)}</select></div>
-                </div>`;
-        }
-        
-        function renderResults(res) {
-            const duplicates = [...res.duplicates1, ...res.duplicates2];
-            resultsContainer.innerHTML = `
-                <div class="results-header"><h2 class="results-title">📊 Analysis Results</h2><div class="results-meta">Time: ${new Date(res.analysisTime).toLocaleString('en-GB', { timeZone: 'UTC' })}</div></div>
-                <div class="stats-grid">
-                    <div class="stat-card"><div class="stat-number">Rs ${res.stats.total1.toFixed(2)}</div><div class="stat-label">Total Src 1</div><div class="stat-meta">${res.stats.count1} entries</div></div>
-                    <div class="stat-card"><div class="stat-number">Rs ${res.stats.total2.toFixed(2)}</div><div class="stat-label">Total Src 2</div><div class="stat-meta">${res.stats.count2} entries</div></div>
-                    <div class="stat-card success"><div class="stat-number">${res.matching.length}</div><div class="stat-label">Matching IDs</div></div>
-                    <div class="stat-card ${res.stats.totalDiff > 0.01 ? 'warning' : 'success'}"><div class="stat-number">Rs ${res.stats.totalDiff.toFixed(2)}</div><div class="stat-label">Total Difference</div></div>
-                    <div class="stat-card ${res.missing.length > 0 ? 'danger' : 'success'}"><div class="stat-number">${res.missing.length}</div><div class="stat-label">Missing IDs</div></div>
-                    <div class="stat-card ${duplicates.length > 0 ? 'danger' : 'success'}"><div class="stat-number">${duplicates.length}</div><div class="stat-label">Duplicate IDs</div></div>
-                </div>
-                ${renderTable('matching', res.matching, res.sortState.matching)}
-                ${renderTable('missing', res.missing, res.sortState.missing)}
-                ${renderTable('duplicates', duplicates, res.sortState.duplicates)}
-                <div class="export-section"><button class="export-btn" id="export-excel-btn">📊 Export Full Report (Excel)</button></div>
-            `;
-            resultsContainer.classList.remove('hidden');
-        }
-
-        function renderTable(type, data, sortState = {}) {
-            if (!data.length) return '';
-            const titles = { matching: '🟢 Matching App IDs', missing: '🔴 Missing App IDs', duplicates: '⚠️ Duplicate App IDs' };
-            const headers = {
-                matching: [{k:'appId',n:'App ID'}, {k:'branding',n:'Source'}, {k:'status',n:'Status'}, {k:'amount1',n:'Amount (Src 1)'}, {k:'amount2',n:'Amount (Src 2)'}, {k:'difference',n:'Difference'}, {k:'date1',n:'Date (Src 1)'}, {k:'date2',n:'Date (Src 2)'}],
-                missing: [{k:'appId',n:'App ID'}, {k:'missingFrom',n:'Missing From'}, {k:'amount',n:'Amount'}, {k:'paid', n:'Paid Status'}, {k:'branding',n:'Source'}, {k:'date', n:'Date'}],
-                duplicates: [{k:'appId',n:'App ID'}, {k:'source',n:'Source'}, {k:'count',n:'Count'}]
-            };
-            const rowClass = { matching: r => r.status !== 'Match' ? 'highlight-mismatch' : '', missing: 'highlight-missing', duplicates: 'highlight-mismatch' };
+            parsePaidStatus(value) {
+                if (value === null || value === undefined) {
+                    return null;
+                }
+                
+                // Convert to string for consistent handling
+                const stringValue = String(value).trim().toLowerCase();
+                
+                // Check for common "paid" indicators
+                if (['paid', 'yes', 'y', 'true', '1', 'complete', 'completed', 'success'].includes(stringValue)) {
+                    return 'paid';
+                }
+                
+                // Check for common "unpaid" indicators
+                if (['unpaid', 'no', 'n', 'false', '0', 'pending', 'incomplete', 'failed'].includes(stringValue)) {
+                    return 'unpaid';
+                }
+                
+                // Return as-is for other values
+                return value;
+            },
             
-            const headerHtml = headers[type].map(h => `<th data-type="${type}" data-key="${h.k}" class="${sortState.key === h.k ? 'sorted' : ''}">${h.n} <span class="sort-arrow">${sortState.key === h.k ? (sortState.dir === 'asc' ? '▲' : '▼') : ''}</span></th>`).join('');
-
-            const bodyHtml = data.map(r => `<tr class="${typeof rowClass[type] === 'function' ? rowClass[type](r) : rowClass[type]}">
-                ${type === 'matching' ? `<td><strong>${r.appId}</strong></td><td>${r.branding || ''}</td><td><span class="status-badge ${r.status.toLowerCase().replace(' ','-')}">${r.status}</span></td><td>Rs ${r.amount1.toFixed(2)}</td><td>Rs ${r.amount2.toFixed(2)}</td><td>Rs ${r.difference.toFixed(2)}</td><td>${DATE_UTILS.formatDisplay(r.date1)}</td><td>${DATE_UTILS.formatDisplay(r.date2)}</td>` : ''}
-                ${type === 'missing' ? `<td><strong>${r.appId}</strong></td><td>${r.missingFrom}</td><td>Rs ${r.amount.toFixed(2)}</td><td>${r.paid === null || r.paid === undefined ? 'N/A' : r.paid}</td><td>${r.branding || ''}</td><td>${DATE_UTILS.formatDisplay(r.date)}</td>` : ''}
-                ${type === 'duplicates' ? `<td><strong>${r.appId}</strong></td><td>${r.source}</td><td>${r.count}</td>` : ''}
-            </tr>`).join('');
-
-            return `<div class="table-container">
-                <div class="table-header"><span class="table-title">${titles[type]} (${data.length})</span><button class="view-btn" data-view-type="${type}">Open Full View</button></div>
-                <div class="table-wrapper"><table><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table></div>
-            </div>`;
-        }
-        
-        // === EXPORT & VIEW ===
-        function exportToExcel() {
-            if (!analysisResults) return;
-            const wb = XLSX.utils.book_new();
-            const res = analysisResults;
-            const duplicates = [...res.duplicates1, ...res.duplicates2];
-
-            const wsMatching = XLSX.utils.json_to_sheet(res.matching.map(r=>({'App ID': r.appId, 'Source': r.branding, 'Status': r.status, 'Amount Src 1': r.amount1, 'Amount Src 2': r.amount2, 'Difference': r.difference, 'Date Src 1': r.date1, 'Date Src 2': r.date2})));
-            addDateFormatting(wsMatching, ['G', 'H']);
-            XLSX.utils.book_append_sheet(wb, wsMatching, 'Matching');
-            
-            const wsMissing = XLSX.utils.json_to_sheet(res.missing.map(r=>({'App ID': r.appId, 'Missing From': r.missingFrom, 'Amount': r.amount, 'Paid Status': r.paid, 'Source': r.branding, 'Date': r.date})));
-            addDateFormatting(wsMissing, ['F']);
-            XLSX.utils.book_append_sheet(wb, wsMissing, 'Missing');
-            
-            if(duplicates.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(duplicates), 'Duplicates');
-
-            const timestamp = new Date().toISOString().replace(/[:\-T]/g, '_').slice(0, 17);
-            XLSX.writeFile(wb, `AppID_Analysis_${timestamp}.xlsx`);
-        }
-        
-        function addDateFormatting(worksheet, dateColumns) {
-            const range = XLSX.utils.decode_range(worksheet['!ref']);
-            for (let R = range.s.r + 1; R <= range.e.r; ++R) {
-                dateColumns.forEach(colLetter => {
-                    const cellAddress = colLetter + (R + 1);
-                    const cell = worksheet[cellAddress];
-                    if (cell && cell.v instanceof Date) { cell.t = 'd'; cell.z = 'dd-mm-yyyy'; }
-                });
-            }
-        }
-
-        function openFullView(type) {
-            if (!analysisResults) return;
-            const dataMap = { matching: analysisResults.matching, missing: analysisResults.missing, duplicates: [...analysisResults.duplicates1, ...analysisResults.duplicates2] };
-            const data = dataMap[type];
-            if (!data || !data.length) return;
-
-            const tableHtml = renderTable(type, data, analysisResults.sortState[type]);
-            const newWindow = window.open("", "_blank");
-            newWindow.document.write(`<html><head><title>Full View: ${type}</title><style>body{font-family:sans-serif;padding:20px} table{width:100%;border-collapse:collapse} th,td{padding:8px;border:1px solid #ddd;text-align:left} .highlight-mismatch{background:#fef2f2} .highlight-missing{background:#fef3c7}</style></head><body>${tableHtml}</body></html>`);
-            newWindow.document.close();
-        }
-
-        // === EVENT LISTENERS SETUP ===
-        function setupEventListeners() {
-            document.getElementById('upload-btn-1').addEventListener('click', () => fileInput1.click());
-            document.getElementById('upload-btn-2').addEventListener('click', () => fileInput2.click());
-            analyzeBtn.addEventListener('click', analyzeData);
-
-            fileInput1.addEventListener('change', (e) => {
-                const files = Array.from(e.target.files);
-                if (!files.length) return;
-                document.getElementById('upload-box-1').classList.add('has-files');
-                document.getElementById('file-info-1').textContent = `${files.length} file(s) selected`;
-                document.getElementById('file-info-1').classList.remove('hidden');
-                source1Files = [];
-                const dynamicContainer = document.getElementById('source1-dynamic');
-                dynamicContainer.innerHTML = '';
-                let processedCount = 0;
-                files.forEach((file, index) => {
+            readExcelFile(file) {
+                return new Promise((resolve, reject) => {
                     const reader = new FileReader();
+                    
                     reader.onload = (event) => {
                         try {
-                            const workbook = XLSX.read(event.target.result, { type: 'binary' });
-                            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-                            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false, cellDates: true });
+                            const data = event.target.result;
+                            const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                            
+                            // Get first sheet
+                            const firstSheetName = workbook.SheetNames[0];
+                            if (!firstSheetName) {
+                                throw new Error('Excel file contains no sheets');
+                            }
+                            
+                            const worksheet = workbook.Sheets[firstSheetName];
+                            const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
+                                header: 1, 
+                                raw: false, 
+                                cellDates: true 
+                            });
+                            
+                            // Extract headers
                             const headers = jsonData[0] || [];
-                            const cols = autoDetectColumns(headers);
-                            const fileData = { file, data: jsonData, headers, cols, branding: String.fromCharCode(65 + index) };
-                            source1Files.push(fileData);
                             
-                            const container = document.createElement('div');
-                            container.className = 'section';
-                            container.innerHTML = `<h4 class="section-title">📄 Column Mapping for ${file.name}</h4>` + renderColumnSelectors(headers, cols);
-                            dynamicContainer.appendChild(container);
+                            // Auto-detect columns
+                            const cols = this.autoDetectColumns(headers);
                             
-                            container.querySelectorAll('.col-select').forEach(sel => sel.addEventListener('change', (ev) => {
-                                fileData.cols[ev.target.dataset.col] = ev.target.value === '' ? null : +ev.target.value;
-                                ValidationState.update();
-                            }));
-                        } catch (err) { showError(`Error reading ${file.name}: ${err.message}`); }
-                        processedCount++;
-                        if (processedCount === files.length) ValidationState.update();
+                            resolve({
+                                file,
+                                data: jsonData,
+                                headers,
+                                cols,
+                                branding: file.name.substring(0, 1).toUpperCase()  // Default branding
+                            });
+                            
+                        } catch (err) {
+                            reject(new Error(`Failed to read Excel file: ${err.message}`));
+                        }
                     };
+                    
+                    reader.onerror = () => {
+                        reject(new Error('File read error'));
+                    };
+                    
                     reader.readAsArrayBuffer(file);
                 });
-            });
+            }
+        };
 
-            fileInput2.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                document.getElementById('upload-box-2').classList.add('has-files');
-                document.getElementById('file-info-2').textContent = file.name;
-                document.getElementById('file-info-2').classList.remove('hidden');
-                const reader = new FileReader();
-                reader.onload = (event) => {
+        // === DATA ANALYSIS ===
+        const Analyzer = {
+            async analyzeData() {
+                try {
+                    UI.showLoading();
+                    
+                    // Get filter settings
+                    const filters = {
+                        from1: DATE_UTILS.parseDateInput(DOM.dateFrom1.value),
+                        to1: DATE_UTILS.getEndOfDay(DATE_UTILS.parseDateInput(DOM.dateTo1.value)),
+                        from2: DATE_UTILS.parseDateInput(DOM.dateFrom2.value),
+                        to2: DATE_UTILS.getEndOfDay(DATE_UTILS.parseDateInput(DOM.dateTo2.value))
+                    };
+                    
+                    const options = {
+                        includeUnpaid: DOM.includeUnpaid1.checked,
+                        applyGST: DOM.applyGST.checked,
+                        roundGST: DOM.gstRound.checked
+                    };
+
+                    // Process Source 1 files
+                    let data1 = [];
+                    STATE.source1Files.forEach((f, index) => {
+                        try {
+                            const processed = FileProcessor.processFileData(f.data, f.cols);
+                            processed.forEach(item => {
+                                item.branding = f.branding || String.fromCharCode(65 + index);
+                            });
+                            data1 = data1.concat(processed);
+                        } catch (err) {
+                            throw new Error(`Error processing file "${f.file.name}": ${err.message}`);
+                        }
+                    });
+
+                    // Process Source 2 file
+                    let data2 = [];
                     try {
-                        const workbook = XLSX.read(event.target.result, { type: 'binary' });
-                        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-                        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false, cellDates: true });
-                        const headers = jsonData[0] || [];
-                        const cols = autoDetectColumns(headers);
-                        source2File = { file, data: jsonData, headers, cols };
-                        
-                        const container = document.getElementById('source2-manual');
-                        container.innerHTML = `<div class="section"><h4 class="section-title">📄 Column Mapping for ${file.name}</h4>${renderColumnSelectors(headers, cols)}</div>`;
-                        container.classList.remove('hidden');
-                        
-                        container.querySelectorAll('.col-select').forEach(sel => sel.addEventListener('change', (ev) => {
-                            source2File.cols[ev.target.dataset.col] = ev.target.value === '' ? null : +ev.target.value;
-                            ValidationState.update();
-                        }));
-                        ValidationState.update();
-                    } catch (err) { showError(`Error reading ${file.name}: ${err.message}`); }
-                };
-                reader.readAsArrayBuffer(file);
-            });
-
-            resultsContainer.addEventListener('click', (e) => {
-                const header = e.target.closest('th[data-key]');
-                if (header) {
-                    const key = header.dataset.key;
-                    const type = header.dataset.type;
-                    const currentSort = analysisResults.sortState[type] || {};
-                    const dir = (currentSort.key === key && currentSort.dir === 'asc') ? 'desc' : 'asc';
-                    
-                    const dataMap = { matching: analysisResults.matching, missing: analysisResults.missing, duplicates: [...analysisResults.duplicates1, ...analysisResults.duplicates2]};
-                    dataMap[type] = _.orderBy(dataMap[type], [key], [dir]);
-                    
-                    if (type === 'duplicates') {
-                        analysisResults.duplicates1 = dataMap.duplicates.filter(d => d.source === 'Source 1');
-                        analysisResults.duplicates2 = dataMap.duplicates.filter(d => d.source === 'Source 2');
-                    } else {
-                        analysisResults[type] = dataMap[type];
+                        data2 = FileProcessor.processFileData(
+                            STATE.source2File.data, 
+                            STATE.source2File.cols
+                        );
+                    } catch (err) {
+                        throw new Error(`Error processing Source 2 file: ${err.message}`);
                     }
 
-                    analysisResults.sortState[type] = { key, dir };
-                    renderResults(analysisResults);
-                }
-                if (e.target.closest('.view-btn[data-view-type]')) {
-                    openFullView(e.target.closest('.view-btn[data-view-type]').dataset.viewType);
-                }
-                if (e.target.closest('#export-excel-btn')) {
-                    exportToExcel();
-                }
-            });
-        }
-        
-        function updateUserInfo(){
-            const now = new Date();
-            const utcString = now.getUTCFullYear() + '-' + String(now.getUTCMonth() + 1).padStart(2, '0') + '-' + String(now.getUTCDate()).padStart(2, '0') + ' ' + String(now.getUTCHours()).padStart(2, '0') + ':' + String(now.getUTCMinutes()).padStart(2, '0') + ':' + String(now.getUTCSeconds()).padStart(2, '0');
-            document.getElementById('user-info').textContent = `User: ksismad | UTC ${utcString}`;
-        }
+                    // Apply date filters
+                    let filtered1 = data1;
+                    let filtered2 = data2;
+                    
+                    if (filters.from1 || filters.to1) {
+                        filtered1 = filtered1.filter(d => 
+                            d.date && 
+                            (!filters.from1 || d.date >= filters.from1) && 
+                            (!filters.to1 || d.date <= filters.to1)
+                        );
+                    }
+                    
+                    if (filters.from2 || filters.to2) {
+                        filtered2 = filtered2.filter(d => 
+                            d.date && 
+                            (!filters.from2 || d.date >= filters.from2) && 
+                            (!filters.to2 || d.date <= filters.to2)
+                        );
+                    }
 
-        // === INITIALIZATION ===
-        setupEventListeners();
-        ValidationState.update();
-        updateUserInfo();
-        setInterval(updateUserInfo, 1000);
-    });
-    </script>
-</body>
-</html>
+                    // Apply payment filter
+                    const final1 = options.includeUnpaid 
+                        ? filtered1 
+                        : filtered1.filter(d => String(d.paid || '').toLowerCase() === 'paid');
+
+                    // Apply GST if needed
+                    if (options.applyGST) {
+                        final1.forEach(d => {
+                            d.amount = options.roundGST 
+                                ? Math.round(d.amount * 1.18) 
+                                : d.amount * 1.18;
+                        });
+                    }
+                    
+                    // Run the comparison
+                    const results = this.performComparison(final1, filtered2, options);
+                    
+                    // Store results and render
+                    STATE.analysisResults = results;
+                    this.renderResults(results);
+                    
+                    UI.showSuccess('Analysis completed successfully!');
+                    
+                    // Automatically scroll to results
+                    DOM.resultsContainer.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'start' 
+                    });
+                    
+                } catch (error) {
+                    console.error('Analysis error:', error);
+                    UI.showError(`Analysis failed: ${error.message}`);
+                    DOM.resultsContainer.classList.add('hidden');
+                } finally {
+                    UI.hideLoading();
+                }
+            },
+            
+            performComparison(d1, d2, options) {
+                // Group by App ID
+                const map1 = _.groupBy(d1, 'appId');
+                const map2 = _.groupBy(d2, 'appId');
+                
+                // Get union of all App IDs
+                const allIds = _.union(Object.keys(map1), Object.keys(map2));
+                
+                // Initialize results object
+                const results = { 
+                    matching: [], 
+                    missing: [], 
+                    duplicates1: [], 
+                    duplicates2: [], 
+                    options,
+                    sortState: {} 
+                };
+                
+                // Process each App ID
+                allIds.forEach(id => {
+                    const items1 = map1[id];
+                    const items2 = map2[id];
+                    
+                    if (items1 && items2) {
+                        // Present in both sources - check for amount match
+                        const amt1 = _.sumBy(items1, 'amount');
+                        const amt2 = _.sumBy(items2, 'amount');
+                        const difference = Math.abs(amt1 - amt2);
+                        const status = difference < 0.01 ? 'Match' : 'Amount Mismatch';
+                        
+                        results.matching.push({ 
+                            appId: id, 
+                            amount1: amt1, 
+                            amount2: amt2, 
+                            difference: difference, 
+                            status: status, 
+                            branding: items1[0].branding,
+                            date1: items1.find(i => i.date)?.date || null,
+                            date2: items2.find(i => i.date)?.date || null
+                        });
+                    } else {
+                        // Missing from one source
+                        const items = items1 || items2;
+                        const amount = _.sumBy(items, 'amount');
+                        const missingFrom = items1 ? 'Source 2' : 'Source 1';
+                        
+                        results.missing.push({ 
+                            appId: id, 
+                            amount: amount, 
+                            missingFrom: missingFrom, 
+                            branding: items[0].branding, 
+                            date: items.find(i => i.date)?.date || null, 
+                            paid: items.find(i => i.paid)?.paid || null
+                        });
+                    }
+                });
+                
+                // Find duplicates (same App ID appears multiple times)
+                Object.keys(map1).forEach(id => { 
+                    if (map1[id].length > 1) {
+                        results.duplicates1.push({ 
+                            appId: id, 
+                            count: map1[id].length, 
+                            source: 'Source 1' 
+                        });
+                    }
+                });
+                
+                Object.keys(map2).forEach(id => { 
+                    if (map2[id].length > 1) {
+                        results.duplicates2.push({ 
+                            appId: id, 
+                            count: map2[id].length, 
+                            source: 'Source 2' 
+                        });
+                    }
+                });
+                
+                // Calculate summary statistics
+                results.stats = {
+                    total1: _.sumBy(d1, 'amount'),
+                    total2: _.sumBy(d2, 'amount'),
+                    count1: d1.length,
+                    count2: d2.length,
+                    matching1: _.sumBy(results.matching, 'amount1'),
+                    matching2: _.sumBy(results.matching, 'amount2'),
+                    totalDiff: Math.abs(_.sumBy(d1, 'amount') - _.sumBy(d2, 'amount')),
+                    matchingIds: results.matching.length,
+                    missingIds: results.missing.length,
+                    duplicateIds: results.duplicates1.length + results.duplicates2.length
+                };
+                
+                // Add timestamp
+                results.analysisTime = new Date().toISOString();
+                
+                return results;
+            },
+            
+            renderResults(res) {
+                const duplicates = [...res.duplicates1, ...res.duplicates2];
+                
+                // Format timestamps
+                const analysisTimeFormatted = new Date(res.analysisTime)
+                    .toLocaleString('en-GB', { 
+                        timeZone: 'UTC',
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                
+                // Format currency
+                const formatCurrency = (amount) => {
+                    return new Intl.NumberFormat('en-IN', {
+                        style: 'currency',
+                        currency: 'INR',
+                        maximumFractionDigits: 2
+                    }).format(amount);
+                };
+                
+                // Generate results HTML
+                const resultsHtml = `
+                    <div class="results-header">
+                        <h2 class="results-title">📊 Analysis Results</h2>
+                        <div class="results-meta">Time: ${analysisTimeFormatted} UTC</div>
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-number">${formatCurrency(res.stats.total1)}</div>
+                            <div class="stat-label">Total Src 1</div>
+                            <div class="stat-meta">${res.stats.count1} entries</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">${formatCurrency(res.stats.total2)}</div>
+                            <div class="stat-label">Total Src 2</div>
+                            <div class="stat-meta">${res.stats.count2} entries</div>
+                        </div>
+                        <div class="stat-card success">
+                            <div class="stat-number">${res.matching.length}</div>
+                            <div class="stat-label">Matching IDs</div>
+                        </div>
+                        <div class="stat-card ${res.stats.totalDiff > 0.01 ? 'warning' : 'success'}">
+                            <div class="stat-number">${formatCurrency(res.stats.totalDiff)}</div>
+                            <div class="stat-label">Total Difference</div>
+                        </div>
+                        <div class="stat-card ${res.missing.length > 0 ? 'danger' : 'success'}">
+                            <div class="stat-number">${res.missing.length}</div>
+                            <div class="stat-label">Missing IDs</div>
+                        </div>
+                        <div class="stat-card ${duplicates.length > 0 ? 'danger' : 'success'}">
+                            <div class="stat-number">${duplicates.length}</div>
+                            <div class="stat-label">Duplicate IDs</div>
+                        </div>
+                    </div>
+                    ${this.renderTable('matching', res.matching, res.sortState.matching)}
+                    ${this.renderTable('missing', res.missing, res.sortState.missing)}
+                    ${this.renderTable('duplicates', duplicates, res.sortState.duplicates)}
+                    <div class="export-section">
+                        <button class="export-btn" id="export-excel-btn">📊 Export Full Report (Excel)</button>
+                    </div>
+                `;
+                
+                DOM.resultsContainer.innerHTML = resultsHtml;
+                DOM.resultsContainer.classList.remove('hidden');
+            },
+            
+            renderTable(type, data, sortState = {}) {
+                if (!data || !data.length) {
+                    return '';
+                }
+                
+                // Table titles and headers configuration
+                const titles = { 
+                    matching: '🟢 Matching App IDs', 
+                    missing: '🔴 Missing App IDs', 
+                    duplicates: '⚠️ Duplicate App IDs' 
+                };
+                
+                const headers = {
+                    matching: [
+                        { k: 'appId', n: 'App ID' }, 
+                        { k: 'branding', n: 'Source' }, 
+                        { k: 'status', n: 'Status' }, 
+                        { k: 'amount1', n: 'Amount (Src 1)' }, 
+                        { k: 'amount2', n: 'Amount (Src 2)' }, 
+                        { k: 'difference', n: 'Difference' }, 
+                        { k: 'date1', n: 'Date (Src 1)' }, 
+                        { k: 'date2', n: 'Date (Src 2)' }
+                    ],
+                    missing: [
+                        { k: 'appId', n: 'App ID' }, 
+                        { k: 'missingFrom', n: 'Missing From' }, 
+                        { k: 'amount', n: 'Amount' }, 
+                        { k: 'paid', n: 'Paid Status' }, 
+                        { k: 'branding', n: 'Source' }, 
+                        { k: 'date', n: 'Date' }
+                    ],
+                    duplicates: [
+                        { k: 'appId', n: 'App ID' }, 
+                        { k: 'source', n: 'Source' }, 
+                        { k: 'count', n: 'Count' }
+                    ]
+                };
+                
+                // Row CSS classes based on type and conditions
+                const rowClass = { 
+                    matching: r => r.status !== 'Match' ? 'highlight-mismatch' : '', 
+                    missing: () => 'highlight-missing', 
+                    duplicates: () => 'highlight-mismatch' 
+                };
+                
+                // Generate HTML for table headers
+                const headerHtml = headers[type].map(h => {
+                    const isSorted = sortState.key === h.k;
+                    const sortArrow = isSorted ? (sortState.dir === 'asc' ? '↑' : '↓') : '↕';
+                    
+                    return `<th data-type="${type}" data-key="${h.k}" 
+                               class="${isSorted ? 'sorted' : ''}"
+                               role="columnheader"
+                               aria-sort="${isSorted ? (sortState.dir === 'asc' ? 'ascending' : 'descending') : 'none'}">
+                            ${h.n} <span class="sort-arrow">${sortArrow}</span>
+                           </th>`;
+                }).join('');
+                
+                // Format currency values
+                const formatCurrency = (amount) => {
+                    return new Intl.NumberFormat('en-IN', {
+                        style: 'currency',
+                        currency: 'INR',
+                        maximumFractionDigits: 2
+                    }).format(amount);
+                };
+                
+                // Generate HTML for table rows based on type
+                let bodyHtml = '';
+                
+                if (type === 'matching') {
+                    bodyHtml = data.map(r => `
+                        <tr class="${rowClass[type](r)}" role="row">
+                            <td role="cell"><strong>${UI.sanitizeHtml(r.appId)}</strong></td>
+                            <td role="cell">${UI.sanitizeHtml(r.branding || '')}</td>
+                            <td role="cell">
+                                <span class="status-badge ${r.status.toLowerCase().replace(' ', '-')}">
+                                    ${UI.sanitizeHtml(r.status)}
+                                </span>
+                            </td>
+                            <td role="cell">${formatCurrency(r.amount1)}</td>
+                            <td role="cell">${formatCurrency(r.amount2)}</td>
+                            <td role="cell">${formatCurrency(r.difference)}</td>
+                            <td role="cell">${r.date1 ? DATE_UTILS.formatDisplay(r.date1) : 'N/A'}</td>
+                            <td role="cell">${r.date2 ? DATE_UTILS.formatDisplay(r.date2) : 'N/A'}</td>
+                        </tr>
+                    `).join('');
+                } else if (type === 'missing') {
+                    bodyHtml = data.map(r => `
+                        <tr class="${rowClass[type](r)}" role="row">
+                            <td role="cell"><strong>${UI.sanitizeHtml(r.appId)}</strong></td>
+                            <td role="cell">${UI.sanitizeHtml(r.missingFrom)}</td>
+                            <td role="cell">${formatCurrency(r.amount)}</td>
+                            <td role="cell">${r.paid === null || r.paid === undefined ? 'N/A' : UI.sanitizeHtml(r.paid)}</td>
+                            <td role="cell">${UI.sanitizeHtml(r.branding || '')}</td>
+                            <td role="cell">${r.date ? DATE_UTILS.formatDisplay(r.date) : 'N/A'}</td>
+                        </tr>
+                    `).join('');
+                } else if (type === 'duplicates') {
+                    bodyHtml = data.map(r => `
+                        <tr class="${rowClass[type](r)}" role="row">
+                            <td role="cell"><strong>${UI.sanitizeHtml(r.appId)}</strong></td>
+                            <td role="cell">${UI.sanitizeHtml(r.source)}</td>
+                            <td role="cell">${r.count}</td>
+                        </tr>
+                    `).join('');
+                }
+                
+                // Render table container with table
+                return `
+                    <div class="table-container">
+                        <div class="table-header">
+                            <span class="table-title">${titles[type]} (${data.length})</span>
+                            <button class="view-btn" data-view-type="${type}" 
+                                    aria-label="Open full view of ${titles[type]}">
+                                Open Full View
+                            </button>
+                        </div>
+                        <div class="table-wrapper">
+                            <table role="table" aria-label="${titles[type]}">
+                                <thead role="rowgroup">
+                                    <tr role="row">${headerHtml}</tr>
+                                </thead>
+                                <tbody role="rowgroup">${bodyHtml}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }
+        };
+
+        // === EXPORT & VIEW FUNCTIONS ===
+        const ExportManager = {
+            exportToExcel() {
+                if (!STATE.analysisResults) {
+                    UI.showError('No analysis results to export');
+                    return;
+                }
+                
+                try {
+                    UI.showLoading();
+                    
+                    const wb = XLSX.utils.book_new();
+                    const res = STATE.analysisResults;
+                    const duplicates = [...res.duplicates1, ...res.duplicates2];
+                    
+                    // Create sheet for matching records
+                    const matchingData = res.matching.map(r => ({
+                        'App ID': r.appId,
+                        'Source': r.branding,
+                        'Status': r.status,
+                        'Amount Src 1': r.amount1,
+                        'Amount Src 2': r.amount2,
+                        'Difference': r.difference,
+                        'Date Src 1': r.date1,
+                        'Date Src 2': r.date2
+                    }));
+                    
+                    const wsMatching = XLSX.utils.json_to_sheet(matchingData);
+                    this.addDateFormatting(wsMatching, ['G', 'H']);
+                    XLSX.utils.book_append_sheet(wb, wsMatching, 'Matching');
+                    
+                    // Create sheet for missing records
+                    const missingData = res.missing.map(r => ({
+                        'App ID': r.appId,
+                        'Missing From': r.missingFrom,
+                        'Amount': r.amount,
+                        'Paid Status': r.paid,
+                        'Source': r.branding,
+                        'Date': r.date
+                    }));
+                    
+                    const wsMissing = XLSX.utils.json_to_sheet(missingData);
+                    this.addDateFormatting(wsMissing, ['F']);
+                    XLSX.utils.book_append_sheet(wb, wsMissing, 'Missing');
+                    
+                    // Create sheet for duplicates if any exist
+                    if (duplicates.length) {
+                        const duplicatesData = duplicates.map(r => ({
+                            'App ID': r.appId,
+                            'Source': r.source,
+                            'Count': r.count
+                        }));
+                        
+                        XLSX.utils.book_append_sheet(
+                            wb, 
+                            XLSX.utils.json_to_sheet(duplicatesData), 
+                            'Duplicates'
+                        );
+                    }
+                    
+                    // Create summary sheet with statistics
+                    const summaryData = [
+                        { Statistic: 'Analysis Date', Value: new Date(res.analysisTime).toLocaleString() },
+                        { Statistic: 'Total Amount (Source 1)', Value: res.stats.total1 },
+                        { Statistic: 'Total Amount (Source 2)', Value: res.stats.total2 },
+                        { Statistic: 'Total Records (Source 1)', Value: res.stats.count1 },
+                        { Statistic: 'Total Records (Source 2)', Value: res.stats.count2 },
+                        { Statistic: 'Matching IDs', Value: res.matching.length },
+                        { Statistic: 'Missing IDs', Value: res.missing.length },
+                        { Statistic: 'Duplicate IDs', Value: duplicates.length },
+                        { Statistic: 'Total Difference', Value: res.stats.totalDiff },
+                        { Statistic: 'Apply GST?', Value: res.options.applyGST ? 'Yes' : 'No' },
+                        { Statistic: 'Round GST?', Value: res.options.roundGST ? 'Yes' : 'No' },
+                        { Statistic: 'Include Unpaid?', Value: res.options.includeUnpaid ? 'Yes' : 'No' }
+                    ];
+                    
+                    XLSX.utils.book_append_sheet(
+                        wb, 
+                        XLSX.utils.json_to_sheet(summaryData), 
+                        'Summary'
+                    );
+                    
+                    // Generate filename with timestamp
+                    const timestamp = new Date().toISOString().replace(/[:\-T]/g, '_').slice(0, 17);
+                    const filename = `AppID_Analysis_${timestamp}.xlsx`;
+                    
+                    // Write file and trigger download
+                    XLSX.writeFile(wb, filename);
+                    
+                    UI.showSuccess(`Report "${filename}" exported successfully!`);
+                    
+                } catch (error) {
+                    console.error('Export error:', error);
+                    UI.showError(`Failed to export: ${error.message}`);
+                } finally {
+                    UI.hideLoading();
+                }
+            },
+            
+            addDateFormatting(worksheet, dateColumns) {
+                if (!worksheet || !worksheet['!ref']) return;
+                
+                const range = XLSX.utils.decode_range(worksheet['!ref']);
+                
+                for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+                    dateColumns.forEach(colLetter => {
+                        const cellAddress = colLetter + (R + 1);
+                        const cell = worksheet[cellAddress];
+                        
+                        if (cell && cell.v instanceof Date) { 
+                            cell.t = 'd'; 
+                            cell.z = 'dd-mm-yyyy'; 
+                        }
+                    });
+                }
+            },
+            
+            openFullView(type) {
+                if (!STATE.analysisResults) {
+                    UI.showError('No analysis results to view');
+                    return;
+                }
+                
+                const dataMap = { 
+                    matching: STATE.analysisResults.matching, 
+                    missing: STATE.analysisResults.missing, 
+                    duplicates: [...STATE.analysisResults.duplicates1, ...STATE.analysisResults.duplicates2] 
+                };
+                
+                const data = dataMap[type];
+                if (!data || !data.length) {
+                    UI.showError(`No ${type} data to display`);
+                    return;
+                }
+                
+                // Generate table HTML for the popup window
+                const tableHtml = Analyzer.renderTable(type, data, STATE.analysisResults.sortState[type]);
+                
+                // Create a new window
+                const newWindow = window.open("", "_blank");
+                
+                // Generate the full HTML document for the new window
+                newWindow.document.write(`
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Full View: ${type}</title>
+                    <style>
+                        body {
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+                            padding: 20px;
+                            margin: 0;
+                        }
+                        h1 {
+                            color: #1e293b;
+                            margin-bottom: 20px;
+                        }
+                        table {
+                            width: 100%;
+                            border-collapse: collapse;
+                            margin-bottom: 20px;
+                        }
+                        th, td {
+                            padding: 12px 16px;
+                            text-align: left;
+                            border: 1px solid #e2e8f0;
+                        }
+                        th {
+                            background: #f8fafc;
+                            font-weight: 600;
+                            color: #374151;
+                            position: sticky;
+                            top: 0;
+                        }
+                        tr:nth-child(even) {
+                            background-color: #f8fafc;
+                        }
+                        tr:hover {
+                            background-color: #e9eef6;
+                        }
+                        .highlight-mismatch {
+                            background: #fef2f2;
+                        }
+                        .highlight-missing {
+                            background: #fef3c7;
+                        }
+                        .status-badge {
+                            padding: 4px 8px;
+                            border-radius: 12px;
+                            font-size: 0.75rem;
+                            font-weight: 600;
+                            text-transform: uppercase;
+                        }
+                        .status-badge.match {
+                            background: #d1fae5;
+                            color: #065f46;
+                        }
+                        .status-badge.amount-mismatch {
+                            background: #fee2e2;
+                            color: #991b1b;
+                        }
+                        .export-btn {
+                            padding: 10px 16px;
+                            background: #1e293b;
+                            color: white;
+                            border: none;
+                            border-radius: 4px;
+                            font-weight: 600;
+                            cursor: pointer;
+                            margin-bottom: 20px;
+                        }
+                        .export-btn:hover {
+                            background: #334155;
+                        }
+                        @media print {
+                            .no-print {
+                                display: none;
+                            }
+                            body {
+                                padding
