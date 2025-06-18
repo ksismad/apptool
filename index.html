@@ -28,6 +28,7 @@
             color: white;
             text-align: center; 
             padding: 32px 24px;
+            position: relative;
         }
         .header h1 { 
             margin: 0 0 12px 0; 
@@ -77,16 +78,6 @@
             border-color: #10b981;
             background: #ecfdf5;
         }
-        .upload-box.duplicate { 
-            border-color: #ef4444; 
-            background: #fef2f2;
-            animation: shake 0.5s ease-in-out;
-        }
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            75% { transform: translateX(5px); }
-        }
         .upload-btn { 
             margin-top: 16px;
             border: none;
@@ -113,6 +104,8 @@
             border-radius: 6px;
             display: inline-block;
         }
+        .file-input { display: none; }
+        
         .date-filter-section {
             background: #f8fafc;
             border-radius: 12px;
@@ -167,6 +160,7 @@
             border-color: #6366f1;
             box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
         }
+        
         .options-section {
             background: #f8fafc;
             border-radius: 12px;
@@ -197,6 +191,15 @@
             gap: 8px;
             margin-bottom: 8px;
         }
+        .col-select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.925rem;
+            background: #fff;
+        }
+        
         .analyze-btn {
             width: 100%;
             padding: 16px;
@@ -211,7 +214,7 @@
             box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.4);
             margin-bottom: 32px;
         }
-        .analyze-btn:hover {
+        .analyze-btn:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: 0 20px 25px -5px rgba(16, 185, 129, 0.4);
         }
@@ -221,9 +224,7 @@
             transform: none;
             box-shadow: none;
         }
-        .results {
-            margin-top: 32px;
-        }
+        
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -259,6 +260,7 @@
             color: #94a3b8;
             margin-top: 4px;
         }
+        
         .table-container {
             background: #fff;
             border-radius: 12px;
@@ -306,13 +308,6 @@
         th:hover {
             background: #e2e8f0;
         }
-        .sort-indicator {
-            margin-left: 4px;
-            opacity: 0.5;
-        }
-        .sort-indicator.active {
-            opacity: 1;
-        }
         tr:hover {
             background: #f8fafc;
         }
@@ -337,6 +332,7 @@
             background: #fee2e2;
             color: #991b1b;
         }
+        
         .export-section {
             display: flex;
             gap: 16px;
@@ -357,6 +353,7 @@
             background: #334155;
             transform: translateY(-1px);
         }
+        
         .hidden { display: none; }
         .error-msg {
             color: #dc2626;
@@ -385,6 +382,7 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+        
         .open-full-btn {
             padding: 6px 12px;
             background: #6366f1;
@@ -404,7 +402,7 @@
 <div class="container">
     <div class="header">
         <div class="user-info">
-            User: ksismad | UTC: 2025-06-18 14:17:31
+            User: ksismad | UTC: 2025-06-18 14:39:56
         </div>
         <h1>App ID Analyzer</h1>
         <p>
@@ -424,7 +422,6 @@
                     Choose Source 1 Files
                 </button>
                 <div id="file1-multi-info" class="file-info hidden"></div>
-                <div class="duplicate-error-msg hidden" id="duplicate-error-1"></div>
             </div>
 
             <div class="upload-box" id="upload-box-2">
@@ -486,7 +483,7 @@
         <div id="source1-dynamic"></div>
         <div id="source2-manual" class="hidden"></div>
 
-        <button id="analyze-btn" class="analyze-btn" disabled>
+        <button id="analyze-btn" class="analyze-btn" disabled onclick="analyzeData()">
             🔍 Analyze Data
         </button>
 
@@ -498,32 +495,24 @@
 <script>
 // === CORE DATE UTILITIES ===
 const DATE_UTILS = {
-    // Convert Excel serial number to UTC Date with precision handling
     excelSerialToUTC(serial) {
         if (typeof serial !== 'number' || serial < 0) return null;
         
-        // Handle Excel's 1900 leap year bug
         let adjustedSerial = serial;
         if (serial > 60) adjustedSerial -= 1;
         
-        // Excel epoch: January 1, 1900 (but treating it as January 0, 1900)
-        const EXCEL_EPOCH = Date.UTC(1899, 11, 31); // Dec 31, 1899
+        const EXCEL_EPOCH = Date.UTC(1899, 11, 31);
         const MILLIS_PER_DAY = 86400000;
         
-        // Separate integer and fractional parts
         const daysSinceEpoch = Math.floor(adjustedSerial);
         const fractionalDay = adjustedSerial - daysSinceEpoch;
         
-        // Calculate date portion
         const msDate = EXCEL_EPOCH + (daysSinceEpoch * MILLIS_PER_DAY);
-        
-        // Calculate time portion with precision
         const msTime = Math.round(fractionalDay * MILLIS_PER_DAY);
         
         return new Date(msDate + msTime);
     },
 
-    // Parse various date formats to UTC Date
     parseToUTC(val) {
         if (!val) return null;
         if (val instanceof Date) {
@@ -533,10 +522,9 @@ const DATE_UTILS = {
             ));
         }
 
-        // Handle Excel serial numbers
         if (typeof val === 'number' || /^\d{5,6}(\.\d+)?$/.test(String(val))) {
             const numVal = typeof val === 'number' ? val : parseFloat(val);
-            if (numVal > 20000) { // Reasonable Excel serial number range
+            if (numVal > 20000) {
                 return this.excelSerialToUTC(numVal);
             }
         }
@@ -544,7 +532,6 @@ const DATE_UTILS = {
         if (typeof val === 'string') {
             val = val.trim();
             
-            // Handle dd-mm-yyyy format
             let match = val.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
             if (match) {
                 return new Date(Date.UTC(
@@ -554,7 +541,6 @@ const DATE_UTILS = {
                 ));
             }
 
-            // Handle yyyy-mm-dd format
             match = val.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
             if (match) {
                 return new Date(Date.UTC(
@@ -564,7 +550,6 @@ const DATE_UTILS = {
                 ));
             }
 
-            // Handle dd/mm/yyyy format
             match = val.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
             if (match) {
                 return new Date(Date.UTC(
@@ -574,7 +559,6 @@ const DATE_UTILS = {
                 ));
             }
 
-            // Try parsing as ISO date
             const d = new Date(val);
             if (!isNaN(d.valueOf())) {
                 return new Date(Date.UTC(
@@ -587,7 +571,6 @@ const DATE_UTILS = {
         return null;
     },
 
-    // Format UTC Date to dd-mm-yyyy for display
     formatDisplay(utcDate) {
         if (!utcDate || !(utcDate instanceof Date) || isNaN(utcDate.valueOf())) return "";
         const dd = String(utcDate.getUTCDate()).padStart(2, '0');
@@ -596,7 +579,6 @@ const DATE_UTILS = {
         return `${dd}-${mm}-${yyyy}`;
     },
 
-    // Format UTC Date to yyyy-mm-dd for date inputs
     formatDateInput(utcDate) {
         if (!utcDate || !(utcDate instanceof Date) || isNaN(utcDate.valueOf())) return "";
         const yyyy = utcDate.getUTCFullYear();
@@ -605,7 +587,6 @@ const DATE_UTILS = {
         return `${yyyy}-${mm}-${dd}`;
     },
 
-    // Parse date input value to UTC
     parseDateInput(val) {
         if (!val) return null;
         const match = val.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -619,7 +600,6 @@ const DATE_UTILS = {
         return null;
     },
 
-    // Get end of day in UTC
     getEndOfDay(utcDate) {
         if (!utcDate) return null;
         return new Date(Date.UTC(
@@ -635,7 +615,6 @@ const DATE_UTILS = {
 let source1Files = [];
 let source2File = null;
 let analysisResults = null;
-let sortState = { table: null, column: null, direction: 'asc' };
 
 // === COLUMN DETECTION ===
 function autoDetectColumns(headers, sampleRows) {
@@ -700,7 +679,7 @@ function detectDateColumn(rows, maxSampleRows = 15) {
         }
     }
     
-    const threshold = 0.6; // 60% threshold for date detection
+    const threshold = 0.6;
     for (let i = 0; i < scores.length; i++) {
         if (scores[i] > threshold) return i;
     }
@@ -712,7 +691,7 @@ function detectDateColumn(rows, maxSampleRows = 15) {
 function processFileData(data, cols) {
     const processed = [];
     
-    for (let i = 1; i < data.length; i++) { // Skip header row
+    for (let i = 1; i < data.length; i++) {
         const row = data[i];
         if (!row) continue;
         
@@ -769,99 +748,38 @@ function findDuplicates(data) {
         .map(([appId, count]) => ({ appId, count }));
 }
 
-// === FILE HANDLING ===
-document.getElementById('file1-multi').addEventListener('change', function(e) {
-    const files = Array.from(e.target.files);
-    if (!files.length) return;
-    
-    const uploadBox = document.getElementById('upload-box-1');
-    const infoDiv = document.getElementById('file1-multi-info');
-    
-    uploadBox.classList.add('has-files');
-    infoDiv.textContent = `${files.length} file(s) selected`;
-    infoDiv.classList.remove('hidden');
-    
-    source1Files = [];
-    document.getElementById('source1-dynamic').innerHTML = '';
-    
-    let filesProcessed = 0;
-    
-    files.forEach((file, index) => {
-        const reader = new FileReader();
-        reader.onload = function(event) {
-            try {
-                const workbook = XLSX.read(event.target.result, { type: 'binary' });
-                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-                
-                const headers = jsonData[0] || [];
-                const sampleRows = jsonData.slice(1, 16);
-                const cols = autoDetectColumns(headers, sampleRows);
-                
-                source1Files.push({
-                    file,
-                    data: jsonData,
-                    headers,
-                    cols,
-                    branding: String.fromCharCode(65 + index), // A, B, C, etc.
-                    processed: null
-                });
-                
-                renderColumnSelection(index, headers, cols, file.name);
-                
-                filesProcessed++;
-                if (filesProcessed === files.length) {
-                    checkForDuplicates();
-                    updateAnalyzeButton();
-                }
-            } catch (error) {
-                showError(`Error reading ${file.name}: ${error.message}`);
-            }
-        };
-        reader.readAsBinaryString(file);
-    });
-});
+// === UI FUNCTIONS ===
+function showError(message) {
+    const container = document.getElementById('error-container');
+    container.innerHTML = `<div class="error-msg">${message}</div>`;
+    setTimeout(() => {
+        container.innerHTML = '';
+    }, 5000);
+}
 
-document.getElementById('file2').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (!file) return;
+function updateAnalyzeButton() {
+    const analyzeBtn = document.getElementById('analyze-btn');
+    const hasSource1 = source1Files.length > 0;
+    const hasSource2 = source2File !== null;
     
-    const uploadBox = document.getElementById('upload-box-2');
-    const infoDiv = document.getElementById('file2-info');
+    // Check if all required columns are selected
+    const source1Valid = source1Files.every(file => 
+        file.cols.appId !== null && file.cols.amount !== null
+    );
+    const source2Valid = source2File && 
+        source2File.cols.appId !== null && source2File.cols.amount !== null;
     
-    uploadBox.classList.add('has-files');
-    infoDiv.textContent = file.name;
-    infoDiv.classList.remove('hidden');
+    const canAnalyze = hasSource1 && hasSource2 && source1Valid && source2Valid;
     
-    const reader = new FileReader();
-    reader.onload = function(event) {
-        try {
-            const workbook = XLSX.read(event.target.result, { type: 'binary' });
-            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-            
-            const headers = jsonData[0] || [];
-            const sampleRows = jsonData.slice(1, 16);
-            const cols = autoDetectColumns(headers, sampleRows);
-            
-            source2File = {
-                file,
-                data: jsonData,
-                headers,
-                cols,
-                processed: null
-            };
-            
-            renderSource2ColumnSelection(headers, cols);
-            updateAnalyzeButton();
-        } catch (error) {
-            showError(`Error reading ${file.name}: ${error.message}`);
-        }
-    };
-    reader.readAsBinaryString(file);
-});
+    analyzeBtn.disabled = !canAnalyze;
+    
+    if (canAnalyze) {
+        analyzeBtn.textContent = '🔍 Analyze Data';
+    } else {
+        analyzeBtn.textContent = 'Please select files and configure columns';
+    }
+}
 
-// === UI RENDERING ===
 function renderColumnSelection(index, headers, cols, filename) {
     const container = document.getElementById('source1-dynamic');
     
@@ -983,18 +901,129 @@ function renderSource2ColumnSelection(headers, cols) {
     });
 }
 
+// === FILE HANDLING ===
+document.getElementById('file1-multi').addEventListener('change', function(e) {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    
+    console.log('Source 1 files selected:', files.length);
+    
+    const uploadBox = document.getElementById('upload-box-1');
+    const infoDiv = document.getElementById('file1-multi-info');
+    
+    uploadBox.classList.add('has-files');
+    infoDiv.textContent = `${files.length} file(s) selected`;
+    infoDiv.classList.remove('hidden');
+    
+    source1Files = [];
+    document.getElementById('source1-dynamic').innerHTML = '';
+    
+    let filesProcessed = 0;
+    
+    files.forEach((file, index) => {
+        console.log(`Processing Source 1 file ${index + 1}:`, file.name);
+        
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            try {
+                const workbook = XLSX.read(event.target.result, { type: 'binary' });
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                
+                console.log(`File ${index + 1} data rows:`, jsonData.length);
+                
+                const headers = jsonData[0] || [];
+                const sampleRows = jsonData.slice(1, 16);
+                const cols = autoDetectColumns(headers, sampleRows);
+                
+                console.log(`File ${index + 1} detected columns:`, cols);
+                
+                source1Files.push({
+                    file,
+                    data: jsonData,
+                    headers,
+                    cols,
+                    branding: String.fromCharCode(65 + index),
+                    processed: null
+                });
+                
+                renderColumnSelection(index, headers, cols, file.name);
+                
+                filesProcessed++;
+                if (filesProcessed === files.length) {
+                    console.log('All Source 1 files processed');
+                    updateAnalyzeButton();
+                }
+            } catch (error) {
+                console.error(`Error reading file ${file.name}:`, error);
+                showError(`Error reading ${file.name}: ${error.message}`);
+            }
+        };
+        reader.readAsBinaryString(file);
+    });
+});
+
+document.getElementById('file2').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    console.log('Source 2 file selected:', file.name);
+    
+    const uploadBox = document.getElementById('upload-box-2');
+    const infoDiv = document.getElementById('file2-info');
+    
+    uploadBox.classList.add('has-files');
+    infoDiv.textContent = file.name;
+    infoDiv.classList.remove('hidden');
+    
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        try {
+            const workbook = XLSX.read(event.target.result, { type: 'binary' });
+            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+            
+            console.log('Source 2 data rows:', jsonData.length);
+            
+            const headers = jsonData[0] || [];
+            const sampleRows = jsonData.slice(1, 16);
+            const cols = autoDetectColumns(headers, sampleRows);
+            
+            console.log('Source 2 detected columns:', cols);
+            
+            source2File = {
+                file,
+                data: jsonData,
+                headers,
+                cols,
+                processed: null
+            };
+            
+            renderSource2ColumnSelection(headers, cols);
+            updateAnalyzeButton();
+        } catch (error) {
+            console.error(`Error reading file ${file.name}:`, error);
+            showError(`Error reading ${file.name}: ${error.message}`);
+        }
+    };
+    reader.readAsBinaryString(file);
+});
+
 // === ANALYSIS ===
 function analyzeData() {
-    if (!source1Files.length || !source2File) return;
+    if (!source1Files.length || !source2File) {
+        showError('Please select both source files first.');
+        return;
+    }
     
-    // Show loading
+    console.log('Starting analysis...');
+    
     const resultsDiv = document.getElementById('results');
     resultsDiv.innerHTML = '<div class="loading">Analyzing data...</div>';
     resultsDiv.classList.remove('hidden');
     
     setTimeout(() => {
         try {
-            // Get date filters
             const filters = {
                 dateFrom1: DATE_UTILS.parseDateInput(document.getElementById('dateFrom1').value),
                 dateTo1: DATE_UTILS.parseDateInput(document.getElementById('dateTo1').value),
@@ -1002,10 +1031,11 @@ function analyzeData() {
                 dateTo2: DATE_UTILS.parseDateInput(document.getElementById('dateTo2').value)
             };
             
-            // Get options
             const includeUnpaid1 = document.getElementById('includeUnpaid1').checked;
             const applyGST = document.getElementById('applyGST').checked;
             const gstRound = document.getElementById('gstRound').checked;
+            
+            console.log('Analysis options:', { filters, includeUnpaid1, applyGST, gstRound });
             
             // Process all source 1 files
             let source1Data = [];
@@ -1017,16 +1047,23 @@ function analyzeData() {
                 source1Data = source1Data.concat(processed);
             });
             
+            console.log('Source 1 processed data:', source1Data.length);
+            
             // Process source 2 file
             const source2Data = processFileData(source2File.data, source2File.cols);
+            console.log('Source 2 processed data:', source2Data.length);
             
             // Apply date filters
             const filteredSource1 = applyDateFilter(source1Data, filters.dateFrom1, filters.dateTo1);
             const filteredSource2 = applyDateFilter(source2Data, filters.dateFrom2, filters.dateTo2);
             
+            console.log('After date filtering - Source 1:', filteredSource1.length, 'Source 2:', filteredSource2.length);
+            
             // Apply payment filter
             const finalSource1 = includeUnpaid1 ? filteredSource1 : 
                 filteredSource1.filter(item => String(item.paid || '').toLowerCase() === 'paid');
+            
+            console.log('After payment filtering - Source 1:', finalSource1.length);
             
             // Apply GST
             finalSource1.forEach(item => {
@@ -1037,6 +1074,8 @@ function analyzeData() {
             const duplicates1 = findDuplicates(finalSource1);
             const duplicates2 = findDuplicates(filteredSource2);
             
+            console.log('Duplicates - Source 1:', duplicates1.length, 'Source 2:', duplicates2.length);
+            
             // Perform analysis
             const results = performComparison(finalSource1, filteredSource2, {
                 duplicates1,
@@ -1045,10 +1084,13 @@ function analyzeData() {
                 options: { includeUnpaid1, applyGST, gstRound }
             });
             
+            console.log('Analysis results:', results);
+            
             analysisResults = results;
             renderResults(results);
             
         } catch (error) {
+            console.error('Analysis failed:', error);
             showError(`Analysis failed: ${error.message}`);
             resultsDiv.classList.add('hidden');
         }
@@ -1056,7 +1098,6 @@ function analyzeData() {
 }
 
 function performComparison(source1Data, source2Data, metadata) {
-    // Group by App ID
     const source1Map = _.groupBy(source1Data, 'appId');
     const source2Map = _.groupBy(source2Data, 'appId');
     const allAppIds = _.union(Object.keys(source1Map), Object.keys(source2Map));
@@ -1065,7 +1106,6 @@ function performComparison(source1Data, source2Data, metadata) {
     const missing = [];
     let totalDifference = 0;
     
-    // Calculate totals
     const totalAmount1 = source1Data.reduce((sum, item) => sum + item.amount, 0);
     const totalAmount2 = source2Data.reduce((sum, item) => sum + item.amount, 0);
     let matchingAmount1 = 0;
@@ -1076,7 +1116,6 @@ function performComparison(source1Data, source2Data, metadata) {
         const items2 = source2Map[appId];
         
         if (items1 && items2) {
-            // Matching App ID
             const amount1 = items1.reduce((sum, item) => sum + item.amount, 0);
             const amount2 = items2.reduce((sum, item) => sum + item.amount, 0);
             const difference = Math.abs(amount1 - amount2);
@@ -1100,7 +1139,6 @@ function performComparison(source1Data, source2Data, metadata) {
                 rows2: items2.map(i => i.rowNum).join(', ')
             });
         } else {
-            // Missing App ID
             const items = items1 || items2;
             const amount = items.reduce((sum, item) => sum + item.amount, 0);
             
@@ -1210,12 +1248,12 @@ function renderMatchingTable(data) {
                 <table>
                     <thead>
                         <tr>
-                            <th onclick="sortTable('matching', 'appId')">App ID <span class="sort-indicator">⇅</span></th>
-                            <th onclick="sortTable('matching', 'branding')">Source <span class="sort-indicator">⇅</span></th>
-                            <th onclick="sortTable('matching', 'status')">Status <span class="sort-indicator">⇅</span></th>
-                            <th onclick="sortTable('matching', 'amount1')">Amount (Src 1) <span class="sort-indicator">⇅</span></th>
-                            <th onclick="sortTable('matching', 'amount2')">Amount (Src 2) <span class="sort-indicator">⇅</span></th>
-                            <th onclick="sortTable('matching', 'difference')">Difference <span class="sort-indicator">⇅</span></th>
+                            <th>App ID</th>
+                            <th>Source</th>
+                            <th>Status</th>
+                            <th>Amount (Src 1)</th>
+                            <th>Amount (Src 2)</th>
+                            <th>Difference</th>
                             <th>Dates (Src 1)</th>
                             <th>Dates (Src 2)</th>
                         </tr>
@@ -1254,11 +1292,11 @@ function renderMissingTable(data) {
                 <table>
                     <thead>
                         <tr>
-                            <th onclick="sortTable('missing', 'appId')">App ID <span class="sort-indicator">⇅</span></th>
-                            <th onclick="sortTable('missing', 'missingFrom')">Missing From <span class="sort-indicator">⇅</span></th>
-                            <th onclick="sortTable('missing', 'amount')">Amount <span class="sort-indicator">⇅</span></th>
+                            <th>App ID</th>
+                            <th>Missing From</th>
+                            <th>Amount</th>
                             <th>Dates</th>
-                            <th onclick="sortTable('missing', 'branding')">Source <span class="sort-indicator">⇅</span></th>
+                            <th>Source</th>
                             <th>Present In Rows</th>
                         </tr>
                     </thead>
@@ -1303,7 +1341,6 @@ function exportToExcel() {
     
     const wb = XLSX.utils.book_new();
     
-    // Summary sheet
     const summaryData = [
         ['Analysis Summary'],
         ['Generated by', 'ksismad'],
@@ -1328,7 +1365,6 @@ function exportToExcel() {
     ];
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summaryData), 'Summary');
     
-    // Matching data sheet
     if (analysisResults.matching.length) {
         const matchingData = analysisResults.matching.map(row => ({
             'App ID': row.appId,
@@ -1347,7 +1383,6 @@ function exportToExcel() {
         XLSX.utils.book_append_sheet(wb, wsMatching, 'Matching');
     }
     
-    // Missing data sheet
     if (analysisResults.missing.length) {
         const missingData = analysisResults.missing.map(row => ({
             'App ID': row.appId,
@@ -1362,7 +1397,6 @@ function exportToExcel() {
         XLSX.utils.book_append_sheet(wb, wsMissing, 'Missing');
     }
     
-    // Generate filename with timestamp
     const timestamp = new Date().toISOString().replace(/[\-\:\.]/g, '').slice(0, 15);
     XLSX.writeFile(wb, `AppID_Analysis_${timestamp}.xlsx`);
 }
@@ -1410,7 +1444,6 @@ function exportToCSV(type) {
         });
     }
     
-    // Download CSV
     const timestamp = new Date().toISOString().replace(/[\-\:\.]/g, '').slice(0, 15);
     const filename = `AppID_${type === 'matching' ? 'Matching' : 'Missing'}_${timestamp}.csv`;
     
@@ -1434,34 +1467,21 @@ function formatCurrency(amount) {
     });
 }
 
-function sortTable(tableType, column) {
-    if (!analysisResults) return;
-    
-    const data = tableType === 'matching' ? analysisResults.matching : analysisResults.missing;
-    
-    // Toggle sort direction
-    if (sortState.table === tableType && sortState.column === column) {
-        sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
-    } else {
-        sortState.table = tableType;
-        sortState.column = column;
-        sortState.direction = 'asc';
-    }
-    
-    // Sort data
-    data.sort((a, b) => {
-        let valA = a[column];
-        let valB = b[column];
-        
-        // Handle different data types
-        if (typeof valA === 'string') valA = valA.toLowerCase();
-        if (typeof valB === 'string') valB = valB.toLowerCase();
-        
-        const direction = sortState.direction === 'asc' ? 1 : -1;
-        
-        if (valA < valB) return -1 * direction;
-        if (valA > valB) return 1 * direction;
-        return 0;
-    });
-    
-    
+function openFullView(type) {
+    // This function can be implemented to open a new tab with full data
+    console.log('Opening full view for:', type);
+}
+
+// === INITIALIZATION ===
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('App initialized for user: ksismad at 2025-06-18 14:39:56 UTC');
+    updateAnalyzeButton();
+});
+
+// Test the date utility functions
+console.log('Testing date conversion:');
+console.log('Excel serial 45721.00011574074 ->', DATE_UTILS.excelSerialToUTC(45721.00011574074));
+console.log('Formatted display:', DATE_UTILS.formatDisplay(DATE_UTILS.excelSerialToUTC(45721.00011574074)));
+</script>
+</body>
+</html>
