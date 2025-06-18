@@ -307,7 +307,7 @@
     <div class="container">
         <div class="header">
             <div class="user-info">
-                User: ksismad | UTC: 2025-06-18 15:27:18
+                User: ksismad | UTC: 2025-06-18 15:32:43
             </div>
             <h1>🔍 App ID Analyzer</h1>
             <p>
@@ -323,7 +323,7 @@
                     <h3>📁 Source 1 Files</h3>
                     <p>Select multiple Excel files containing App IDs and amounts</p>
                     <input type="file" id="file1-multi" class="file-input" multiple accept=".xlsx,.xls">
-                    <button class="upload-btn" onclick="document.getElementById('file1-multi').click()">
+                    <button class="upload-btn" id="upload-btn-1">
                         Choose Source 1 Files
                     </button>
                     <div id="file1-multi-info" class="file-info hidden"></div>
@@ -333,7 +333,7 @@
                     <h3>📁 Source 2 File</h3>
                     <p>Select Excel file for comparison</p>
                     <input type="file" id="file2" class="file-input" accept=".xlsx,.xls">
-                    <button class="upload-btn" onclick="document.getElementById('file2').click()">
+                    <button class="upload-btn" id="upload-btn-2">
                         Choose Source 2 File
                     </button>
                     <div id="file2-info" class="file-info hidden"></div>
@@ -399,7 +399,7 @@
                 </div>
             </div>
 
-            <button id="analyze-btn" class="analyze-btn" disabled onclick="analyzeData()">
+            <button id="analyze-btn" class="analyze-btn" disabled>
                 📋 Please Select Files and Configure Columns
             </button>
 
@@ -522,6 +522,10 @@
         // === VALIDATION LOGIC ===
         const ValidationState = {
             update() {
+                console.log('ValidationState.update() called');
+                console.log('Source1Files:', source1Files.length);
+                console.log('Source2File:', !!source2File);
+                
                 const hasSource1Files = source1Files.length > 0;
                 const hasSource2File = source2File !== null;
                 const source1ColumnsValid = hasSource1Files && source1Files.every(file => 
@@ -529,6 +533,13 @@
                 );
                 const source2ColumnsValid = hasSource2File && 
                     source2File.cols.appId !== null && source2File.cols.amount !== null;
+                
+                console.log('Validation state:', {
+                    hasSource1Files,
+                    hasSource2File,
+                    source1ColumnsValid,
+                    source2ColumnsValid
+                });
                 
                 const items = [
                     { text: `Source 1 files (${source1Files.length} selected)`, valid: hasSource1Files },
@@ -584,6 +595,7 @@
                 }
             }
             
+            console.log('Auto-detected columns:', cols);
             return cols;
         }
 
@@ -750,6 +762,8 @@
                     const colType = this.dataset.col;
                     const colIndex = this.value === '' ? null : parseInt(this.value);
                     
+                    console.log(`Source 1 File ${fileIndex} - ${colType} column changed to:`, colIndex);
+                    
                     source1Files[fileIndex].cols[colType] = colIndex;
                     ValidationState.update();
                 });
@@ -812,110 +826,13 @@
                     const colType = this.id.replace('source2-', '');
                     const colIndex = this.value === '' ? null : parseInt(this.value);
                     
+                    console.log(`Source 2 - ${colType} column changed to:`, colIndex);
+                    
                     source2File.cols[colType] = colIndex;
                     ValidationState.update();
                 });
             });
         }
-
-        // === FILE HANDLING ===
-        document.getElementById('file1-multi').addEventListener('change', function(e) {
-            const files = Array.from(e.target.files);
-            if (!files.length) return;
-            
-            console.log('Source 1 files selected:', files.length);
-            
-            const uploadBox = document.getElementById('upload-box-1');
-            const infoDiv = document.getElementById('file1-multi-info');
-            
-            uploadBox.classList.add('has-files');
-            infoDiv.textContent = `${files.length} file(s) selected`;
-            infoDiv.classList.remove('hidden');
-            
-            source1Files = [];
-            document.getElementById('source1-dynamic').innerHTML = '';
-            
-            let filesProcessed = 0;
-            
-            files.forEach((file, index) => {
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    try {
-                        const workbook = XLSX.read(event.target.result, { type: 'binary' });
-                        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-                        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-                        
-                        const headers = jsonData[0] || [];
-                        const sampleRows = jsonData.slice(1, 16);
-                        const cols = autoDetectColumns(headers, sampleRows);
-                        
-                        source1Files.push({
-                            file,
-                            data: jsonData,
-                            headers,
-                            cols,
-                            branding: String.fromCharCode(65 + index),
-                            processed: null
-                        });
-                        
-                        renderColumnSelection(index, headers, cols, file.name);
-                        
-                        filesProcessed++;
-                        if (filesProcessed === files.length) {
-                            showSuccess(`${files.length} Source 1 file(s) loaded successfully!`);
-                            ValidationState.update();
-                        }
-                    } catch (error) {
-                        console.error(`Error reading file ${file.name}:`, error);
-                        showError(`Error reading ${file.name}: ${error.message}`);
-                    }
-                };
-                reader.readAsBinaryString(file);
-            });
-        });
-
-        document.getElementById('file2').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            
-            console.log('Source 2 file selected:', file.name);
-            
-            const uploadBox = document.getElementById('upload-box-2');
-            const infoDiv = document.getElementById('file2-info');
-            
-            uploadBox.classList.add('has-files');
-            infoDiv.textContent = file.name;
-            infoDiv.classList.remove('hidden');
-            
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                try {
-                    const workbook = XLSX.read(event.target.result, { type: 'binary' });
-                    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-                    
-                    const headers = jsonData[0] || [];
-                    const sampleRows = jsonData.slice(1, 16);
-                    const cols = autoDetectColumns(headers, sampleRows);
-                    
-                    source2File = {
-                        file,
-                        data: jsonData,
-                        headers,
-                        cols,
-                        processed: null
-                    };
-                    
-                    renderSource2ColumnSelection(headers, cols);
-                    showSuccess('Source 2 file loaded successfully!');
-                    ValidationState.update();
-                } catch (error) {
-                    console.error(`Error reading file ${file.name}:`, error);
-                    showError(`Error reading ${file.name}: ${error.message}`);
-                }
-            };
-            reader.readAsBinaryString(file);
-        });
 
         // === ANALYSIS ===
         function analyzeData() {
@@ -1357,9 +1274,7 @@
                     'Dates (Source 1)': row.dates1.map(d => d.display).join(', '),
                     'Dates (Source 2)': row.dates2.map(d => d.display).join(', '),
                     'Rows (Source 1)': row.rows1,
-                    'Rows (Source 2)': row.rows2,
-                    'Paid Status 1': row.paid1,
-                    'Paid Status 2': row.paid2
+                    'Rows (Source 2)': row.rows2
                 }));
                 
                 const wsMatching = XLSX.utils.json_to_sheet(matchingData);
@@ -1374,12 +1289,86 @@
                     'Amount': row.amount,
                     'Source': row.branding,
                     'Dates': row.dates.map(d => d.display).join(', '),
-                    'Present In Rows': row.rows,
-                    'Paid Status': row.paid
+                    'Present In Rows': row.rows
                 }));
                 
                 const wsMissing = XLSX.utils.json_to_sheet(missingData);
                 XLSX.utils.book_append_sheet(wb, wsMissing, 'Missing App IDs');
             }
             
-            // Duplic
+            // Duplicates data sheet
+            const allDuplicates = [
+                ...analysisResults.source1.duplicates.map(d => ({ ...d, source: 'Source 1' })),
+                ...analysisResults.source2.duplicates.map(d => ({ ...d, source: 'Source 2' }))
+            ];
+            
+            if (allDuplicates.length) {
+                const duplicatesData = allDuplicates.map(row => ({
+                    'App ID': row.appId,
+                    'Source': row.source,
+                    'Count': row.count
+                }));
+                
+                const wsDuplicates = XLSX.utils.json_to_sheet(duplicatesData);
+                XLSX.utils.book_append_sheet(wb, wsDuplicates, 'Duplicates');
+            }
+            
+            const timestamp = new Date().toISOString().replace(/[\-\:\.]/g, '').slice(0, 15);
+            XLSX.writeFile(wb, `AppID_Analysis_${timestamp}.xlsx`);
+        }
+
+        function exportToCSV(type) {
+            if (!analysisResults) return;
+            
+            let data, headers, filename;
+            
+            if (type === 'matching') {
+                data = analysisResults.matching;
+                headers = ['App ID', 'Source', 'Status', 'Amount (Source 1)', 'Amount (Source 2)', 'Difference', 'Dates (Source 1)', 'Dates (Source 2)'];
+                filename = 'Matching_AppIDs';
+            } else if (type === 'missing') {
+                data = analysisResults.missing;
+                headers = ['App ID', 'Missing From', 'Amount', 'Source', 'Dates', 'Present In Rows'];
+                filename = 'Missing_AppIDs';
+            } else if (type === 'duplicates') {
+                data = [
+                    ...analysisResults.source1.duplicates.map(d => ({ ...d, source: 'Source 1' })),
+                    ...analysisResults.source2.duplicates.map(d => ({ ...d, source: 'Source 2' }))
+                ];
+                headers = ['App ID', 'Source', 'Count'];
+                filename = 'Duplicate_AppIDs';
+            }
+            
+            if (!data.length) return;
+            
+            let csv = headers.join(',') + '\n';
+            
+            data.forEach(row => {
+                let csvRow = [];
+                if (type === 'matching') {
+                    csvRow = [
+                        `"${row.appId}"`,
+                        `"${row.branding}"`,
+                        `"${row.status}"`,
+                        row.amount1,
+                        row.amount2,
+                        row.difference,
+                        `"${row.dates1.map(d => d.display).join(', ')}"`,
+                        `"${row.dates2.map(d => d.display).join(', ')}"`,
+                    ];
+                } else if (type === 'missing') {
+                    csvRow = [
+                        `"${row.appId}"`,
+                        `"${row.missingFrom}"`,
+                        row.amount,
+                        `"${row.branding}"`,
+                        `"${row.dates.map(d => d.display).join(', ')}"`,
+                        `"${row.rows}"`
+                    ];
+                } else if (type === 'duplicates') {
+                    csvRow = [
+                        `"${row.appId}"`,
+                        `"${row.source}"`,
+                        row.count
+                    ];
+                }
