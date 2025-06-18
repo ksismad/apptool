@@ -15,7 +15,7 @@
             padding: 20px;
         }
         .container {
-            max-width: 1400px;
+            max-width: 1600px;
             margin: 0 auto;
             background: #fff;
             border-radius: 16px;
@@ -51,7 +51,9 @@
         .date-range { display: flex; align-items: center; gap: 12px; }
         .date-input { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.925rem; flex: 1; }
         .checkbox-group { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-        .col-select { width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.925rem; background: #fff; }
+        .input-group { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .col-select, .commission-input { width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.925rem; background: #fff; }
+        .commission-input { max-width: 150px; }
         .validation-title { font-weight: 600; color: #374151; margin-bottom: 12px; }
         .validation-item { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 0.875rem; }
         .validation-item.valid { color: #059669; }
@@ -70,6 +72,7 @@
         .stat-card.success { border-left-color: #10b981; }
         .stat-card.warning { border-left-color: #f59e0b; }
         .stat-card.danger { border-left-color: #ef4444; }
+        .stat-card.commission { border-left-color: #8b5cf6; }
         .stat-number { font-size: 1.875rem; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
         .stat-label { font-size: 0.875rem; color: #64748b; font-weight: 500; text-transform: uppercase; }
         .stat-meta { font-size: 0.75rem; color: #94a3b8; margin-top: 4px; }
@@ -80,14 +83,17 @@
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 0.875rem; white-space: nowrap; }
         th { background: #f8fafc; font-weight: 600; color: #374151; position: sticky; top: 0; cursor: pointer; user-select: none; }
+        th:hover { background: #e2e8f0; }
         th .sort-arrow { display: inline-block; margin-left: 5px; opacity: 0.5; }
         th.sorted .sort-arrow { opacity: 1; }
         tr:hover { background: #f8fafc; }
         .highlight-mismatch { background: #fef2f2; }
         .highlight-missing { background: #fef3c7; }
+        .highlight-match { background: #f0fdf4; }
         .status-badge { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
         .status-badge.match { background: #d1fae5; color: #065f46; }
         .status-badge.amount-mismatch { background: #fee2e2; color: #991b1b; }
+        .status-badge.missing { background: #fef3c7; color: #92400e; }
         .export-section { display: flex; gap: 16px; justify-content: center; margin-top: 32px; flex-wrap: wrap; }
         .export-btn, .view-btn { padding: 12px 24px; background: #1e293b; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
         .export-btn:hover, .view-btn:hover { background: #334155; transform: translateY(-1px); }
@@ -96,8 +102,8 @@
         .error-msg { color: #dc2626; background: #fef2f2; border-color: #dc2626; }
         .success-msg { color: #059669; background: #ecfdf5; border-color: #059669; }
         .loading { text-align: center; padding: 40px; color: #6b7280; }
-        .hidden { display: none !important; }
         .processing { text-align: center; padding: 20px; color: #6366f1; font-weight: 600; }
+        .hidden { display: none !important; }
         @media (max-width: 768px) {
             .upload-section, .date-filter-grid, .options-grid { grid-template-columns: 1fr; }
             .stats-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
@@ -109,7 +115,7 @@
         <div class="header">
             <div class="user-info" id="user-info"></div>
             <h1>🔍 App ID Analyzer</h1>
-            <p>Advanced multi-file Excel analysis with sorting, full-view, and comprehensive reporting.</p>
+            <p>Advanced multi-file Excel analysis with commission calculation and comprehensive reporting.</p>
         </div>
 
         <div class="main-content">
@@ -122,10 +128,10 @@
                     <div id="file-info-1" class="file-info hidden"></div>
                 </div>
                 <div class="upload-box" id="upload-box-2">
-                    <h3>📁 Source 2 File</h3>
-                    <p>Select a single Excel file</p>
-                    <input type="file" id="file-input-2" class="file-input" accept=".xlsx,.xls">
-                    <button class="upload-btn" id="upload-btn-2">Choose Source 2 File</button>
+                    <h3>📁 Source 2 Files</h3>
+                    <p>Select one or more Excel files</p>
+                    <input type="file" id="file-input-2" class="file-input" multiple accept=".xlsx,.xls">
+                    <button class="upload-btn" id="upload-btn-2">Choose Source 2 Files</button>
                     <div id="file-info-2" class="file-info hidden"></div>
                 </div>
             </div>
@@ -153,7 +159,7 @@
             </div>
 
             <div class="section">
-                <h3 class="section-title">⚙️ Analysis Options</h3>
+                <h3 class="section-title">⚙️ Analysis & Commission Options</h3>
                 <div class="options-grid">
                     <div class="option-group">
                         <label class="option-label">Payment Filter</label>
@@ -163,21 +169,35 @@
                         </div>
                     </div>
                     <div class="option-group">
-                        <label class="option-label">GST Calculation</label>
+                        <label class="option-label">GST Calculation (18%)</label>
                         <div class="checkbox-group">
                             <input type="checkbox" id="applyGST">
-                            <label for="applyGST">Apply 18% GST to amounts</label>
+                            <label for="applyGST">Apply 18% GST to Source 1</label>
                         </div>
                         <div class="checkbox-group">
                             <input type="checkbox" id="gstRound">
-                            <label for="gstRound">Round final amounts</label>
+                            <label for="gstRound">Round GST amounts</label>
+                        </div>
+                    </div>
+                    <div class="option-group">
+                        <label class="option-label">Commission Rate (%)</label>
+                        <div class="input-group">
+                            <input type="number" id="commissionRate" class="commission-input" placeholder="e.g., 5" min="0" max="100" step="0.01">
+                            <label>% on paid amounts</label>
+                        </div>
+                    </div>
+                    <div class="option-group">
+                        <label class="option-label">Manual Commission Calculator</label>
+                        <div class="input-group">
+                            <input type="number" id="manualCommissionRate" class="commission-input" placeholder="e.g., 2.5" min="0" max="100" step="0.01">
+                            <label>% on taxable value</label>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div id="source1-dynamic"></div>
-            <div id="source2-manual" class="hidden"></div>
+            <div id="source2-dynamic"></div>
 
             <div id="validation-status" class="section">
                 <h3 class="section-title">📋 Validation Status</h3>
@@ -195,7 +215,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         // === GLOBAL STATE ===
         let source1Files = [];
-        let source2File = null;
+        let source2Files = [];
         let analysisResults = null;
 
         // === DOM ELEMENTS ===
@@ -212,6 +232,11 @@
 
         function safeString(val, defaultVal = '') {
             return (val === null || val === undefined) ? defaultVal : String(val);
+        }
+
+        function calculateTaxableValue(amount, hasGST = false) {
+            // If amount includes GST, remove it to get taxable value
+            return hasGST ? amount / 1.18 : amount;
         }
 
         // === CORE DATE UTILITIES ===
@@ -251,13 +276,13 @@
         const ValidationState = {
             update() {
                 const hasSrc1 = source1Files.length > 0;
-                const hasSrc2 = source2File !== null;
+                const hasSrc2 = source2Files.length > 0;
                 const src1ColsOk = hasSrc1 && source1Files.every(f => f.cols.appId !== null && f.cols.amount !== null);
-                const src2ColsOk = hasSrc2 && source2File.cols && source2File.cols.appId !== null && source2File.cols.amount !== null;
+                const src2ColsOk = hasSrc2 && source2Files.every(f => f.cols.appId !== null && f.cols.amount !== null);
                 
                 document.getElementById('validation-items').innerHTML = [
                     { text: `Source 1 files selected (${source1Files.length})`, valid: hasSrc1 },
-                    { text: 'Source 2 file selected', valid: hasSrc2 },
+                    { text: `Source 2 files selected (${source2Files.length})`, valid: hasSrc2 },
                     { text: 'Source 1 columns configured', valid: src1ColsOk },
                     { text: 'Source 2 columns configured', valid: src2ColsOk }
                 ].map(item => `<div class="validation-item ${item.valid ? 'valid' : 'invalid'}">${item.text}</div>`).join('');
@@ -270,16 +295,18 @@
 
         // === FILE PROCESSING & ANALYSIS ===
         function autoDetectColumns(headers, sample) {
-            const cols = { appId: null, amount: null, date: null, paid: null };
+            const cols = { appId: null, amount: null, date: null, paid: null, commission: null };
             const lcHeaders = headers.map(h => String(h || '').toLowerCase());
             
             const appIdIdx = lcHeaders.findIndex(h => h.includes('app') && h.includes('id'));
             const amountIdx = lcHeaders.findIndex(h => h.includes('amount') || h.includes('total'));
             const paidIdx = lcHeaders.findIndex(h => h.includes('paid') || h.includes('status'));
+            const commissionIdx = lcHeaders.findIndex(h => h.includes('commission') || h.includes('comm'));
             
             cols.appId = appIdIdx !== -1 ? appIdIdx : null;
             cols.amount = amountIdx !== -1 ? amountIdx : null;
             cols.paid = paidIdx !== -1 ? paidIdx : null;
+            cols.commission = commissionIdx !== -1 ? commissionIdx : null;
             
             // Find best date column
             const dateScores = Array(headers.length).fill(0);
@@ -298,7 +325,7 @@
             return cols;
         }
 
-        function processFileData(data, cols) {
+        function processFileData(data, cols, source = 1) {
             const processed = [];
             if (!Array.isArray(data) || data.length < 2) return processed;
             
@@ -314,7 +341,9 @@
                     appId: appId,
                     amount: safeNumber(row[cols.amount]),
                     paid: cols.paid !== null ? safeString(row[cols.paid]) : null,
-                    date: cols.date !== null ? DATE_UTILS.parseToDate(row[cols.date]) : null
+                    date: cols.date !== null ? DATE_UTILS.parseToDate(row[cols.date]) : null,
+                    commission: cols.commission !== null ? safeNumber(row[cols.commission]) : 0,
+                    source: source
                 });
             }
             return processed;
@@ -336,17 +365,30 @@
                     const includeUnpaid = document.getElementById('includeUnpaid1').checked;
                     const applyGST = document.getElementById('applyGST').checked;
                     const roundGST = document.getElementById('gstRound').checked;
+                    const commissionRate = safeNumber(document.getElementById('commissionRate').value);
+                    const manualCommissionRate = safeNumber(document.getElementById('manualCommissionRate').value);
 
                     // Process source 1 files
                     let data1 = [];
-                    source1Files.forEach(f => {
-                        const processed = processFileData(f.data, f.cols);
-                        processed.forEach(item => item.branding = f.branding);
+                    source1Files.forEach((f, fileIndex) => {
+                        const processed = processFileData(f.data, f.cols, 1);
+                        processed.forEach(item => {
+                            item.branding = f.branding;
+                            item.fileName = f.file.name;
+                        });
                         data1 = data1.concat(processed);
                     });
                     
-                    // Process source 2 file
-                    const data2 = processFileData(source2File.data, source2File.cols);
+                    // Process source 2 files
+                    let data2 = [];
+                    source2Files.forEach((f, fileIndex) => {
+                        const processed = processFileData(f.data, f.cols, 2);
+                        processed.forEach(item => {
+                            item.branding = f.branding;
+                            item.fileName = f.file.name;
+                        });
+                        data2 = data2.concat(processed);
+                    });
 
                     // Apply date filters
                     let filtered1 = (filters.from1 || filters.to1) 
@@ -364,11 +406,14 @@
                     // Apply GST
                     if (applyGST) {
                         final1.forEach(d => {
+                            d.originalAmount = d.amount;
                             d.amount = roundGST ? Math.round(d.amount * 1.18) : d.amount * 1.18;
                         });
                     }
                     
-                    analysisResults = performComparison(final1, filtered2, {includeUnpaid, applyGST, roundGST});
+                    analysisResults = performComparison(final1, filtered2, {
+                        includeUnpaid, applyGST, roundGST, commissionRate, manualCommissionRate
+                    });
                     renderResults(analysisResults);
                     showSuccess('Analysis completed successfully!');
                 } catch (e) {
@@ -383,7 +428,15 @@
             const map1 = _.groupBy(d1, 'appId');
             const map2 = _.groupBy(d2, 'appId');
             const allIds = _.union(Object.keys(map1), Object.keys(map2));
-            const results = { matching: [], missing: [], duplicates1: [], duplicates2: [], options, sortState: {} };
+            const results = { 
+                matching: [], 
+                missing: [], 
+                duplicates1: [], 
+                duplicates2: [], 
+                options, 
+                sortState: {},
+                commissionData: []
+            };
             
             allIds.forEach(id => {
                 const items1 = map1[id];
@@ -402,7 +455,9 @@
                         status: diff < 0.01 ? 'Match' : 'Amount Mismatch',
                         branding: items1[0]?.branding || '',
                         date1: items1.find(i => i.date)?.date,
-                        date2: items2.find(i => i.date)?.date
+                        date2: items2.find(i => i.date)?.date,
+                        fileName1: items1[0]?.fileName || '',
+                        fileName2: items2[0]?.fileName || ''
                     });
                 } else {
                     const items = items1 || items2;
@@ -414,7 +469,8 @@
                         missingFrom: items1 ? 'Source 2' : 'Source 1',
                         branding: items[0]?.branding || '',
                         date: items.find(i => i.date)?.date,
-                        paid: items[0]?.paid
+                        paid: items[0]?.paid,
+                        fileName: items[0]?.fileName || ''
                     });
                 }
             });
@@ -425,7 +481,8 @@
                     results.duplicates1.push({
                         appId: id,
                         count: map1[id].length,
-                        source: 'Source 1'
+                        source: 'Source 1',
+                        totalAmount: _.sumBy(map1[id], 'amount')
                     });
                 }
             });
@@ -435,10 +492,42 @@
                     results.duplicates2.push({
                         appId: id,
                         count: map2[id].length,
-                        source: 'Source 2'
+                        source: 'Source 2',
+                        totalAmount: _.sumBy(map2[id], 'amount')
                     });
                 }
             });
+
+            // Calculate commission data
+            const paidItems1 = d1.filter(d => String(d.paid || '').toLowerCase() === 'paid');
+            let totalCommissionFromColumn = 0;
+            let totalCommissionCalculated = 0;
+            let totalManualCommission = 0;
+
+            paidItems1.forEach(item => {
+                // Commission from column
+                totalCommissionFromColumn += item.commission || 0;
+                
+                // Calculated commission on paid amounts
+                if (options.commissionRate > 0) {
+                    totalCommissionCalculated += (item.amount * options.commissionRate / 100);
+                }
+                
+                // Manual commission on taxable value
+                if (options.manualCommissionRate > 0) {
+                    const taxableValue = calculateTaxableValue(item.originalAmount || item.amount, options.applyGST);
+                    totalManualCommission += (taxableValue * options.manualCommissionRate / 100);
+                }
+            });
+
+            results.commissionData = {
+                fromColumn: totalCommissionFromColumn,
+                calculated: totalCommissionCalculated,
+                manual: totalManualCommission,
+                rate: options.commissionRate,
+                manualRate: options.manualCommissionRate,
+                paidCount: paidItems1.length
+            };
             
             results.stats = {
                 total1: safeNumber(_.sumBy(d1, 'amount')),
@@ -449,7 +538,9 @@
                 count1: d1.length,
                 count2: d2.length,
                 unique1: Object.keys(map1).length,
-                unique2: Object.keys(map2).length
+                unique2: Object.keys(map2).length,
+                duplicateAmount1: safeNumber(_.sumBy(results.duplicates1, 'totalAmount')),
+                duplicateAmount2: safeNumber(_.sumBy(results.duplicates2, 'totalAmount'))
             };
             results.analysisTime = new Date().toISOString();
             return results;
@@ -467,10 +558,19 @@
             }, 3000);
         }
 
-        function renderColumnSelectors(parent, headers, cols) {
+        function renderColumnSelectors(parent, headers, cols, sourceNum) {
             const headerOptions = headers.map((h, i) => 
-                `<option value="${i}" ${cols.appId === i || cols.amount === i || cols.date === i || cols.paid === i ? 'selected' : ''}>${h || `Column ${i+1}`}</option>`
+                `<option value="${i}" ${cols.appId === i || cols.amount === i || cols.date === i || cols.paid === i || cols.commission === i ? 'selected' : ''}>${h || `Column ${i+1}`}</option>`
             ).join('');
+            
+            const commissionSelector = sourceNum === 1 ? `
+                <div class="option-group">
+                    <label class="option-label">Commission Column</label>
+                    <select class="col-select" data-col="commission">
+                        <option value="">None</option>
+                        ${headerOptions}
+                    </select>
+                </div>` : '';
             
             parent.innerHTML = `
                 <div class="options-grid">
@@ -502,6 +602,7 @@
                             ${headerOptions}
                         </select>
                     </div>
+                    ${commissionSelector}
                 </div>`;
             
             // Set correct selected values
@@ -515,6 +616,8 @@
 
         function renderResults(res) {
             const duplicates = [...res.duplicates1, ...res.duplicates2];
+            const comm = res.commissionData;
+            
             resultsContainer.innerHTML = `
                 <div class="results-header">
                     <h2 class="results-title">📊 Analysis Results</h2>
@@ -523,29 +626,48 @@
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-number">Rs ${res.stats.total1.toFixed(2)}</div>
-                        <div class="stat-label">Total Src 1</div>
+                        <div class="stat-label">Total Source 1</div>
                         <div class="stat-meta">${res.stats.count1} entries</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-number">Rs ${res.stats.total2.toFixed(2)}</div>
-                        <div class="stat-label">Total Src 2</div>
+                        <div class="stat-label">Total Source 2</div>
                         <div class="stat-meta">${res.stats.count2} entries</div>
                     </div>
                     <div class="stat-card success">
                         <div class="stat-number">${res.matching.length}</div>
                         <div class="stat-label">Matching IDs</div>
+                        <div class="stat-meta">Rs ${res.stats.matching1.toFixed(2)} vs Rs ${res.stats.matching2.toFixed(2)}</div>
                     </div>
                     <div class="stat-card ${res.stats.totalDiff > 0.01 ? 'warning' : 'success'}">
                         <div class="stat-number">Rs ${res.stats.totalDiff.toFixed(2)}</div>
                         <div class="stat-label">Total Difference</div>
+                        <div class="stat-meta">Amount mismatches</div>
                     </div>
                     <div class="stat-card ${res.missing.length > 0 ? 'danger' : 'success'}">
                         <div class="stat-number">${res.missing.length}</div>
                         <div class="stat-label">Missing IDs</div>
+                        <div class="stat-meta">Not found in either source</div>
                     </div>
                     <div class="stat-card ${duplicates.length > 0 ? 'danger' : 'success'}">
                         <div class="stat-number">${duplicates.length}</div>
                         <div class="stat-label">Duplicate IDs</div>
+                        <div class="stat-meta">Rs ${(res.stats.duplicateAmount1 + res.stats.duplicateAmount2).toFixed(2)}</div>
+                    </div>
+                    <div class="stat-card commission">
+                        <div class="stat-number">Rs ${comm.fromColumn.toFixed(2)}</div>
+                        <div class="stat-label">Commission (Column)</div>
+                        <div class="stat-meta">From source 1 data</div>
+                    </div>
+                    <div class="stat-card commission">
+                        <div class="stat-number">Rs ${comm.calculated.toFixed(2)}</div>
+                        <div class="stat-label">Commission (${comm.rate}%)</div>
+                        <div class="stat-meta">On ${comm.paidCount} paid entries</div>
+                    </div>
+                    <div class="stat-card commission">
+                        <div class="stat-number">Rs ${comm.manual.toFixed(2)}</div>
+                        <div class="stat-label">Manual Commission (${comm.manualRate}%)</div>
+                        <div class="stat-meta">On taxable value</div>
                     </div>
                 </div>
                 ${renderTable('matching', res.matching, res.sortState.matching)}
@@ -569,30 +691,35 @@
             const headers = {
                 matching: [
                     {k:'appId', n:'App ID'},
-                    {k:'branding', n:'Source'},
                     {k:'status', n:'Status'},
                     {k:'amount1', n:'Amount (Src 1)'},
                     {k:'amount2', n:'Amount (Src 2)'},
                     {k:'difference', n:'Difference'},
                     {k:'date1', n:'Date (Src 1)'},
-                    {k:'date2', n:'Date (Src 2)'}
+                    {k:'date2', n:'Date (Src 2)'},
+                    {k:'branding', n:'Source'},
+                    {k:'fileName1', n:'File (Src 1)'},
+                    {k:'fileName2', n:'File (Src 2)'}
                 ],
                 missing: [
                     {k:'appId', n:'App ID'},
                     {k:'missingFrom', n:'Missing From'},
                     {k:'amount', n:'Amount'},
+                    {k:'date', n:'Date'},
                     {k:'paid', n:'Paid Status'},
-                    {k:'branding', n:'Source'}
+                    {k:'branding', n:'Source'},
+                    {k:'fileName', n:'File Name'}
                 ],
                 duplicates: [
                     {k:'appId', n:'App ID'},
                     {k:'source', n:'Source'},
-                    {k:'count', n:'Count'}
+                    {k:'count', n:'Count'},
+                    {k:'totalAmount', n:'Total Amount'}
                 ]
             };
             
             const rowClass = {
-                matching: r => r.status !== 'Match' ? 'highlight-mismatch' : '',
+                matching: r => r.status === 'Match' ? 'highlight-match' : 'highlight-mismatch',
                 missing: 'highlight-missing',
                 duplicates: 'highlight-mismatch'
             };
@@ -600,7 +727,7 @@
             const headerHtml = headers[type].map(h => {
                 const isSorted = sortState.key === h.k;
                 const arrow = isSorted ? (sortState.dir === 'asc' ? '▲' : '▼') : '';
-                return `<th data-type="${type}" data-key="${h.k}" class="${isSorted ? 'sorted' : ''}">${h.n} <span class="sort-arrow">${arrow}</span></th>`;
+                return `<th data-type="${type}" data-key="${h.k}" class="${isSorted ? 'sorted' : ''}" title="Click to sort">${h.n} <span class="sort-arrow">${arrow}</span></th>`;
             }).join('');
 
             const bodyHtml = data.map(r => {
@@ -610,25 +737,30 @@
                 if (type === 'matching') {
                     rowContent = `
                         <td><strong>${safeString(r.appId)}</strong></td>
-                        <td>${safeString(r.branding)}</td>
                         <td><span class="status-badge ${r.status.toLowerCase().replace(' ', '-')}">${r.status}</span></td>
                         <td>Rs ${safeNumber(r.amount1).toFixed(2)}</td>
                         <td>Rs ${safeNumber(r.amount2).toFixed(2)}</td>
                         <td>Rs ${safeNumber(r.difference).toFixed(2)}</td>
                         <td>${DATE_UTILS.formatDisplay(r.date1)}</td>
-                        <td>${DATE_UTILS.formatDisplay(r.date2)}</td>`;
+                        <td>${DATE_UTILS.formatDisplay(r.date2)}</td>
+                        <td>${safeString(r.branding)}</td>
+                        <td title="${safeString(r.fileName1)}">${safeString(r.fileName1).substring(0, 20)}${r.fileName1 && r.fileName1.length > 20 ? '...' : ''}</td>
+                        <td title="${safeString(r.fileName2)}">${safeString(r.fileName2).substring(0, 20)}${r.fileName2 && r.fileName2.length > 20 ? '...' : ''}</td>`;
                 } else if (type === 'missing') {
                     rowContent = `
                         <td><strong>${safeString(r.appId)}</strong></td>
-                        <td>${safeString(r.missingFrom)}</td>
+                        <td><span class="status-badge missing">${safeString(r.missingFrom)}</span></td>
                         <td>Rs ${safeNumber(r.amount).toFixed(2)}</td>
+                        <td>${DATE_UTILS.formatDisplay(r.date)}</td>
                         <td>${r.paid === null || r.paid === undefined ? 'N/A' : safeString(r.paid)}</td>
-                        <td>${safeString(r.branding)}</td>`;
+                        <td>${safeString(r.branding)}</td>
+                        <td title="${safeString(r.fileName)}">${safeString(r.fileName).substring(0, 30)}${r.fileName && r.fileName.length > 30 ? '...' : ''}</td>`;
                 } else if (type === 'duplicates') {
                     rowContent = `
                         <td><strong>${safeString(r.appId)}</strong></td>
                         <td>${safeString(r.source)}</td>
-                        <td>${safeNumber(r.count)}</td>`;
+                        <td>${safeNumber(r.count)}</td>
+                        <td>Rs ${safeNumber(r.totalAmount).toFixed(2)}</td>`;
                 }
                 
                 return `<tr class="${rowClassStr}">${rowContent}</tr>`;
@@ -658,19 +790,41 @@
                 const res = analysisResults;
                 const duplicates = [...res.duplicates1, ...res.duplicates2];
 
+                // Summary sheet
+                const summaryData = [
+                    ['Analysis Summary', ''],
+                    ['Generated At', new Date(res.analysisTime).toLocaleString()],
+                    ['', ''],
+                    ['Source 1 Total', res.stats.total1],
+                    ['Source 2 Total', res.stats.total2],
+                    ['Source 1 Count', res.stats.count1],
+                    ['Source 2 Count', res.stats.count2],
+                    ['', ''],
+                    ['Matching IDs', res.matching.length],
+                    ['Missing IDs', res.missing.length],
+                    ['Duplicate IDs', duplicates.length],
+                    ['Total Difference', res.stats.totalDiff],
+                    ['', ''],
+                    ['Commission from Column', res.commissionData.fromColumn],
+                    ['Calculated Commission (' + res.commissionData.rate + '%)', res.commissionData.calculated],
+                    ['Manual Commission (' + res.commissionData.manualRate + '%)', res.commissionData.manual]
+                ];
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summaryData), 'Summary');
+
                 // Matching sheet
                 const matchingData = res.matching.map(r => ({
                     'App ID': r.appId,
-                    'Source': r.branding,
                     'Status': r.status,
-                    'Amount Src 1': safeNumber(r.amount1),
-                    'Amount Src 2': safeNumber(r.amount2),
+                    'Amount Source 1': safeNumber(r.amount1),
+                    'Amount Source 2': safeNumber(r.amount2),
                     'Difference': safeNumber(r.difference),
-                    'Date Src 1': r.date1,
-                    'Date Src 2': r.date2
+                    'Date Source 1': r.date1,
+                    'Date Source 2': r.date2,
+                    'Source': r.branding,
+                    'File Source 1': r.fileName1,
+                    'File Source 2': r.fileName2
                 }));
                 const wsMatching = XLSX.utils.json_to_sheet(matchingData);
-                addDateFormatting(wsMatching, ['G', 'H']);
                 XLSX.utils.book_append_sheet(wb, wsMatching, 'Matching');
                 
                 // Missing sheet
@@ -678,17 +832,23 @@
                     'App ID': r.appId,
                     'Missing From': r.missingFrom,
                     'Amount': safeNumber(r.amount),
+                    'Date': r.date,
                     'Paid Status': r.paid || 'N/A',
                     'Source': r.branding,
-                    'Date': r.date
+                    'File Name': r.fileName
                 }));
                 const wsMissing = XLSX.utils.json_to_sheet(missingData);
-                addDateFormatting(wsMissing, ['F']);
                 XLSX.utils.book_append_sheet(wb, wsMissing, 'Missing');
                 
                 // Duplicates sheet
                 if (duplicates.length) {
-                    const wsDuplicates = XLSX.utils.json_to_sheet(duplicates);
+                    const duplicatesData = duplicates.map(r => ({
+                        'App ID': r.appId,
+                        'Source': r.source,
+                        'Count': r.count,
+                        'Total Amount': safeNumber(r.totalAmount)
+                    }));
+                    const wsDuplicates = XLSX.utils.json_to_sheet(duplicatesData);
                     XLSX.utils.book_append_sheet(wb, wsDuplicates, 'Duplicates');
                 }
 
@@ -697,22 +857,6 @@
                 showSuccess('Report exported successfully!');
             } catch (error) {
                 showError(`Export failed: ${error.message}`);
-            }
-        }
-        
-        function addDateFormatting(worksheet, dateColumns) {
-            if (!worksheet['!ref']) return;
-            
-            const range = XLSX.utils.decode_range(worksheet['!ref']);
-            for (let R = range.s.r + 1; R <= range.e.r; ++R) {
-                dateColumns.forEach(colLetter => {
-                    const cellAddress = colLetter + (R + 1);
-                    const cell = worksheet[cellAddress];
-                    if (cell && cell.v instanceof Date) {
-                        cell.t = 'd';
-                        cell.z = 'dd-mm-yyyy';
-                    }
-                });
             }
         }
 
@@ -731,25 +875,77 @@
             if (!data || !data.length) return;
 
             const tableHtml = renderTable(type, data, res.sortState[type]);
-            const newWindow = window.open("", "_blank");
+            const newWindow = window.open("", "_blank", "width=1200,height=800");
             if (newWindow) {
                 newWindow.document.write(`
                     <html>
                         <head>
-                            <title>Full View: ${type}</title>
+                            <title>Full View: ${type.charAt(0).toUpperCase() + type.slice(1)} - App ID Analyzer</title>
                             <style>
-                                body { font-family: sans-serif; padding: 20px; }
-                                table { width: 100%; border-collapse: collapse; }
-                                th, td { padding: 8px; border: 1px solid #ddd; text-align: left; white-space: nowrap; }
-                                th { background: #f5f5f5; font-weight: bold; }
+                                body { font-family: sans-serif; padding: 20px; margin: 0; }
+                                h1 { color: #1e293b; margin-bottom: 20px; }
+                                table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+                                th, td { padding: 12px 8px; border: 1px solid #e2e8f0; text-align: left; font-size: 0.875rem; }
+                                th { background: #f8fafc; font-weight: 600; position: sticky; top: 0; cursor: pointer; user-select: none; }
+                                th:hover { background: #e2e8f0; }
+                                tr:hover { background: #f8fafc; }
+                                .highlight-match { background: #f0fdf4; }
                                 .highlight-mismatch { background: #fef2f2; }
                                 .highlight-missing { background: #fef3c7; }
-                                .status-badge { padding: 2px 6px; border-radius: 4px; font-size: 0.8em; }
+                                .status-badge { padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; }
                                 .status-badge.match { background: #d1fae5; color: #065f46; }
                                 .status-badge.amount-mismatch { background: #fee2e2; color: #991b1b; }
+                                .status-badge.missing { background: #fef3c7; color: #92400e; }
+                                .print-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #6366f1; color: white; border: none; border-radius: 6px; cursor: pointer; }
+                                @media print { .print-btn { display: none; } }
                             </style>
                         </head>
-                        <body>${tableHtml}</body>
+                        <body>
+                            <button class="print-btn" onclick="window.print()">🖨️ Print</button>
+                            <h1>${type.charAt(0).toUpperCase() + type.slice(1)} App IDs - Full View</h1>
+                            <p><strong>Total Records:</strong> ${data.length} | <strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+                            ${tableHtml}
+                            <script>
+                                // Add sorting functionality to the new window
+                                document.addEventListener('click', function(e) {
+                                    const header = e.target.closest('th[data-key]');
+                                    if (!header) return;
+                                    
+                                    const table = header.closest('table');
+                                    const tbody = table.querySelector('tbody');
+                                    const rows = Array.from(tbody.querySelectorAll('tr'));
+                                    const key = header.dataset.key;
+                                    const isNumeric = ['amount', 'amount1', 'amount2', 'difference', 'count', 'totalAmount'].includes(key);
+                                    
+                                    // Toggle sort direction
+                                    const currentDir = header.dataset.sortDir || 'asc';
+                                    const newDir = currentDir === 'asc' ? 'desc' : 'asc';
+                                    header.dataset.sortDir = newDir;
+                                    
+                                    // Update arrow
+                                    table.querySelectorAll('th .sort-arrow').forEach(arrow => arrow.textContent = '');
+                                    header.querySelector('.sort-arrow').textContent = newDir === 'asc' ? '▲' : '▼';
+                                    
+                                    // Sort rows
+                                    const colIndex = Array.from(header.parentNode.children).indexOf(header);
+                                    rows.sort((a, b) => {
+                                        let aVal = a.children[colIndex].textContent.trim();
+                                        let bVal = b.children[colIndex].textContent.trim();
+                                        
+                                        if (isNumeric) {
+                                            aVal = parseFloat(aVal.replace(/[^0-9.-]/g, '')) || 0;
+                                            bVal = parseFloat(bVal.replace(/[^0-9.-]/g, '')) || 0;
+                                            return newDir === 'asc' ? aVal - bVal : bVal - aVal;
+                                        } else {
+                                            return newDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+                                        }
+                                    });
+                                    
+                                    // Re-append sorted rows
+                                    rows.forEach(row => tbody.appendChild(row));
+                                });
+                            </script>
+                        </body>
                     </html>`);
                 newWindow.document.close();
             }
@@ -762,11 +958,11 @@
             const targetId = isSource1 ? '1' : '2';
             const uploadBox = document.getElementById(`upload-box-${targetId}`);
             const fileInfo = document.getElementById(`file-info-${targetId}`);
-            const dynamicContainer = document.getElementById(isSource1 ? 'source1-dynamic' : 'source2-manual');
+            const dynamicContainer = document.getElementById(isSource1 ? 'source1-dynamic' : 'source2-dynamic');
 
             // Update UI
             uploadBox.classList.add('has-files');
-            fileInfo.textContent = isSource1 ? `${files.length} file(s) selected` : files[0].name;
+            fileInfo.textContent = `${files.length} file(s) selected`;
             fileInfo.classList.remove('hidden');
             dynamicContainer.innerHTML = '<div class="processing">🔄 Processing files...</div>';
 
@@ -774,7 +970,7 @@
             if (isSource1) {
                 source1Files = [];
             } else {
-                source2File = null;
+                source2Files = [];
             }
 
             try {
@@ -811,39 +1007,29 @@
                 // Clear processing message
                 dynamicContainer.innerHTML = '';
 
-                if (isSource1) {
-                    source1Files = results;
-                    results.forEach(fileData => {
-                        const container = document.createElement('div');
-                        container.className = 'section';
-                        container.innerHTML = `<h4 class="section-title">📄 Column Mapping for ${fileData.file.name}</h4>`;
-                        renderColumnSelectors(container, fileData.headers, fileData.cols);
-                        dynamicContainer.appendChild(container);
-                        
-                        // Add event listeners
-                        container.querySelectorAll('.col-select').forEach(sel => {
-                            sel.addEventListener('change', (ev) => {
-                                fileData.cols[ev.target.dataset.col] = ev.target.value === '' ? null : parseInt(ev.target.value);
-                                ValidationState.update();
-                            });
-                        });
-                    });
-                } else {
-                    source2File = results[0];
+                const targetFiles = isSource1 ? source1Files : source2Files;
+                
+                results.forEach(fileData => {
+                    targetFiles.push(fileData);
                     const container = document.createElement('div');
                     container.className = 'section';
-                    container.innerHTML = `<h4 class="section-title">📄 Column Mapping for ${source2File.file.name}</h4>`;
-                    renderColumnSelectors(container, source2File.headers, source2File.cols);
+                    container.innerHTML = `<h4 class="section-title">📄 Column Mapping for ${fileData.file.name}</h4>`;
+                    renderColumnSelectors(container, fileData.headers, fileData.cols, isSource1 ? 1 : 2);
                     dynamicContainer.appendChild(container);
-                    dynamicContainer.classList.remove('hidden');
                     
                     // Add event listeners
                     container.querySelectorAll('.col-select').forEach(sel => {
                         sel.addEventListener('change', (ev) => {
-                            source2File.cols[ev.target.dataset.col] = ev.target.value === '' ? null : parseInt(ev.target.value);
+                            fileData.cols[ev.target.dataset.col] = ev.target.value === '' ? null : parseInt(ev.target.value);
                             ValidationState.update();
                         });
                     });
+                });
+
+                if (isSource1) {
+                    source1Files = targetFiles;
+                } else {
+                    source2Files = targetFiles;
                 }
 
                 ValidationState.update();
@@ -930,12 +1116,3 @@
 
         // === INITIALIZATION ===
         setupEventListeners();
-        ValidationState.update();
-        updateUserInfo();
-        
-        // Update time every second
-        setInterval(updateUserInfo, 1000);
-    });
-    </script>
-</body>
-</html>
