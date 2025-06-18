@@ -102,7 +102,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <div class="user-info">User: ksismad | UTC: 2025-06-18 15:59:46</div>
+            <div class="user-info" id="user-info"></div>
             <h1>🔍 App ID Analyzer</h1>
             <p>Advanced multi-file Excel analysis with sorting, full-view, and comprehensive reporting.</p>
         </div>
@@ -247,7 +247,7 @@
             const processed = [];
             for (let i = 1; i < data.length; i++) {
                 const row = data[i];
-                if (!row || !row[cols.appId]) continue;
+                if (!row || row[cols.appId] === undefined || row[cols.appId] === null) continue;
                 processed.push({
                     rowNum: i + 1,
                     appId: String(row[cols.appId]).trim(),
@@ -312,7 +312,6 @@
                         appId: id, amount1: amt1, amount2: amt2, difference: Math.abs(amt1 - amt2),
                         status: Math.abs(amt1 - amt2) < 0.01 ? 'Match' : 'Amount Mismatch',
                         branding: items1[0].branding,
-                        paid1: items1[0].paid, paid2: items2[0].paid,
                         date1: items1.find(i=>i.date)?.date, date2: items2.find(i=>i.date)?.date
                     });
                 } else {
@@ -321,6 +320,7 @@
                         appId: id, amount: _.sumBy(items, 'amount'),
                         missingFrom: items1 ? 'Source 2' : 'Source 1',
                         branding: items[0].branding, date: items.find(i=>i.date)?.date,
+                        paid: items[0].paid
                     });
                 }
             });
@@ -355,7 +355,7 @@
         function renderResults(res) {
             const duplicates = [...res.duplicates1, ...res.duplicates2];
             resultsContainer.innerHTML = `
-                <div class="results-header"><h2 class="results-title">📊 Analysis Results</h2><div class="results-meta">Time: ${new Date(res.analysisTime).toLocaleString()} UTC</div></div>
+                <div class="results-header"><h2 class="results-title">📊 Analysis Results</h2><div class="results-meta">Time: ${new Date(res.analysisTime).toLocaleString('en-GB', { timeZone: 'UTC' })} UTC</div></div>
                 <div class="stats-grid">
                     <div class="stat-card"><div class="stat-number">Rs ${res.stats.total1.toFixed(2)}</div><div class="stat-label">Total Src 1</div><div class="stat-meta">${res.stats.count1} entries</div></div>
                     <div class="stat-card"><div class="stat-number">Rs ${res.stats.total2.toFixed(2)}</div><div class="stat-label">Total Src 2</div><div class="stat-meta">${res.stats.count2} entries</div></div>
@@ -376,8 +376,8 @@
             if (!data.length) return '';
             const titles = { matching: '🟢 Matching App IDs', missing: '🔴 Missing App IDs', duplicates: '⚠️ Duplicate App IDs' };
             const headers = {
-                matching: [{k:'appId',n:'App ID'}, {k:'branding',n:'Source'}, {k:'status',n:'Status'}, {k:'amount1',n:'Amount (Src 1)'}, {k:'amount2',n:'Amount (Src 2)'}, {k:'difference',n:'Difference'}, {k:'paid1', n:'Paid (Src 1)'}, {k:'paid2', n:'Paid (Src 2)'}],
-                missing: [{k:'appId',n:'App ID'}, {k:'missingFrom',n:'Missing From'}, {k:'amount',n:'Amount'}, {k:'branding',n:'Source'}],
+                matching: [{k:'appId',n:'App ID'}, {k:'branding',n:'Source'}, {k:'status',n:'Status'}, {k:'amount1',n:'Amount (Src 1)'}, {k:'amount2',n:'Amount (Src 2)'}, {k:'difference',n:'Difference'}],
+                missing: [{k:'appId',n:'App ID'}, {k:'missingFrom',n:'Missing From'}, {k:'amount',n:'Amount'}, {k:'paid', n:'Paid Status'}, {k:'branding',n:'Source'}],
                 duplicates: [{k:'appId',n:'App ID'}, {k:'source',n:'Source'}, {k:'count',n:'Count'}]
             };
             const rowClass = { matching: r => r.status !== 'Match' ? 'highlight-mismatch' : '', missing: 'highlight-missing', duplicates: 'highlight-mismatch' };
@@ -389,8 +389,8 @@
             }).join('');
 
             const bodyHtml = data.map(r => `<tr class="${typeof rowClass[type] === 'function' ? rowClass[type](r) : rowClass[type]}">
-                ${type === 'matching' ? `<td><strong>${r.appId}</strong></td><td>${r.branding || ''}</td><td><span class="status-badge ${r.status.toLowerCase().replace(' ','-')}">${r.status}</span></td><td>Rs ${r.amount1.toFixed(2)}</td><td>Rs ${r.amount2.toFixed(2)}</td><td>Rs ${r.difference.toFixed(2)}</td><td>${r.paid1 || 'N/A'}</td><td>${r.paid2 || 'N/A'}</td>` : ''}
-                ${type === 'missing' ? `<td><strong>${r.appId}</strong></td><td>${r.missingFrom}</td><td>Rs ${r.amount.toFixed(2)}</td><td>${r.branding || ''}</td>` : ''}
+                ${type === 'matching' ? `<td><strong>${r.appId}</strong></td><td>${r.branding || ''}</td><td><span class="status-badge ${r.status.toLowerCase().replace(' ','-')}">${r.status}</span></td><td>Rs ${r.amount1.toFixed(2)}</td><td>Rs ${r.amount2.toFixed(2)}</td><td>Rs ${r.difference.toFixed(2)}</td>` : ''}
+                ${type === 'missing' ? `<td><strong>${r.appId}</strong></td><td>${r.missingFrom}</td><td>Rs ${r.amount.toFixed(2)}</td><td>${r.paid || 'N/A'}</td><td>${r.branding || ''}</td>` : ''}
                 ${type === 'duplicates' ? `<td><strong>${r.appId}</strong></td><td>${r.source}</td><td>${r.count}</td>` : ''}
             </tr>`).join('');
 
@@ -410,12 +410,32 @@
             const res = analysisResults;
             const duplicates = [...res.duplicates1, ...res.duplicates2];
 
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(res.matching.map(r=>({'App ID': r.appId, 'Source': r.branding, 'Status': r.status, 'Amount Src 1': r.amount1, 'Amount Src 2': r.amount2, 'Difference': r.difference, 'Paid Src 1': r.paid1, 'Paid Src 2': r.paid2, 'Date Src 1': r.date1, 'Date Src 2': r.date2 }))), 'Matching');
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(res.missing.map(r=>({'App ID': r.appId, 'Missing From': r.missingFrom, 'Amount': r.amount, 'Source': r.branding, 'Date': r.date }))), 'Missing');
+            const wsMatching = XLSX.utils.json_to_sheet(res.matching.map(r=>({'App ID': r.appId, 'Source': r.branding, 'Status': r.status, 'Amount Src 1': r.amount1, 'Amount Src 2': r.amount2, 'Difference': r.difference, 'Date Src 1': r.date1, 'Date Src 2': r.date2 })));
+            addDateFormatting(wsMatching, ['G', 'H']);
+            XLSX.utils.book_append_sheet(wb, wsMatching, 'Matching');
+            
+            const wsMissing = XLSX.utils.json_to_sheet(res.missing.map(r=>({'App ID': r.appId, 'Missing From': r.missingFrom, 'Amount': r.amount, 'Paid Status': r.paid, 'Source': r.branding, 'Date': r.date })));
+            addDateFormatting(wsMissing, ['F']);
+            XLSX.utils.book_append_sheet(wb, wsMissing, 'Missing');
+            
             if(duplicates.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(duplicates), 'Duplicates');
 
             const timestamp = new Date().toISOString().replace(/[:\-T]/g, '_').slice(0, 17);
             XLSX.writeFile(wb, `AppID_Analysis_${timestamp}.xlsx`, { cellDates: true });
+        }
+        
+        function addDateFormatting(worksheet, dateColumns) {
+            const range = XLSX.utils.decode_range(worksheet['!ref']);
+            for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+                dateColumns.forEach(colLetter => {
+                    const cellAddress = colLetter + (R + 1);
+                    const cell = worksheet[cellAddress];
+                    if (cell && cell.v) {
+                        cell.t = 'd';
+                        cell.z = 'dd-mm-yyyy';
+                    }
+                });
+            }
         }
 
         function openFullView(type) {
@@ -535,15 +555,28 @@
                 if (viewButton) {
                     openFullView(viewButton.dataset.viewType);
                 }
-                if (e.target.closest('#export-excel-btn')) {
+                const exportButton = e.target.closest('#export-excel-btn');
+                if (exportButton) {
                     exportToExcel();
                 }
             });
+        }
+        
+        function updateUserInfo(){
+            const now = new Date();
+            const utcString = now.getUTCFullYear() + '-' + 
+                              String(now.getUTCMonth() + 1).padStart(2, '0') + '-' + 
+                              String(now.getUTCDate()).padStart(2, '0') + ' ' + 
+                              String(now.getUTCHours()).padStart(2, '0') + ':' + 
+                              String(now.getUTCMinutes()).padStart(2, '0') + ':' + 
+                              String(now.getUTCSeconds()).padStart(2, '0');
+            document.getElementById('user-info').textContent = `User: ksismad | UTC ${utcString}`;
         }
 
         // === INITIALIZATION ===
         setupEventListeners();
         ValidationState.update();
+        updateUserInfo();
     });
     </script>
 </body>
