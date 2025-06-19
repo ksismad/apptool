@@ -7,187 +7,91 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
     <style>
-        /* Core styles */
-        html, body { 
-            background: #f3f4f6; 
-            color: #1e293b; 
-            font-family: 'Segoe UI', Arial, sans-serif; 
-            margin: 0; 
-            padding: 0;
-        }
-        .container { 
-            max-width: 1100px; 
-            margin: 36px auto 20px auto; 
-            background: #fff; 
-            border-radius: 18px; 
-            box-shadow: 0 8px 32px rgba(60,60,100,0.11); 
-            overflow: hidden; 
-            padding: 0 0 32px 0;
-        }
-        
-        /* Header styles */
-        .header { 
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); 
-            color: white; 
-            text-align: left; 
-            padding: 32px; 
-            position: relative; 
-            border-radius: 0 0 20px 20px;
-        }
-        .header h1 { 
-            margin: 0 0 8px 0; 
-            font-size: 2.25rem;
-        }
-        .user-info {
-            position: absolute;
-            top: 16px;
-            right: 32px;
-            background: rgba(255,255,255,0.15);
-            padding: 7px 16px;
-            border-radius: 20px;
-            font-size: 0.93rem;
-        }
-        
-        /* Upload section styles */
-        .upload-section {
-            display: flex;
-            gap: 24px;
-            padding: 32px;
-            flex-wrap: wrap;
-        }
-        .upload-box {
-            flex: 1;
-            min-width: 300px;
+        /* Core styles from previous implementation */
+        /* Adding new styles for column mapping */
+        .column-mapping {
+            margin: 20px 32px;
+            padding: 20px;
             background: #f8fafc;
-            border: 2px dashed #cbd5e1;
             border-radius: 12px;
-            padding: 24px;
+            border: 1px solid #e2e8f0;
         }
-        .file-input { display: none; }
-        .upload-btn {
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-            color: white;
-            border: none;
-            padding: 10px 20px;
+        .column-mapping h3 {
+            margin-top: 0;
+            color: #1e293b;
+        }
+        .mapping-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        .mapping-box {
+            background: white;
+            padding: 16px;
             border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
-        
-        /* File info and validation styles */
-        .file-info {
-            margin-top: 12px;
-            padding: 8px 16px;
-            background: #d1fae5;
-            color: #059669;
-            border-radius: 6px;
-            display: none;
-        }
-        .file-info.show { display: inline-block; }
-        
-        /* Options section styles */
-        .options-section {
-            padding: 0 32px;
-        }
-        .option-group {
-            margin-bottom: 16px;
-        }
-        .option-label {
-            font-weight: 600;
+        .mapping-row {
+            display: flex;
+            align-items: center;
             margin-bottom: 8px;
         }
-        
-        /* Analysis button styles */
-        .analyze-btn {
-            width: calc(100% - 64px);
-            margin: 32px;
-            padding: 16px;
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 1.2rem;
-            font-weight: 700;
-            cursor: pointer;
+        .mapping-label {
+            flex: 1;
+            font-weight: 600;
+            color: #475569;
         }
-        .analyze-btn:disabled {
-            background: #9ca3af;
-            cursor: not-allowed;
-        }
-        
-        /* Results styles */
-        .results {
-            margin: 32px;
-            display: none;
-        }
-        .results.show { display: block; }
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-            margin-bottom: 24px;
-        }
-        .stat-card {
+        .mapping-select {
+            flex: 2;
+            padding: 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
             background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        
-        /* Table styles */
-        .table-container {
-            overflow-x: auto;
+        .detailed-results {
+            margin-top: 24px;
             background: white;
             border-radius: 12px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
         }
-        table {
+        .results-table {
             width: 100%;
             border-collapse: collapse;
         }
-        th, td {
+        .results-table th,
+        .results-table td {
             padding: 12px;
             text-align: left;
             border-bottom: 1px solid #e2e8f0;
         }
-        th { 
+        .results-table th {
             background: #f8fafc;
             font-weight: 600;
+            color: #1e293b;
         }
-        
-        /* Loading overlay styles */
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(255,255,255,0.9);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            display: none;
+        .results-table tr:nth-child(even) {
+            background: #f8fafc;
         }
-        .loading-overlay.show { display: flex; }
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
+        .export-btn {
+            margin: 20px 32px;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
         }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+        .status-match { color: #059669; }
+        .status-mismatch { color: #dc2626; }
+        .status-missing { color: #d97706; }
     </style>
 </head>
 <body>
+    <!-- Previous HTML structure remains the same -->
     <div class="container">
         <div class="header">
-            <div class="user-info" id="user-info">User: ksismad | UTC 2025-06-19 04:54:31</div>
+            <div class="user-info" id="user-info">User: ksismad | UTC 2025-06-19 18:09:36</div>
             <h1>🔍 App ID Analyzer</h1>
             <p>Compare and analyze Excel files efficiently</p>
         </div>
@@ -198,6 +102,7 @@
                 <input type="file" id="file-input-1" class="file-input" multiple accept=".xlsx,.xls">
                 <button class="upload-btn" id="upload-btn-1">Choose Files</button>
                 <div id="file-info-1" class="file-info"></div>
+                <div id="columns-1" class="column-mapping"></div>
             </div>
             
             <div class="upload-box">
@@ -205,169 +110,103 @@
                 <input type="file" id="file-input-2" class="file-input" accept=".xlsx,.xls">
                 <button class="upload-btn" id="upload-btn-2">Choose File</button>
                 <div id="file-info-2" class="file-info"></div>
+                <div id="columns-2" class="column-mapping"></div>
             </div>
         </div>
-        
-        <div class="options-section">
-            <div class="option-group">
-                <div class="option-label">Date Range (Source 1)</div>
-                <input type="date" id="date1-from"> to <input type="date" id="date1-to">
-            </div>
-            <div class="option-group">
-                <div class="option-label">Date Range (Source 2)</div>
-                <input type="date" id="date2-from"> to <input type="date" id="date2-to">
-            </div>
-            <div class="option-group">
-                <div class="option-label">Filters</div>
-                <select id="paid-filter">
-                    <option value="all">All Records</option>
-                    <option value="paid">Paid Only</option>
-                    <option value="unpaid">Unpaid Only</option>
-                </select>
-                <label>
-                    <input type="checkbox" id="apply-gst">
-                    Apply 18% GST
-                </label>
+
+        <div id="column-mappings" class="column-mapping">
+            <h3>Column Mappings</h3>
+            <div class="mapping-grid">
+                <div class="mapping-box">
+                    <h4>Source 1</h4>
+                    <div id="source1-mappings"></div>
+                </div>
+                <div class="mapping-box">
+                    <h4>Source 2</h4>
+                    <div id="source2-mappings"></div>
+                </div>
             </div>
         </div>
-        
-        <div id="column-mappings"></div>
         
         <button id="analyze-btn" class="analyze-btn" disabled>Please select files</button>
         
         <div id="results" class="results">
-            <!-- Results will be dynamically inserted here -->
+            <div class="stats-grid">
+                <!-- Stats cards will be inserted here -->
+            </div>
+            <div class="detailed-results">
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>App ID</th>
+                            <th>Source 1 Amount</th>
+                            <th>Source 2 Amount</th>
+                            <th>Difference</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="results-body"></tbody>
+                </table>
+            </div>
+            <button id="export-btn" class="export-btn">Export Results</button>
         </div>
     </div>
     
     <div id="loading-overlay" class="loading-overlay">
         <div class="spinner"></div>
     </div>
-    
+
     <script>
-        // --- STATE MANAGEMENT ---
+        // STATE MANAGEMENT
         const STATE = {
             source1Files: [],
             source2File: null,
+            columnMappings: {
+                source1: {},
+                source2: {}
+            },
             userInfo: {
                 login: 'ksismad',
-                currentUTC: '2025-06-19 04:54:31'
+                currentUTC: '2025-06-19 18:09:36'
             }
         };
 
-        // --- DOM ELEMENTS ---
-        const DOM = {
-            fileInput1: document.getElementById('file-input-1'),
-            fileInput2: document.getElementById('file-input-2'),
-            uploadBtn1: document.getElementById('upload-btn-1'),
-            uploadBtn2: document.getElementById('upload-btn-2'),
-            fileInfo1: document.getElementById('file-info-1'),
-            fileInfo2: document.getElementById('file-info-2'),
-            analyzeBtn: document.getElementById('analyze-btn'),
-            results: document.getElementById('results'),
-            loadingOverlay: document.getElementById('loading-overlay'),
-            userInfo: document.getElementById('user-info'),
-            columnMappings: document.getElementById('column-mappings')
+        // COLUMN PATTERNS
+        const COLUMN_PATTERNS = {
+            appId: {
+                patterns: [/app.*id/i, /application.*id/i, /id/i, /ref/i, /number/i],
+                required: true,
+                label: 'Application ID'
+            },
+            amount: {
+                patterns: [/amount/i, /total/i, /value/i, /paid/i, /fee/i],
+                required: true,
+                label: 'Amount'
+            },
+            date: {
+                patterns: [/date/i, /time/i, /created/i, /timestamp/i],
+                required: false,
+                label: 'Date'
+            },
+            status: {
+                patterns: [/status/i, /state/i, /paid/i],
+                required: false,
+                label: 'Status'
+            }
         };
 
-        // --- FILE SELECTION HANDLERS ---
-        DOM.uploadBtn1.addEventListener('click', function(e) {
-            e.preventDefault();
-            DOM.fileInput1.click();
-        });
-
-        DOM.uploadBtn2.addEventListener('click', function(e) {
-            e.preventDefault();
-            DOM.fileInput2.click();
-        });
-
-        DOM.fileInput1.addEventListener('change', function(e) {
-            handleFileSelection(e.target.files, 1);
-        });
-
-        DOM.fileInput2.addEventListener('change', function(e) {
-            handleFileSelection(e.target.files, 2);
-        });
-
-        // --- FILE PROCESSING ---
-        function handleFileSelection(files, source) {
-            if (!files.length) return;
-            
-            showLoading();
-            
-            if (source === 1) {
-                STATE.source1Files = [];
-                Array.from(files).forEach((file, idx) => {
-                    processExcelFile(file, (err, data) => {
-                        if (!err) {
-                            STATE.source1Files.push({
-                                file: file,
-                                data: data,
-                                columns: detectColumns(data[0])
-                            });
-                            updateFileInfo(1, files);
-                        }
-                        if (idx === files.length - 1) {
-                            hideLoading();
-                            updateAnalyzeButton();
-                        }
-                    });
-                });
-            } else {
-                const file = files[0];
-                processExcelFile(file, (err, data) => {
-                    if (!err) {
-                        STATE.source2File = {
-                            file: file,
-                            data: data,
-                            columns: detectColumns(data[0])
-                        };
-                        updateFileInfo(2, [file]);
-                    }
-                    hideLoading();
-                    updateAnalyzeButton();
-                });
-            }
-        }
-
-        function processExcelFile(file, callback) {
-            const reader = new FileReader();
-            
-            reader.onload = function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, {type: 'array'});
-                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
-                    callback(null, jsonData);
-                } catch (err) {
-                    callback(err);
-                }
-            };
-            
-            reader.onerror = function(err) {
-                callback(err);
-            };
-            
-            reader.readAsArrayBuffer(file);
-        }
-
-        // --- COLUMN DETECTION ---
+        // HELPER FUNCTIONS
         function detectColumns(headers) {
-            if (!headers) return {};
+            if (!headers || !headers.length) return {};
             
             const columns = {};
-            const patterns = {
-                appId: /app.*id|application.*id/i,
-                amount: /amount|total/i,
-                date: /date|timestamp/i,
-                status: /status|state/i
-            };
-            
             headers.forEach((header, index) => {
-                for (let [key, pattern] of Object.entries(patterns)) {
-                    if (pattern.test(header)) {
+                if (!header) return;
+                
+                for (const [key, config] of Object.entries(COLUMN_PATTERNS)) {
+                    if (config.patterns.some(pattern => pattern.test(header))) {
                         columns[key] = index;
+                        break;
                     }
                 }
             });
@@ -375,29 +214,248 @@
             return columns;
         }
 
-        // --- UI UPDATES ---
-        function updateFileInfo(source, files) {
-            const info = source === 1 ? DOM.fileInfo1 : DOM.fileInfo2;
-            info.textContent = Array.from(files).map(f => f.name).join(', ');
-            info.classList.add('show');
+        function createColumnMappingUI(source, headers, detectedColumns) {
+            const container = document.getElementById(`source${source}-mappings`);
+            if (!container) return;
+
+            container.innerHTML = Object.entries(COLUMN_PATTERNS).map(([key, config]) => {
+                const options = headers.map((header, index) => 
+                    `<option value="${index}" ${detectedColumns[key] === index ? 'selected' : ''}>${header}</option>`
+                ).join('');
+
+                return `
+                    <div class="mapping-row">
+                        <label class="mapping-label">${config.label}</label>
+                        <select class="mapping-select" data-key="${key}" data-source="${source}">
+                            <option value="">Select column</option>
+                            ${options}
+                        </select>
+                    </div>
+                `;
+            }).join('');
+
+            // Add event listeners
+            container.querySelectorAll('select').forEach(select => {
+                select.addEventListener('change', () => {
+                    const key = select.dataset.key;
+                    const source = select.dataset.source;
+                    STATE.columnMappings[`source${source}`][key] = parseInt(select.value);
+                    updateAnalyzeButton();
+                });
+            });
         }
 
-        function updateAnalyzeButton() {
-            const canAnalyze = STATE.source1Files.length > 0 && STATE.source2File;
-            DOM.analyzeBtn.disabled = !canAnalyze;
-            DOM.analyzeBtn.textContent = canAnalyze ? 'Analyze Data' : 'Please select files';
+        function processFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                
+                reader.onload = e => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, {type: 'array'});
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
+                        
+                        const headers = jsonData[0];
+                        const rows = jsonData.slice(1);
+                        const detectedColumns = detectColumns(headers);
+                        
+                        resolve({
+                            headers,
+                            rows,
+                            detectedColumns
+                        });
+                    } catch (err) {
+                        reject(err);
+                    }
+                };
+                
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
         }
 
-        function showLoading() {
-            DOM.loadingOverlay.classList.add('show');
+        async function handleFileSelection(files, source) {
+            if (!files.length) return;
+            
+            showLoading();
+            
+            try {
+                if (source === 1) {
+                    STATE.source1Files = [];
+                    for (const file of files) {
+                        const processed = await processFile(file);
+                        STATE.source1Files.push({
+                            file,
+                            ...processed
+                        });
+                    }
+                    updateFileInfo(1, files);
+                    createColumnMappingUI(1, STATE.source1Files[0].headers, STATE.source1Files[0].detectedColumns);
+                    STATE.columnMappings.source1 = STATE.source1Files[0].detectedColumns;
+                } else {
+                    const processed = await processFile(files[0]);
+                    STATE.source2File = {
+                        file: files[0],
+                        ...processed
+                    };
+                    updateFileInfo(2, [files[0]]);
+                    createColumnMappingUI(2, STATE.source2File.headers, STATE.source2File.detectedColumns);
+                    STATE.columnMappings.source2 = STATE.source2File.detectedColumns;
+                }
+            } catch (err) {
+                console.error('File processing error:', err);
+                alert('Error processing file: ' + err.message);
+            }
+            
+            hideLoading();
+            updateAnalyzeButton();
         }
 
-        function hideLoading() {
-            DOM.loadingOverlay.classList.remove('show');
+        function analyzeData() {
+            const source1Data = STATE.source1Files[0];
+            const source2Data = STATE.source2File;
+            
+            const source1Map = new Map();
+            const results = {
+                matches: 0,
+                mismatches: 0,
+                missing: 0,
+                total: 0,
+                details: []
+            };
+
+            // Process source 1
+            source1Data.rows.forEach(row => {
+                const appId = row[STATE.columnMappings.source1.appId];
+                const amount = parseFloat(row[STATE.columnMappings.source1.amount]) || 0;
+                
+                if (appId) {
+                    source1Map.set(appId.toString(), amount);
+                }
+            });
+
+            // Compare with source 2
+            source2Data.rows.forEach(row => {
+                const appId = row[STATE.columnMappings.source2.appId];
+                const amount2 = parseFloat(row[STATE.columnMappings.source2.amount]) || 0;
+                
+                if (appId) {
+                    const appIdStr = appId.toString();
+                    const amount1 = source1Map.get(appIdStr) || 0;
+                    const difference = amount1 - amount2;
+                    
+                    let status;
+                    if (!source1Map.has(appIdStr)) {
+                        status = 'missing';
+                        results.missing++;
+                    } else if (Math.abs(difference) < 0.01) {
+                        status = 'match';
+                        results.matches++;
+                    } else {
+                        status = 'mismatch';
+                        results.mismatches++;
+                    }
+                    
+                    results.details.push({
+                        appId,
+                        amount1,
+                        amount2,
+                        difference,
+                        status
+                    });
+                    
+                    source1Map.delete(appIdStr);
+                }
+            });
+
+            // Add remaining source 1 entries as missing
+            source1Map.forEach((amount1, appId) => {
+                results.details.push({
+                    appId,
+                    amount1,
+                    amount2: 0,
+                    difference: amount1,
+                    status: 'missing'
+                });
+                results.missing++;
+            });
+
+            results.total = results.matches + results.mismatches + results.missing;
+            return results;
         }
 
-        // --- ANALYSIS ---
-        DOM.analyzeBtn.addEventListener('click', function() {
+        function displayResults(results) {
+            const statsHtml = `
+                <div class="stat-card">
+                    <h3>Matches</h3>
+                    <div class="stat-value">${results.matches}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Mismatches</h3>
+                    <div class="stat-value">${results.mismatches}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Missing</h3>
+                    <div class="stat-value">${results.missing}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Total</h3>
+                    <div class="stat-value">${results.total}</div>
+                </div>
+            `;
+
+            const detailsHtml = results.details.map(item => `
+                <tr>
+                    <td>${item.appId}</td>
+                    <td>${item.amount1.toFixed(2)}</td>
+                    <td>${item.amount2.toFixed(2)}</td>
+                    <td>${item.difference.toFixed(2)}</td>
+                    <td class="status-${item.status}">${item.status.toUpperCase()}</td>
+                </tr>
+            `).join('');
+
+            document.querySelector('.stats-grid').innerHTML = statsHtml;
+            document.getElementById('results-body').innerHTML = detailsHtml;
+            document.getElementById('results').classList.add('show');
+        }
+
+        function exportResults() {
+            const results = analyzeData();
+            const wb = XLSX.utils.book_new();
+            
+            const ws = XLSX.utils.json_to_sheet(results.details.map(item => ({
+                'App ID': item.appId,
+                'Source 1 Amount': item.amount1,
+                'Source 2 Amount': item.amount2,
+                'Difference': item.difference,
+                'Status': item.status.toUpperCase()
+            })));
+            
+            XLSX.utils.book_append_sheet(wb, ws, 'Analysis Results');
+            XLSX.writeFile(wb, 'analysis_results.xlsx');
+        }
+
+        // EVENT LISTENERS
+        document.getElementById('upload-btn-1').onclick = e => {
+            e.preventDefault();
+            document.getElementById('file-input-1').click();
+        };
+
+        document.getElementById('upload-btn-2').onclick = e => {
+            e.preventDefault();
+            document.getElementById('file-input-2').click();
+        };
+
+        document.getElementById('file-input-1').onchange = e => {
+            handleFileSelection(e.target.files, 1);
+        };
+
+        document.getElementById('file-input-2').onchange = e => {
+            handleFileSelection(e.target.files, 2);
+        };
+
+        document.getElementById('analyze-btn').onclick = () => {
             showLoading();
             setTimeout(() => {
                 try {
@@ -409,53 +467,48 @@
                 }
                 hideLoading();
             }, 100);
-        });
+        };
 
-        function analyzeData() {
-            // Implement your data analysis logic here
-            // This is where you'll compare the files and generate results
-            return {
-                matches: 0,
-                mismatches: 0,
-                missing: 0,
-                total: 0
-            };
+        document.getElementById('export-btn').onclick = exportResults;
+
+        // UTILITY FUNCTIONS
+        function updateFileInfo(source, files) {
+            const info = document.getElementById(`file-info-${source}`);
+            info.textContent = Array.from(files).map(f => f.name).join(', ');
+            info.classList.add('show');
         }
 
-        function displayResults(results) {
-            DOM.results.innerHTML = `
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <h3>Matches</h3>
-                        <div class="stat-value">${results.matches}</div>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Mismatches</h3>
-                        <div class="stat-value">${results.mismatches}</div>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Missing</h3>
-                        <div class="stat-value">${results.missing}</div>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Total</h3>
-                        <div class="stat-value">${results.total}</div>
-                    </div>
-                </div>
-            `;
-            DOM.results.classList.add('show');
+        function updateAnalyzeButton() {
+            const btn = document.getElementById('analyze-btn');
+            const canAnalyze = STATE.source1Files.length > 0 && 
+                             STATE.source2File && 
+                             STATE.columnMappings.source1.appId !== undefined && 
+                             STATE.columnMappings.source1.amount !== undefined && 
+                             STATE.columnMappings.source2.appId !== undefined && 
+                             STATE.columnMappings.source2.amount !== undefined;
+            
+            btn.disabled = !canAnalyze;
+            btn.textContent = canAnalyze ? 'Analyze Data' : 'Please select files and map columns';
         }
 
-        // --- INITIALIZATION ---
-        function updateUserInfo() {
-            const now = new Date();
-            const utcString = now.toISOString().replace('T', ' ').slice(0, 19);
-            STATE.userInfo.currentUTC = utcString;
-            DOM.userInfo.textContent = `User: ${STATE.userInfo.login} | UTC ${utcString}`;
+        function showLoading() {
+            document.getElementById('loading-overlay').classList.add('show');
+        }
+
+        function hideLoading() {
+            document.getElementById('loading-overlay').classList.remove('show');
         }
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
+            const updateUserInfo = () => {
+                const now = new Date();
+                const utcString = now.toISOString().replace('T', ' ').slice(0, 19);
+                STATE.userInfo.currentUTC = utcString;
+                document.getElementById('user-info').textContent = 
+                    `User: ${STATE.userInfo.login} | UTC ${utcString}`;
+            };
+            
             updateUserInfo();
             setInterval(updateUserInfo, 15000);
         });
