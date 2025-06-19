@@ -110,6 +110,7 @@
             border-top: 1px solid var(--medium-gray); text-align: right;
         }
         .commission-table { width: 100%; border-collapse: collapse; }
+        .commission-table th { text-align: left; padding: 8px; }
         .commission-table td { padding: 8px; border-bottom: 1px solid var(--medium-gray); vertical-align: middle; }
         .loading-overlay {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -342,7 +343,7 @@
                         if (s1item) {
                             const s1row = s1item.data;
                             filename1 = s1item.__filename;
-                            const controls = STATE.source1.financialControls[filename1];
+                            const controls = STATE.source1.financialControls[filename1] || { additionalAmount: 0, mergedCommission: 0, tdsPercent: 0 };
                             
                             date1 = parseDate(s1row[STATE.source1.mappings.date]);
                             date2 = parseDate(s2row[STATE.source2.mappings.date]);
@@ -367,7 +368,7 @@
 
                     s1Map.forEach(s1item => {
                         const s1row = s1item.data;
-                        const controls = STATE.source1.financialControls[s1item.__filename];
+                        const controls = STATE.source1.financialControls[s1item.__filename] || { additionalAmount: 0, mergedCommission: 0, tdsPercent: 0 };
                         let amount1 = parseFloat(s1row[s1AmountCol]) || 0;
                         if (applyGst) amount1 *= 1.18;
                         amount1 += controls.additionalAmount;
@@ -407,11 +408,11 @@
             headers.forEach(h => tableHTML += `<th class="sortable" data-sort-key="${h.toLowerCase().replace(/ /g, '')}">${h}</th>`);
             tableHTML += `</tr></thead><tbody>`;
 
-            const dups = id.includes('1') ? STATE.duplicates.source2 : STATE.duplicates.source1;
+            const dups = new Set(id.includes('1') ? STATE.duplicates.source2 : STATE.duplicates.source1);
             data.forEach(item => {
                 totalAmount1 += item.amount1 || 0;
                 totalAmount2 += item.amount2 || 0;
-                const isDuplicate = dups.includes(item.appId);
+                const isDuplicate = dups.has(item.appId);
                 tableHTML += `<tr ${isDuplicate ? 'class="duplicate-row"' : ''}>`;
                 if (id === 'matches') tableHTML += `<td>${item.appId}</td><td>${item.amount1.toFixed(2)}</td><td>${formatDate(item.date1)}</td><td>${item.filename1}</td>`;
                 else if (id === 'mismatches') tableHTML += `<td>${item.appId}</td><td>${item.amount1.toFixed(2)}</td><td>${item.amount2.toFixed(2)}</td><td>${(item.amount1 - item.amount2).toFixed(2)}</td><td>${item.commission.toFixed(2)}</td><td>${item.tds.toFixed(2)}</td><td>${formatDate(item.date1)}</td><td>${formatDate(item.date2)}</td><td>${item.filename1}</td>`;
@@ -472,6 +473,7 @@
             
             for (const fileName of fileNames) {
                 const controls = STATE.source1.financialControls[fileName];
+                if (!controls) continue;
                 let options = fileNames.filter(f => f !== fileName).map(f => `<option value="${f}" ${controls.mergedInto === f ? 'selected' : ''}>${f}</option>`).join('');
                 
                 html += `<tr>
@@ -496,12 +498,7 @@
                 btn.addEventListener('click', e => {
                     const fromFile = e.target.dataset.fromFile;
                     const toFile = document.querySelector(`.merge-target[data-from-file="${fromFile}"]`).value;
-                    if (toFile) {
-                        updateCommissionMerge(fromFile, toFile);
-                        alert(`Commission from ${fromFile} has been merged into ${toFile}. Re-run analysis to see changes.`);
-                    } else {
-                        alert('Please select a target file to merge into.');
-                    }
+                    updateCommissionMerge(fromFile, toFile);
                 });
             });
         }
@@ -509,25 +506,53 @@
         function initializeFinancialControls() {
             const { data, mappings, financialControls } = STATE.source1;
             const commissionCol = mappings.commission;
-            if (commissionCol === undefined) return;
 
-            // Reset controls on new file upload to recalculate
-            STATE.source1.financialControls = {};
+            // Clear previous calculations
+            for (const fileName in financialControls) {
+                const control = financialControls[fileName];
+                control.originalCommission = 0;
+                control.mergedCommission = 0;
+                // Don't reset user-set values like tdsPercent, additionalAmount, mergedInto
+            }
 
-            for (const item of data) {
-                const fileName = item.__filename;
+            // Ensure all files have a control object
+            for (const fileName of STATE.source1.files.values()) {
                 if (!financialControls[fileName]) {
                     financialControls[fileName] = { originalCommission: 0, mergedCommission: 0, tdsPercent: 2, additionalAmount: 0, mergedInto: null };
                 }
-                financialControls[fileName].originalCommission += parseFloat(item.data[commissionCol]) || 0;
+            }
+            
+            // Recalculate original commission if column is mapped
+            if (commissionCol !== undefined) {
+                for (const item of data) {
+                    const fileName = item.__filename;
+                    if (financialControls[fileName]) {
+                         financialControls[fileName].originalCommission += parseFloat(item.data[commissionCol]) || 0;
+                    }
+                }
             }
         }
         
         function updateCommissionMerge(fromFile, toFile) {
             const { financialControls } = STATE.source1;
-            // This function is now simpler: it just updates the state. The analysis function will read this state.
-            // Note: This is a conceptual merge. The actual numbers are calculated during analysis.
-            alert('Merge selection noted. The values will be calculated when you run the analysis.');
+            const fromControl = financialControls[fromFile];
+            
+            // Undo previous merge if it exists
+            const oldTargetFile = fromControl.mergedInto;
+            if(oldTargetFile && financialControls[oldTargetFile]) {
+                financialControls[oldTargetFile].mergedCommission -= fromControl.originalCommission;
+            }
+
+            // Apply new merge
+            fromControl.mergedInto = toFile;
+            if(toFile && financialControls[toFile]) {
+                financialControls[toFile].mergedCommission += fromControl.originalCommission;
+                alert(`Commission from ${fromFile} will now be added to ${toFile} during analysis.`);
+            } else {
+                 alert(`Commission from ${fromFile} will no longer be merged.`);
+            }
+            // Re-render to show updated conceptual state (though numbers only change on analysis)
+            renderFinancialControls();
         }
 
         function getFilteredData(sourceNum) {
@@ -694,7 +719,7 @@
         function hideLoading() { DOM.loadingOverlay.classList.remove('show'); }
 
         function initialize() {
-            DOM.userInfo.textContent = `User: ksismad | UTC 2025-06-19 19:46:44`;
+            DOM.userInfo.textContent = `User: ksismad | UTC 2025-06-19 19:50:47`;
             document.getElementById('file-input-1').addEventListener('change', e => handleFileSelection(e.target.files, 1));
             document.getElementById('file-input-2').addEventListener('change', e => handleFileSelection(e.target.files, 2));
             DOM.analyzeBtn.addEventListener('click', runAnalysis);
