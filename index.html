@@ -77,8 +77,8 @@
         }
         .analyze-btn:hover { box-shadow: 0 4px 15px rgba(47, 133, 90, 0.4); }
         .analyze-btn:disabled { background: #a0aec0; cursor: not-allowed; box-shadow: none; }
-        .results { margin-top: 30px; display: none; }
-        .results.show { display: block; }
+        .results, #duplicates-section { margin-top: 30px; display: none; }
+        .results.show, #duplicates-section.show { display: block; }
         .results-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
         .result-box {
             background: var(--white); border: 1px solid var(--medium-gray);
@@ -197,6 +197,11 @@
             
             <button id="analyze-btn" class="analyze-btn" disabled>Upload & Map Files to Begin</button>
             
+            <div id="duplicates-section" class="commission-section">
+                <h3>Duplicate ID Report</h3>
+                <div id="duplicates-display"></div>
+            </div>
+
             <div id="results" class="results">
                 <h2>Analysis Results</h2>
                 <div class="results-grid">
@@ -217,7 +222,7 @@
             source1: { files: new Map(), data: [], headers: [], mappings: {}, financialControls: {} },
             source2: { files: new Map(), data: [], headers: [], mappings: {} },
             analysisResults: null,
-            duplicates: { source1: [], source2: [] }
+            duplicates: { source1: new Set(), source2: new Set() }
         };
 
         const COLUMN_CONFIG = {
@@ -232,6 +237,8 @@
             userInfo: document.getElementById('user-info'),
             columnMappingSection: document.getElementById('column-mapping-section'),
             commissionControlSection: document.getElementById('commission-control-section'),
+            duplicatesSection: document.getElementById('duplicates-section'),
+            duplicatesDisplay: document.getElementById('duplicates-display'),
             resultsSection: document.getElementById('results'),
             exportBtn: document.getElementById('export-btn'),
             loadingOverlay: document.getElementById('loading-overlay')
@@ -313,9 +320,9 @@
             showLoading();
             setTimeout(() => {
                 try {
-                    checkForDuplicates(); // This will now just alert and store duplicates
+                    checkForDuplicates();
 
-                    const { appId: s1AppIdCol, amount: s1AmountCol } = STATE.source1.mappings;
+                    const { appId: s1AppIdCol, amount: s1AmountCol, commission: s1CommissionCol } = STATE.source1.mappings;
                     const { appId: s2AppIdCol, amount: s2AmountCol } = STATE.source2.mappings;
                     const applyGst = document.getElementById('apply-gst').checked;
                     const roundOff = document.getElementById('round-off').checked;
@@ -352,7 +359,7 @@
                             s1Amount += controls.additionalAmount;
                             if (roundOff) s1Amount = Math.round(s1Amount);
                             
-                            commission = parseFloat(s1row[STATE.source1.mappings.commission]) || 0;
+                            commission = s1CommissionCol !== undefined ? (parseFloat(s1row[s1CommissionCol]) || 0) : 0;
                             commission += controls.mergedCommission;
                             tds = commission * (controls.tdsPercent / 100);
                             
@@ -373,7 +380,7 @@
                         if (applyGst) amount1 *= 1.18;
                         amount1 += controls.additionalAmount;
                         if (roundOff) amount1 = Math.round(amount1);
-                        let commission = parseFloat(s1row[STATE.source1.mappings.commission]) || 0;
+                        let commission = s1CommissionCol !== undefined ? (parseFloat(s1row[s1CommissionCol]) || 0) : 0;
                         commission += controls.mergedCommission;
                         const tds = commission * (controls.tdsPercent / 100);
                         results.missingInSource2.push({ appId: s1row[s1AppIdCol], amount1, amount2: 0, commission, tds, status: 'Missing in Source 2', filename1: s1item.__filename, date1: parseDate(s1row[STATE.source1.mappings.date]), date2: null });
@@ -391,7 +398,7 @@
         
         function displayResults(results) {
             buildResultTable('matches', 'Matches', ['App ID', 'Amount', 'Date', 'Filename'], results.matches);
-            buildResultTable('mismatches', 'Mismatches', ['App ID', 'S1 Amount', 'S2 Amount', 'Diff', 'Commission', 'TDS', 'S1 Date', 'S2 Date', 'Filename'], results.mismatches);
+            buildResultTable('mismatches', 'Mismatches', ['App ID', 'S1 Amount', 'S2 Amount', 'Diff', 'Variance %', 'Commission', 'TDS', 'S1 Date', 'S2 Date', 'Filename'], results.mismatches);
             buildResultTable('missing2', 'Missing in Source 2', ['App ID', 'Amount', 'Commission', 'TDS', 'Date', 'Filename'], results.missingInSource2);
             buildResultTable('missing1', 'Missing in Source 1', ['App ID', 'Amount', 'Date'], results.missingInSource1);
             
@@ -405,17 +412,18 @@
             
             let tableHTML = `<div class="result-header"><h3>${title}</h3><button class="view-full-btn">View Full</button></div>
                              <div class="table-container"><table class="results-table"><thead><tr>`;
-            headers.forEach(h => tableHTML += `<th class="sortable" data-sort-key="${h.toLowerCase().replace(/ /g, '')}">${h}</th>`);
+            headers.forEach(h => tableHTML += `<th class="sortable" data-sort-key="${h.toLowerCase().replace(/ /g, '').replace('%', '')}">${h}</th>`);
             tableHTML += `</tr></thead><tbody>`;
 
-            const dups = new Set(id.includes('1') ? STATE.duplicates.source2 : STATE.duplicates.source1);
+            const dups = new Set(id.includes('1') ? [...STATE.duplicates.source2] : [...STATE.duplicates.source1]);
             data.forEach(item => {
                 totalAmount1 += item.amount1 || 0;
                 totalAmount2 += item.amount2 || 0;
                 const isDuplicate = dups.has(item.appId);
+                const variance = item.amount1 && item.amount2 ? ((item.amount1 - item.amount2) / item.amount2 * 100).toFixed(2) : 0;
                 tableHTML += `<tr ${isDuplicate ? 'class="duplicate-row"' : ''}>`;
                 if (id === 'matches') tableHTML += `<td>${item.appId}</td><td>${item.amount1.toFixed(2)}</td><td>${formatDate(item.date1)}</td><td>${item.filename1}</td>`;
-                else if (id === 'mismatches') tableHTML += `<td>${item.appId}</td><td>${item.amount1.toFixed(2)}</td><td>${item.amount2.toFixed(2)}</td><td>${(item.amount1 - item.amount2).toFixed(2)}</td><td>${item.commission.toFixed(2)}</td><td>${item.tds.toFixed(2)}</td><td>${formatDate(item.date1)}</td><td>${formatDate(item.date2)}</td><td>${item.filename1}</td>`;
+                else if (id === 'mismatches') tableHTML += `<td>${item.appId}</td><td>${item.amount1.toFixed(2)}</td><td>${item.amount2.toFixed(2)}</td><td>${(item.amount1 - item.amount2).toFixed(2)}</td><td>${variance}%</td><td>${item.commission.toFixed(2)}</td><td>${item.tds.toFixed(2)}</td><td>${formatDate(item.date1)}</td><td>${formatDate(item.date2)}</td><td>${item.filename1}</td>`;
                 else if (id === 'missing2') tableHTML += `<td>${item.appId}</td><td>${item.amount1.toFixed(2)}</td><td>${item.commission.toFixed(2)}</td><td>${item.tds.toFixed(2)}</td><td>${formatDate(item.date1)}</td><td>${item.filename1}</td>`;
                 else if (id === 'missing1') tableHTML += `<td>${item.appId}</td><td>${item.amount2.toFixed(2)}</td><td>${formatDate(item.date2)}</td>`;
                 tableHTML += '</tr>';
@@ -440,7 +448,8 @@
                     
                     const keyMap = {
                         'appid': 'appId', 'amount': 'amount1', 's1amount': 'amount1', 's2amount': 'amount2',
-                        'diff': item => item.amount1 - item.amount2, 'commission': 'commission', 'tds': 'tds',
+                        'diff': item => item.amount1 - item.amount2, 'variance': item => item.amount1 && item.amount2 ? ((item.amount1 - item.amount2) / item.amount2) : 0,
+                        'commission': 'commission', 'tds': 'tds',
                         'date': 'date1', 's1date': 'date1', 's2date': 'date2', 'filename': 'filename1'
                     };
                     const key = keyMap[header.dataset.sortKey];
@@ -507,22 +516,18 @@
             const { data, mappings, financialControls } = STATE.source1;
             const commissionCol = mappings.commission;
 
-            // Clear previous calculations
+            // Reset only calculated values, preserve user inputs
             for (const fileName in financialControls) {
-                const control = financialControls[fileName];
-                control.originalCommission = 0;
-                control.mergedCommission = 0;
-                // Don't reset user-set values like tdsPercent, additionalAmount, mergedInto
+                financialControls[fileName].originalCommission = 0;
+                financialControls[fileName].mergedCommission = 0;
             }
 
-            // Ensure all files have a control object
             for (const fileName of STATE.source1.files.values()) {
                 if (!financialControls[fileName]) {
                     financialControls[fileName] = { originalCommission: 0, mergedCommission: 0, tdsPercent: 2, additionalAmount: 0, mergedInto: null };
                 }
             }
             
-            // Recalculate original commission if column is mapped
             if (commissionCol !== undefined) {
                 for (const item of data) {
                     const fileName = item.__filename;
@@ -537,13 +542,11 @@
             const { financialControls } = STATE.source1;
             const fromControl = financialControls[fromFile];
             
-            // Undo previous merge if it exists
             const oldTargetFile = fromControl.mergedInto;
             if(oldTargetFile && financialControls[oldTargetFile]) {
                 financialControls[oldTargetFile].mergedCommission -= fromControl.originalCommission;
             }
 
-            // Apply new merge
             fromControl.mergedInto = toFile;
             if(toFile && financialControls[toFile]) {
                 financialControls[toFile].mergedCommission += fromControl.originalCommission;
@@ -551,8 +554,6 @@
             } else {
                  alert(`Commission from ${fromFile} will no longer be merged.`);
             }
-            // Re-render to show updated conceptual state (though numbers only change on analysis)
-            renderFinancialControls();
         }
 
         function getFilteredData(sourceNum) {
@@ -593,17 +594,24 @@
                         else appIds.set(appId, 1);
                     }
                 });
-                return Array.from(duplicates);
+                return duplicates;
             };
 
             STATE.duplicates.source1 = findDups(STATE.source1.data, STATE.source1.mappings.appId);
             STATE.duplicates.source2 = findDups(STATE.source2.data, STATE.source2.mappings.appId);
 
-            if(STATE.duplicates.source1.length > 0 || STATE.duplicates.source2.length > 0) {
-                let message = "Warning: Duplicate App IDs found! They will be highlighted in the results.\n";
-                if(STATE.duplicates.source1.length > 0) message += `\nSource 1 Duplicates: ${STATE.duplicates.source1.join(', ')}`;
-                if(STATE.duplicates.source2.length > 0) message += `\nSource 2 Duplicates: ${STATE.duplicates.source2.join(', ')}`;
-                alert(message);
+            const s1Dups = Array.from(STATE.duplicates.source1);
+            const s2Dups = Array.from(STATE.duplicates.source2);
+
+            if(s1Dups.length > 0 || s2Dups.length > 0) {
+                DOM.duplicatesSection.classList.add('show');
+                let html = '<ul>';
+                if(s1Dups.length > 0) html += `<li><strong>Source 1 Duplicates:</strong> ${s1Dups.join(', ')}</li>`;
+                if(s2Dups.length > 0) html += `<li><strong>Source 2 Duplicates:</strong> ${s2Dups.join(', ')}</li>`;
+                html += '</ul>';
+                DOM.duplicatesDisplay.innerHTML = html;
+            } else {
+                 DOM.duplicatesSection.classList.remove('show');
             }
         }
 
@@ -665,11 +673,16 @@
             const ws_summary = XLSX.utils.aoa_to_sheet([["Reconciliation Summary"],[],...summaryData]);
             XLSX.utils.book_append_sheet(wb, ws_summary, "Summary");
             
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(STATE.duplicates.source1.length > 0 ? STATE.duplicates.source1.map(d => ({'Duplicate App ID': d})) : []), "Duplicate IDs (Source 1)");
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(STATE.duplicates.source2.length > 0 ? STATE.duplicates.source2.map(d => ({'Duplicate App ID': d})) : []), "Duplicate IDs (Source 2)");
+            if (STATE.duplicates.source1.size > 0 || STATE.duplicates.source2.size > 0) {
+                const dupData = [
+                    ...Array.from(STATE.duplicates.source1).map(d => ({ Source: 1, 'Duplicate App ID': d })),
+                    ...Array.from(STATE.duplicates.source2).map(d => ({ Source: 2, 'Duplicate App ID': d }))
+                ];
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dupData), "Duplicate IDs Found");
+            }
             
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(matches.map(r => ({'App ID':r.appId, 'Amount':r.amount1, 'Date': formatDate(r.date1), 'Source 1 Filename': r.filename1}))), "Matches");
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mismatches.map(r => ({'App ID':r.appId, 'S1 Amount':r.amount1, 'S2 Amount':r.amount2, 'Difference': r.amount1 - r.amount2, 'S1 Commission': r.commission, 'TDS': r.tds, 'S1 Date': formatDate(r.date1), 'S2 Date': formatDate(r.date2), 'S1 Filename': r.filename1}))), "Mismatches");
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mismatches.map(r => ({'App ID':r.appId, 'S1 Amount':r.amount1, 'S2 Amount':r.amount2, 'Difference': r.amount1 - r.amount2, 'Variance %': r.amount1 && r.amount2 ? ((r.amount1 - r.amount2) / r.amount2 * 100) : 0, 'S1 Commission': r.commission, 'TDS': r.tds, 'S1 Date': formatDate(r.date1), 'S2 Date': formatDate(r.date2), 'S1 Filename': r.filename1}))), "Mismatches");
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(missingInSource2.map(r => ({'App ID':r.appId, 'S1 Amount':r.amount1, 'S1 Commission': r.commission, 'TDS': r.tds, 'S1 Date': formatDate(r.date1), 'S1 Filename': r.filename1}))), "Missing in Source 2");
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(missingInSource1.map(r => ({'App ID':r.appId, 'S2 Amount':r.amount2, 'S2 Date': formatDate(r.date2)}))), "Missing in Source 1");
             
@@ -719,7 +732,7 @@
         function hideLoading() { DOM.loadingOverlay.classList.remove('show'); }
 
         function initialize() {
-            DOM.userInfo.textContent = `User: ksismad | UTC 2025-06-19 19:50:47`;
+            DOM.userInfo.textContent = `User: ksismad | UTC 2025-06-19 20:01:48`;
             document.getElementById('file-input-1').addEventListener('change', e => handleFileSelection(e.target.files, 1));
             document.getElementById('file-input-2').addEventListener('change', e => handleFileSelection(e.target.files, 2));
             DOM.analyzeBtn.addEventListener('click', runAnalysis);
