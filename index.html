@@ -7,13 +7,309 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
   <style>
-    /* Use your existing CSS for brevity, or request a modernized version */
-    .export-section {
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+      background: #f3f4f6;
+      color: #1e293b;
+    }
+    .container {
+      max-width: 850px;
+      margin: 32px auto 0 auto;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(60,60,100,0.10);
+      overflow: hidden;
+      padding: 0 0 32px 0;
+    }
+    .header {
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      color: white;
+      text-align: left;
+      padding: 32px 32px 20px 32px;
+      position: relative;
+      border-radius: 0 0 20px 20px;
+    }
+    .header h1 { margin: 0 0 8px 0; font-size: 2.3rem; display: flex; align-items: center; gap: 10px;}
+    .header p { margin: 0; opacity: 0.9; font-size: 1.06rem; line-height: 1.5; }
+    .user-info {
+      position: absolute;
+      top: 16px;
+      right: 32px;
+      background: rgba(255,255,255,0.15);
+      padding: 7px 16px;
+      border-radius: 20px;
+      font-size: 0.93rem;
+      letter-spacing: 0.02em;
+    }
+    .main-content {
+      padding: 32px;
       display: flex;
-      gap: 16px;
-      justify-content: center;
-      margin-top: 32px;
+      flex-direction: column;
+      gap: 30px;
+    }
+    .upload-section {
+      display: flex;
+      gap: 24px;
       flex-wrap: wrap;
+    }
+    .upload-box {
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 24px;
+      flex: 1 1 350px;
+      min-width: 280px;
+      border: 2px dashed #cbd5e1;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+    .upload-box:hover { border-color: #6366f1; }
+    .upload-box.has-files { border-color: #10b981; background: #ecfdf5; }
+    .upload-box h3 {
+      font-size: 1.18rem;
+      font-weight: 600;
+      margin: 0 0 6px 0;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .file-info {
+      margin-top: 10px;
+      color: #059669;
+      font-weight: 600;
+      padding: 8px 16px;
+      background: #d1fae5;
+      border-radius: 6px;
+      display: inline-block;
+      font-size: 0.98rem;
+    }
+    .file-input { display: none; }
+    .file-input-wrapper {
+      position: relative;
+      overflow: hidden;
+      display: inline-block;
+      margin-top: 8px;
+    }
+    .upload-btn {
+      border: none;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      color: #fff;
+      border-radius: 8px;
+      padding: 10px 18px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-left: 8px;
+    }
+    .upload-btn:hover { background: linear-gradient(135deg,#4f46e5 0%, #a78bfa 100%); }
+    .section {
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 18px 22px 22px 22px;
+      margin-bottom: 0;
+      border: 1px solid #e2e8f0;
+    }
+    .section-title {
+      font-size: 1.13rem;
+      font-weight: 600;
+      color: #4f46e5;
+      margin: 0 0 14px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .options-grid {
+      display: flex;
+      gap: 38px;
+      flex-wrap: wrap;
+      margin-top: 9px;
+    }
+    .option-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 200px;
+    }
+    .option-label {
+      font-weight: 600;
+      color: #374151;
+      font-size: 0.99rem;
+      margin-bottom: 1px;
+    }
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 5px 0 0 0;
+    }
+    .col-select {
+      width: 100%;
+      padding: 7px 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 0.98rem;
+      background: #fff;
+    }
+    .validation-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-size: 1.02rem;
+    }
+    .validation-item.valid { color: #059669; }
+    .validation-item.invalid { color: #dc2626; }
+    .validation-item.valid::before { content: "✅"; }
+    .validation-item.invalid::before { content: "❌"; }
+    .analyze-btn {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 1.13rem;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 5px;
+      transition: all 0.3s ease;
+    }
+    .analyze-btn:hover:not(:disabled) { background: linear-gradient(135deg, #059669 0%, #10b981 100%); }
+    .analyze-btn:disabled { background: #9ca3af; cursor: not-allowed; }
+    .results { margin-top: 28px; }
+    .results-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding: 16px;
+      background: #f8fafc;
+      border-radius: 8px;
+    }
+    .results-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin: 0;
+    }
+    .results-meta {
+      font-size: 0.91rem;
+      color: #6b7280;
+      text-align: right;
+    }
+    .stats-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+      margin-bottom: 18px;
+      margin-top: 6px;
+    }
+    .stat-card {
+      background: #fff;
+      padding: 16px 18px;
+      border-radius: 12px;
+      box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.08);
+      text-align: center;
+      border-left: 4px solid #6366f1;
+      flex: 1 1 140px;
+      min-width: 130px;
+    }
+    .stat-card.success { border-left-color: #10b981; }
+    .stat-card.warning { border-left-color: #f59e0b; }
+    .stat-card.danger { border-left-color: #ef4444; }
+    .table-container {
+      background: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 6px -1px rgba(0, 0, 0, 0.09);
+      margin-bottom: 24px;
+    }
+    .table-header {
+      background: #f8fafc;
+      padding: 12px 18px;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .table-title {
+      font-size: 1.11rem;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .table-wrapper {
+      overflow-x: auto;
+      max-height: 350px;
+      overflow-y: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.99rem;
+    }
+    th, td {
+      padding: 10px 13px;
+      text-align: left;
+      border-bottom: 1px solid #e2e8f0;
+      white-space: nowrap;
+    }
+    th {
+      background: #f8fafc;
+      font-weight: 600;
+      color: #374151;
+      position: sticky;
+      top: 0;
+      cursor: pointer;
+      user-select: none;
+    }
+    tr:hover { background: #f1f5f9; }
+    .highlight-warning { background: #fef3c7; }
+    .highlight-danger { background: #fee2e2; }
+    .status-badge {
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .status-badge.match { background: #d1fae5; color: #065f46; }
+    .status-badge.amount-mismatch { background: #fee2e2; color: #991b1b; }
+    .error-msg, .success-msg {
+      padding: 11px 15px;
+      border-radius: 8px;
+      margin: 13px 0;
+      border-left-width: 4px;
+      border-left-style: solid;
+    }
+    .error-msg { color: #dc2626; background: #fef2f2; border-color: #dc2626; }
+    .success-msg { color: #059669; background: #ecfdf5; border-color: #059669; }
+    .loading-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(255, 255, 255, 0.8);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .loading-spinner {
+      width: 50px; height: 50px;
+      border: 5px solid #f3f3f3;
+      border-top: 5px solid #3498db;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 16px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg);}
+      100% { transform: rotate(360deg);}
+    }
+    .export-section {
+      display: flex; gap: 16px; justify-content: center; margin-top: 32px; flex-wrap: wrap;
     }
     .export-btn {
       padding: 12px 24px;
@@ -29,19 +325,29 @@
       background: #047857;
       transform: translateY(-1px);
     }
+    @media (max-width: 950px) {
+      .main-content { padding: 18px 4vw; }
+      .container { margin-top: 15px; }
+    }
+    @media (max-width: 700px) {
+      .upload-section { flex-direction: column; }
+      .main-content { padding: 8px 2vw; }
+      .header { padding: 22px 10px 12px 10px; }
+      .user-info { right: 10px; }
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
       <div class="user-info" id="user-info"></div>
-      <h1>🔍 App ID Analyzer</h1>
+      <h1><span style="font-size:1.5em;">🔍</span> App ID Analyzer</h1>
       <p>Advanced multi-file Excel analysis with sorting, full-view, and comprehensive reporting.</p>
     </div>
     <div class="main-content">
       <div class="upload-section">
         <div class="upload-box" id="upload-box-1">
-          <h3>📁 Source 1 Files</h3>
+          <h3><span style="font-size:1.2em;">📁</span> Source 1 Files</h3>
           <p>Select one or more Excel files</p>
           <div class="file-input-wrapper">
             <input type="file" id="file-input-1" class="file-input" multiple accept=".xlsx,.xls">
@@ -50,7 +356,7 @@
           <div id="file-info-1" class="file-info hidden"></div>
         </div>
         <div class="upload-box" id="upload-box-2">
-          <h3>📁 Source 2 File</h3>
+          <h3><span style="font-size:1.2em;">📁</span> Source 2 File</h3>
           <p>Select a single Excel file</p>
           <div class="file-input-wrapper">
             <input type="file" id="file-input-2" class="file-input" accept=".xlsx,.xls">
@@ -59,10 +365,33 @@
           <div id="file-info-2" class="file-info hidden"></div>
         </div>
       </div>
+      <div class="section" style="margin-bottom:0;">
+        <div class="section-title">⚙️ Options</div>
+        <div class="options-grid">
+          <div class="option-group">
+            <label class="option-label" for="source1-paid-filter">Paid/Unpaid Filter <span style="color:#64748b;font-weight:400;font-size:0.93em;">(Source 1)</span></label>
+            <select id="source1-paid-filter" class="col-select">
+              <option value="all">Include All</option>
+              <option value="paid">Only Paid</option>
+              <option value="unpaid">Only Unpaid</option>
+            </select>
+          </div>
+          <div class="option-group">
+            <label class="option-label" for="apply-gst">GST Adjustment <span style="color:#64748b;font-weight:400;font-size:0.93em;">(Source 1)</span></label>
+            <div class="checkbox-group">
+              <input type="checkbox" id="apply-gst">
+              <label for="apply-gst">Apply 18% GST to Source 1 Amount</label>
+            </div>
+            <div style="font-size:0.92em;color:#4b5563;margin-top:2px;">
+              (When checked, all Source 1 Amounts will include GST in analysis and export)
+            </div>
+          </div>
+        </div>
+      </div>
       <div id="dynamic-cols-1"></div>
       <div id="dynamic-cols-2"></div>
       <div id="validation-status" class="section">
-        <h3 class="section-title">📋 Validation Status</h3>
+        <h3 class="section-title"><span style="font-size:1.1em;">📝</span> Validation Status</h3>
         <div id="validation-items"></div>
       </div>
       <button id="analyze-btn" class="analyze-btn" disabled>Please complete setup</button>
@@ -105,41 +434,16 @@
       userInfo: document.getElementById('user-info'),
       exportSection: document.getElementById('export-section'),
       exportExcelBtn: document.getElementById('export-excel-btn'),
+      paidFilter: document.getElementById('source1-paid-filter'),
+      applyGST: document.getElementById('apply-gst')
     };
-
-    // --- UTILS ---
-    function showError(msg, timeout = 0) {
-      DOM.errorContainer.innerHTML = `<div class="error-msg" role="alert">${sanitizeHtml(msg)}</div>`;
-      if (timeout > 0) setTimeout(() => DOM.errorContainer.innerHTML = '', timeout);
-    }
-    function showSuccess(msg, timeout = 2500) {
-      DOM.errorContainer.innerHTML = `<div class="success-msg" role="alert">${sanitizeHtml(msg)}</div>`;
-      if (timeout > 0) setTimeout(() => DOM.errorContainer.innerHTML = '', timeout);
-    }
-    function sanitizeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
-    }
-    function showLoading() {
-      STATE.isProcessing = true;
-      DOM.loadingOverlay.classList.remove('hidden');
-      updateValidation();
-    }
-    function hideLoading() {
-      STATE.isProcessing = false;
-      DOM.loadingOverlay.classList.add('hidden');
-      updateValidation();
-    }
 
     // --- HEADER DETECTION ---
     const HEADER_MAP = [
       { key: 'appId', labels: [/app\s*id/i, /application\s*id/i, /^id$/i, /appid/i, /applicant id/i] },
       { key: 'amount', labels: [/amount/i, /total/i, /amt/i, /price/i, /fee/i, /cost/i, /paid amount/i, /payment/i, /value/i, /rs/i, /inr/i, /₹/i, /\$/i] },
-      { key: 'date', labels: [/date/i, /created/i, /timestamp/i, /txn\s*date/i, /order date/i] },
-      { key: 'paid', labels: [/paid/i, /status/i, /payment\s*status/i, /state/i, /is\s*paid/i] },
-      // Add commission detection for source 1 (must always be present in source 1)
-      { key: 'commission', labels: [/commission/i, /comm/i, /brokerage/i, /agent fee/i, /agent comm/i] }
+      { key: 'commission', labels: [/commission/i, /comm/i, /brokerage/i, /agent fee/i, /agent comm/i] },
+      { key: 'paid', labels: [/paid/i, /status/i, /payment\s*status/i, /state/i, /is\s*paid/i] }
     ];
     function autoDetectCols(headers) {
       const cols = {};
@@ -162,7 +466,7 @@
       if (!headers || headers.length === 0) return;
       let html = '<div class="options-grid">';
       for (const {key} of HEADER_MAP) {
-        if (key === 'commission' && !isSource1) continue; // Commission only for source 1
+        if (key === 'commission' && !isSource1) continue;
         html += `<div class="option-group">
           <label class="option-label" for="col-${key}-${fileIdx}">${key.charAt(0).toUpperCase()+key.slice(1)} Column${(key==='appId'||key==='amount'||(key==='commission'&&isSource1))?' *':''}</label>
           <select class="col-select" id="col-${key}-${fileIdx}" data-key="${key}" data-fileidx="${fileIdx}" data-source="${isSource1?'1':'2'}">
@@ -295,7 +599,7 @@
       const hasSrc2 = !!STATE.source2File;
       // Require commission column for source 1
       const src1ColsOk = hasSrc1 && STATE.source1Files.every(f=>
-        f.cols.appId!==null && f.cols.amount!==null && f.cols.commission!==null
+        f.cols.appId!==null && f.cols.amount!==null && f.cols.commission!==null && f.cols.paid!==null
       );
       const src2ColsOk = hasSrc2 && STATE.source2File.cols.appId!==null && STATE.source2File.cols.amount!==null;
 
@@ -327,8 +631,8 @@
       DOM.validationItems.innerHTML = [
         {text: `Source 1 files selected (${STATE.source1Files.length})`, valid: hasSrc1},
         {text: 'Source 2 file selected', valid: hasSrc2},
-        {text: 'Source 1 columns configured', valid: src1ColsOk},
-        {text: 'Source 2 columns configured', valid: src2ColsOk},
+        {text: 'Source 1 columns configured (App ID, Amount, Commission, Paid)', valid: src1ColsOk},
+        {text: 'Source 2 columns configured (App ID, Amount)', valid: src2ColsOk},
       ].map(item=>
         `<div class="validation-item ${item.valid?'valid':'invalid'}">${item.text}</div>`
       ).join('') +
@@ -348,9 +652,11 @@
     DOM.analyzeBtn.addEventListener('click', () => {
       showLoading();
       setTimeout(() => {
+        const paidFilter = DOM.paidFilter.value;
+        const applyGST = DOM.applyGST.checked;
         let s1data = [], s2data = [];
         STATE.source1Files.forEach((f, idx) => {
-          s1data = s1data.concat(processFileRows(f, f.cols, f.branding));
+          s1data = s1data.concat(processFileRows(f, f.cols, f.branding, paidFilter, applyGST));
         });
         s2data = processFileRows(STATE.source2File, STATE.source2File.cols, "S2");
 
@@ -388,6 +694,7 @@
 
         // Totals for money impact and commission
         const sum = arr => arr.reduce((s, r) => s + (r.amount || 0), 0);
+        const gstSum = arr => arr.reduce((s, r) => s + (r.gstAmount || 0), 0);
         const commissionSum = arr => arr.reduce((s, r) => s + (r.commission || 0), 0);
         const stats = {
           matched: matched.length,
@@ -404,6 +711,7 @@
           totalS1Amount: sum(s1data),
           totalS2: s2data.length,
           totalS2Amount: sum(s2data),
+          totalGST: gstSum(s1data),
           totalCommission: commissionSum(s1data),
           avgCommissionPct: s1data.length ? (commissionSum(s1data) / sum(s1data)) * 100 : 0
         };
@@ -411,21 +719,30 @@
         // Prepare export rows
         STATE.exportRows = [
           ["Reconciliation Summary"],
-          ["Metric","Count","Amount","Commission %"],
-          ["Matched", stats.matched, stats.matchedAmount, ""],
-          ["Missing in Source 2", stats.missingInS2, stats.missingInS2Amount, ""],
-          ["Missing in Source 1", stats.missingInS1, stats.missingInS1Amount, ""],
-          ["Duplicates in Source 1", stats.duplicatesS1, stats.duplicatesS1Amount, ""],
-          ["Duplicates in Source 2", stats.duplicatesS2, stats.duplicatesS2Amount, ""],
-          ["Total Commission (Source 1)", "", stats.totalCommission, stats.avgCommissionPct.toFixed(2)+"%"],
+          ["Metric","Count","Amount","GST Amount","Commission %"],
+          ["Matched", stats.matched, stats.matchedAmount, "", ""],
+          ["Missing in Source 2", stats.missingInS2, stats.missingInS2Amount, "", ""],
+          ["Missing in Source 1", stats.missingInS1, stats.missingInS1Amount, "", ""],
+          ["Duplicates in Source 1", stats.duplicatesS1, stats.duplicatesS1Amount, "", ""],
+          ["Duplicates in Source 2", stats.duplicatesS2, stats.duplicatesS2Amount, "", ""],
+          ["Total GST (Source 1)", "", "", stats.totalGST, ""],
+          ["Total Commission (Source 1)", "", stats.totalCommission, "", stats.avgCommissionPct.toFixed(2)+"%"],
           [],
           ["Details"],
-          ["Type","App ID","Amount","Commission","Commission %","Branding","Source"],
+          ["Type","App ID","Amount","GST Amount","Commission","Commission %","Branding","Status","Source"],
         ];
-        missingInS2.forEach(r => STATE.exportRows.push(["Missing in Source 2", r.appId, r.amount, r.commission||"", r.commissionPct||"", r.branding, "S1"]));
-        duplicatesS1.forEach(r => STATE.exportRows.push(["Duplicate in Source 1", r.appId, r.amount, r.commission||"", r.commissionPct||"", r.branding, "S1"]));
-        missingInS1.forEach(r => STATE.exportRows.push(["Missing in Source 1", r.appId, r.amount, "", "", r.branding, "S2"]));
-        duplicatesS2.forEach(r => STATE.exportRows.push(["Duplicate in Source 2", r.appId, r.amount, "", "", r.branding, "S2"]));
+        missingInS2.forEach(r => STATE.exportRows.push([
+          "Missing in Source 2", r.appId, r.amount, r.gstAmount||"", r.commission||"", r.commissionPct||"", r.branding, r.paidStatus, "S1"
+        ]));
+        duplicatesS1.forEach(r => STATE.exportRows.push([
+          "Duplicate in Source 1", r.appId, r.amount, r.gstAmount||"", r.commission||"", r.commissionPct||"", r.branding, r.paidStatus, "S1"
+        ]));
+        missingInS1.forEach(r => STATE.exportRows.push([
+          "Missing in Source 1", r.appId, r.amount, "", "", "", r.branding, "", "S2"
+        ]));
+        duplicatesS2.forEach(r => STATE.exportRows.push([
+          "Duplicate in Source 2", r.appId, r.amount, "", "", "", r.branding, "", "S2"
+        ]));
 
         // Render results
         DOM.results.innerHTML = `
@@ -454,10 +771,10 @@
               <div class="stat-label">Duplicates in Source 2</div>
               <div class="stat-meta">Double Count: ₹${stats.duplicatesS2Amount.toLocaleString()}</div>
             </div>
-            <div class="stat-card warning">
-              <div class="stat-number">${stats.missingInS1}</div>
-              <div class="stat-label">Missing in Source 1</div>
-              <div class="stat-meta">Untracked in S1: ₹${stats.missingInS1Amount.toLocaleString()}</div>
+            <div class="stat-card" style="border-left-color:#3b82f6;">
+              <div class="stat-number">₹${stats.totalGST.toLocaleString()}</div>
+              <div class="stat-label">Total GST (Source 1)</div>
+              <div class="stat-meta"></div>
             </div>
             <div class="stat-card">
               <div class="stat-number">₹${stats.totalCommission.toLocaleString()}</div>
@@ -475,6 +792,7 @@
                   <tr>
                     <th>App ID</th>
                     <th>Amount</th>
+                    <th>GST Amt</th>
                     <th>Commission</th>
                     <th>Commission %</th>
                     <th>Branding</th>
@@ -503,7 +821,7 @@
     });
 
     // Helper: Parse file rows into normalized objects
-    function processFileRows(fileObj, cols, branding) {
+    function processFileRows(fileObj, cols, branding, paidFilter, applyGST) {
       const out = [];
       const data = fileObj.data;
       for (let i = 1; i < data.length; i++) {
@@ -513,14 +831,24 @@
         if (appId == null || String(appId).trim() === "") continue;
         let amount = parseAmount(row[cols.amount]);
         let commission = cols.commission != null ? parseAmount(row[cols.commission]) : null;
+        let paidStatus = cols.paid != null ? parsePaid(row[cols.paid]) : "";
+        // Paid/unpaid filter (for source 1 only)
+        if (typeof paidFilter === "string" && paidFilter !== "all") {
+          if (paidFilter === "paid" && paidStatus.toLowerCase() !== "paid") continue;
+          if (paidFilter === "unpaid" && paidStatus.toLowerCase() !== "unpaid") continue;
+        }
+        let gstAmount = applyGST ? Math.round(amount * 0.18 * 100) / 100 : 0;
+        let amountWithGST = applyGST ? Math.round(amount * 1.18 * 100) / 100 : amount;
         let commissionPct = (commission != null && amount) ? (commission/amount*100) : null;
         out.push({
           appId: String(appId).trim(),
-          amount: amount,
+          amount: amountWithGST,
+          gstAmount: gstAmount,
           commission: commission,
           commissionPct: commissionPct!=null ? commissionPct.toFixed(2)+"%" : "",
           branding: branding,
-          rowNum: i+1
+          rowNum: i+1,
+          paidStatus: paidStatus
         });
       }
       return out;
@@ -535,14 +863,26 @@
       }
       return 0;
     }
+    function parsePaid(value) {
+      if (value === null || value === undefined) return "";
+      const stringValue = String(value).trim().toLowerCase();
+      if (['paid', 'yes', 'y', 'true', '1', 'complete', 'completed', 'success'].includes(stringValue)) {
+        return 'Paid';
+      }
+      if (['unpaid', 'no', 'n', 'false', '0', 'pending', 'incomplete', 'failed'].includes(stringValue)) {
+        return 'Unpaid';
+      }
+      return value;
+    }
     function rowHtml(r, status, statusClass, src) {
       return `<tr class="highlight-${statusClass}">
         <td>${sanitizeHtml(r.appId)}</td>
         <td>₹${(r.amount||0).toLocaleString()}</td>
+        <td>${r.gstAmount ? "₹"+r.gstAmount.toLocaleString() : ""}</td>
         <td>${r.commission !== undefined && r.commission !== null ? "₹" + r.commission.toLocaleString() : ""}</td>
         <td>${r.commissionPct||""}</td>
         <td>${sanitizeHtml(r.branding||'')}</td>
-        <td><span class="status-badge ${statusClass}">${sanitizeHtml(status)}</span></td>
+        <td>${sanitizeHtml(r.paidStatus||'')}</td>
         <td>${sanitizeHtml(src)}</td>
       </tr>`;
     }
@@ -560,6 +900,29 @@
     });
 
     // --- PAGE INIT ---
+    function showError(msg, timeout = 0) {
+      DOM.errorContainer.innerHTML = `<div class="error-msg" role="alert">${sanitizeHtml(msg)}</div>`;
+      if (timeout > 0) setTimeout(() => DOM.errorContainer.innerHTML = '', timeout);
+    }
+    function showSuccess(msg, timeout = 2500) {
+      DOM.errorContainer.innerHTML = `<div class="success-msg" role="alert">${sanitizeHtml(msg)}</div>`;
+      if (timeout > 0) setTimeout(() => DOM.errorContainer.innerHTML = '', timeout);
+    }
+    function sanitizeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    function showLoading() {
+      STATE.isProcessing = true;
+      DOM.loadingOverlay.classList.remove('hidden');
+      updateValidation();
+    }
+    function hideLoading() {
+      STATE.isProcessing = false;
+      DOM.loadingOverlay.classList.add('hidden');
+      updateValidation();
+    }
     function updateUserInfo() {
       const now = new Date();
       DOM.userInfo.textContent = `User: ksismad | UTC ${now.getUTCFullYear()}-${String(now.getUTCMonth()+1).padStart(2,'0')}-${String(now.getUTCDate()).padStart(2,'0')} ${String(now.getUTCHours()).padStart(2,'0')}:${String(now.getUTCMinutes()).padStart(2,'0')}:${String(now.getUTCSeconds()).padStart(2,'0')}`;
