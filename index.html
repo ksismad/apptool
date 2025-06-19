@@ -390,15 +390,14 @@
                                 results.mismatches.push({ appId: s2AppId, amount1: s1Amount, amount2: s2Amount, commission, tds, filename1: s1item.__filename, date1: parseDate(s1item.data[s1DateCol]), date2: parseDate(s2row[s2DateCol]) });
                                 if (s1Status === 'unpaid' && !amountMatch) results.redAlerts.push({appId: s2AppId, amount: s2Amount, reason: `Paid in S2, but Unpaid in S1 AND Amount Mismatch`});
                                 else if (s1Status === 'unpaid') results.redAlerts.push({appId: s2AppId, amount: s2Amount, reason: `Paid in S2, but 'Unpaid' in S1`});
-                                else if (!amountMatch) results.redAlerts.push({appId: s2AppId, amount: s2Amount, reason: `Amount Mismatch (S1: ${s1Amount.toFixed(2)}, S2: ${s2Amount.toFixed(2)})`});
+                                else if (s1Status === 'paid' && !amountMatch) results.redAlerts.push({appId: s2AppId, amount: s2Amount, reason: `Amount Mismatch (S1: ${s1Amount.toFixed(2)}, S2: ${s2Amount.toFixed(2)})`});
                             }
                         } else {
                             results.redAlerts.push({appId: s2AppId, amount: s2Amount, reason: `Paid in S2, but MISSING in S1`});
                         }
                     });
                     
-                    const s1Filtered = getFilteredData(1);
-                    s1Filtered.forEach(item => {
+                    processedS1Data.forEach(item => {
                         const appId = item.data[s1AppIdCol]?.toString();
                         const status = item.data[s1StatusCol]?.toString().toLowerCase();
                         if (status === 'paid' && !s1ItemsFound.has(appId) && !STATE.duplicates.source1.has(appId)) {
@@ -407,7 +406,7 @@
                     });
 
                     if (expectedCommissionRate > 0 && s1CommissionCol !== undefined) {
-                        s1Filtered.forEach(s1item => {
+                        processedS1Data.forEach(s1item => {
                             const status = s1item.data[s1StatusCol]?.toString().toLowerCase();
                             if (status !== 'paid') return;
 
