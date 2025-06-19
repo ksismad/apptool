@@ -16,7 +16,7 @@
       color: #1e293b;
     }
     .container {
-      max-width: 850px;
+      max-width: 900px;
       margin: 32px auto 0 auto;
       background: #fff;
       border-radius: 16px;
@@ -295,6 +295,12 @@
       align-items: center;
       justify-content: center;
       z-index: 1000;
+      transition: opacity 0.25s;
+    }
+    .loading-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+      visibility: hidden;
     }
     .loading-spinner {
       width: 50px; height: 50px;
@@ -597,7 +603,7 @@
     function updateValidation() {
       const hasSrc1 = STATE.source1Files.length > 0;
       const hasSrc2 = !!STATE.source2File;
-      // Require commission column for source 1
+      // Require commission and paid columns for source 1
       const src1ColsOk = hasSrc1 && STATE.source1Files.every(f=>
         f.cols.appId!==null && f.cols.amount!==null && f.cols.commission!==null && f.cols.paid!==null
       );
@@ -930,6 +936,7 @@
     updateUserInfo();
     setInterval(updateUserInfo, 15000);
     updateValidation();
+    hideLoading(); // Fix: Ensure overlay is hidden on initial page load
   </script>
 </body>
 </html>
