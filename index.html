@@ -3,14 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced App ID Analyzer (ksismad)</title>
+    <title>Professional Reconciliation Tool (ksismad)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
     <style>
-        /* Core styles */
+        :root {
+            --primary-color: #4C51BF;
+            --primary-dark: #434190;
+            --secondary-color: #38A169;
+            --secondary-dark: #2F855A;
+            --light-gray: #f7fafc;
+            --medium-gray: #e2e8f0;
+            --dark-gray: #2d3748;
+            --text-color: #4a5568;
+            --white: #fff;
+            --danger-color: #c53030;
+            --warning-color: #dd6b20;
+        }
         html, body { 
             background: #f3f4f6; 
-            color: #1e293b; 
+            color: var(--text-color); 
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
             margin: 0; 
             padding: 0;
@@ -19,7 +30,7 @@
         .container { 
             max-width: 1200px; 
             margin: 30px auto; 
-            background: #fff; 
+            background: var(--white); 
             border-radius: 20px; 
             box-shadow: 0 10px 40px rgba(0,0,0,0.1); 
             overflow: hidden;
@@ -28,7 +39,7 @@
         /* Header */
         .header { 
             background: linear-gradient(135deg, #5A67D8 0%, #7F5AD5 100%); 
-            color: white; 
+            color: var(--white); 
             padding: 30px 40px; 
             position: relative;
         }
@@ -38,191 +49,101 @@
             font-weight: 700;
         }
         .user-info {
-            position: absolute;
-            top: 20px;
-            right: 30px;
+            position: absolute; top: 20px; right: 30px;
             background: rgba(255,255,255,0.2);
-            padding: 8px 16px;
-            border-radius: 99px;
-            font-size: 0.9rem;
-            font-weight: 500;
+            padding: 8px 16px; border-radius: 99px;
+            font-size: 0.9rem; font-weight: 500;
         }
         
         /* Main Content Area */
-        .main-content {
-            padding: 30px 40px;
-        }
+        .main-content { padding: 30px 40px; }
 
         /* Upload Section */
         .upload-section {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin-bottom: 30px;
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 30px; margin-bottom: 30px;
         }
         .upload-box {
-            background: #f7fafc;
-            border: 2px dashed #e2e8f0;
-            border-radius: 12px;
-            padding: 25px;
-            transition: all 0.2s ease;
+            background: var(--light-gray); border: 2px dashed var(--medium-gray);
+            border-radius: 12px; padding: 25px; transition: all 0.2s ease;
         }
-        .upload-box:hover {
-            border-color: #c3dafe;
-            background: #f1f5f9;
-        }
-        .upload-box h3 {
-            margin-top: 0;
-            margin-bottom: 15px;
-            font-size: 1.25rem;
-        }
+        .upload-box:hover { border-color: #c3dafe; background: #f1f5f9; }
+        .upload-box h3 { margin-top: 0; margin-bottom: 15px; font-size: 1.25rem; color: var(--dark-gray); }
         .file-input { display: none; }
         .upload-btn {
-            background: #4C51BF;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: background 0.2s ease;
+            background: var(--primary-color); color: var(--white);
+            border: none; padding: 10px 20px; border-radius: 8px;
+            cursor: pointer; font-weight: 600; transition: background 0.2s ease;
         }
-        .upload-btn:hover {
-            background: #434190;
-        }
+        .upload-btn:hover { background: var(--primary-dark); }
         .file-info {
-            margin-top: 15px;
-            padding: 10px;
-            background: #e6fffa;
-            color: #2c7a7b;
-            border-radius: 6px;
-            font-weight: 500;
-            display: none;
+            margin-top: 15px; padding: 10px; background: #e6fffa;
+            color: #2c7a7b; border-radius: 6px; font-weight: 500;
+            display: none; word-break: break-all;
         }
         .file-info.show { display: block; }
         
         /* Options & Mapping Section */
         .options-section, .column-mapping {
-            background: #f7fafc;
-            border-radius: 12px;
-            padding: 25px;
-            margin-bottom: 30px;
+            background: var(--light-gray); border-radius: 12px;
+            padding: 25px; margin-bottom: 30px;
         }
-        .options-section h3, .column-mapping h3 {
-            margin-top: 0;
-            margin-bottom: 20px;
-        }
+        .options-section h3, .column-mapping h3 { margin-top: 0; margin-bottom: 20px; color: var(--dark-gray); }
         .options-grid, .mapping-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 20px;
         }
-        .mapping-box h4 {
-            margin-top: 0;
-            margin-bottom: 10px;
-            font-size: 1.1rem;
-            color: #4a5568;
-        }
-        .mapping-row {
-            display: flex;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-        .mapping-label {
-            flex: 1;
-            font-weight: 600;
-        }
+        .mapping-box h4 { margin: 0 0 10px 0; font-size: 1.1rem; color: var(--dark-gray); }
+        .mapping-row { display: flex; align-items: center; margin-bottom: 12px; }
+        .mapping-label { flex: 1; font-weight: 600; }
         .mapping-select {
-            flex: 2;
-            padding: 8px;
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            background: white;
+            flex: 2; padding: 8px; border: 1px solid #cbd5e1;
+            border-radius: 6px; background: var(--white);
         }
         
         /* Analyze Button */
         .analyze-btn {
-            width: 100%;
-            padding: 16px;
-            background: linear-gradient(135deg, #38A169 0%, #2F855A 100%);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 1.25rem;
-            font-weight: 700;
-            cursor: pointer;
+            width: 100%; padding: 16px;
+            background: linear-gradient(135deg, var(--secondary-color) 0%, var(--secondary-dark) 100%);
+            color: var(--white); border: none; border-radius: 12px;
+            font-size: 1.25rem; font-weight: 700; cursor: pointer;
             transition: all 0.2s ease;
         }
-        .analyze-btn:hover {
-            box-shadow: 0 4px 15px rgba(47, 133, 90, 0.4);
-        }
+        .analyze-btn:hover { box-shadow: 0 4px 15px rgba(47, 133, 90, 0.4); }
         .analyze-btn:disabled {
-            background: #a0aec0;
-            cursor: not-allowed;
-            box-shadow: none;
+            background: #a0aec0; cursor: not-allowed; box-shadow: none;
         }
         
         /* Results */
-        .results {
-            margin-top: 30px;
-            display: none;
-        }
+        .results { margin-top: 30px; display: none; }
         .results.show { display: block; }
         .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px; margin-bottom: 30px;
         }
         .stat-card {
-            background: #fff;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            text-align: center;
+            background: var(--white); padding: 20px; border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center;
         }
-        .stat-card h3 {
-            margin: 0 0 10px 0;
-            font-size: 1.1rem;
-            color: #4a5568;
-        }
-        .stat-value {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: #2d3748;
-        }
+        .stat-card h3 { margin: 0 0 10px 0; font-size: 1.1rem; color: var(--text-color); }
+        .stat-value { font-size: 2.5rem; font-weight: 700; color: var(--dark-gray); }
         .table-container {
-            overflow-x: auto;
-            background: white;
-            border-radius: 12px;
+            overflow-x: auto; background: var(--white); border-radius: 12px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         }
-        .results-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
+        .results-table { width: 100%; border-collapse: collapse; }
         .results-table th, .results-table td {
-            padding: 12px 15px;
-            text-align: left;
-            border-bottom: 1px solid #e2e8f0;
+            padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--medium-gray);
         }
-        .results-table th {
-            background: #f7fafc;
-            font-weight: 600;
-        }
-        .status-match { color: #2f855a; font-weight: 600; }
-        .status-mismatch { color: #c53030; font-weight: 600; }
-        .status-missing-in-source-2, .status-missing-in-source-1 { color: #dd6b20; font-weight: 600; }
+        .results-table th { background: var(--light-gray); font-weight: 600; }
+        .status-match { color: var(--secondary-dark); font-weight: 600; }
+        .status-mismatch { color: var(--danger-color); font-weight: 600; }
+        .status-missing-in-source-2, .status-missing-in-source-1 { color: var(--warning-color); font-weight: 600; }
         
         .export-btn {
-            margin-top: 20px;
-            padding: 10px 20px;
-            background: #4C51BF;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
+            margin-top: 20px; padding: 10px 20px; background: var(--primary-color);
+            color: var(--white); border: none; border-radius: 8px;
+            cursor: pointer; font-weight: 600;
         }
 
         /* Loading Overlay */
@@ -230,18 +151,23 @@
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(255,255,255,0.85);
             display: flex; align-items: center; justify-content: center;
-            z-index: 9999;
-            display: none;
+            z-index: 9999; display: none;
         }
         .loading-overlay.show { display: flex; }
+        .spinner {
+            width: 40px; height: 40px; border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary-color); border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <div class="user-info" id="user-info"></div>
-            <h1>Advanced App ID Analyzer</h1>
-            <p>Intelligently compare, analyze, and export Excel data with ease.</p>
+            <h1>Professional Reconciliation Tool</h1>
+            <p>Intelligently compare, analyze, and export financial data with ease.</p>
         </div>
         
         <div class="main-content">
@@ -249,20 +175,20 @@
                 <div class="upload-box">
                     <h3>Source 1 (Master Data)</h3>
                     <input type="file" id="file-input-1" class="file-input" multiple accept=".xlsx,.xls,.csv">
-                    <button class="upload-btn" onclick="document.getElementById('file-input-1').click()">Choose Files</button>
+                    <button class="upload-btn" onclick="document.getElementById('file-input-1').click()">Choose Master File(s)</button>
                     <div id="file-info-1" class="file-info"></div>
                 </div>
                 <div class="upload-box">
                     <h3>Source 2 (Comparison Data)</h3>
                     <input type="file" id="file-input-2" class="file-input" accept=".xlsx,.xls,.csv">
-                    <button class="upload-btn" onclick="document.getElementById('file-input-2').click()">Choose File</button>
+                    <button class="upload-btn" onclick="document.getElementById('file-input-2').click()">Choose Comparison File</button>
                     <div id="file-info-2" class="file-info"></div>
                 </div>
             </div>
 
             <div id="column-mapping-section" class="column-mapping" style="display: none;">
                 <h3>Column Mapping</h3>
-                <p>Please verify the automatically detected columns or select the correct ones.</p>
+                <p>Please verify the automatically detected columns. Fields marked with * are required for analysis.</p>
                 <div class="mapping-grid">
                     <div id="source1-mappings"></div>
                     <div id="source2-mappings"></div>
@@ -273,14 +199,14 @@
                 <h3>Filters & Options</h3>
                 <div class="options-grid">
                     <div>
-                        <label for="date1-from" class="mapping-label">Source 1 Date Range</label>
-                        <input type="date" id="date1-from"> to <input type="date" id="date1-to">
+                        <label for="status-filter" class="mapping-label">Filter Source 1 by Status</label>
+                        <select id="status-filter" class="mapping-select">
+                            <option value="all">All Records</option>
+                            <option value="paid">Paid Only</option>
+                            <option value="unpaid">Unpaid Only</option>
+                        </select>
                     </div>
-                    <div>
-                        <label for="date2-from" class="mapping-label">Source 2 Date Range</label>
-                        <input type="date" id="date2-from"> to <input type="date" id="date2-to">
-                    </div>
-                    <div>
+                     <div>
                         <label for="apply-gst" class="mapping-label">Apply 18% GST to Source 1</label>
                         <input type="checkbox" id="apply-gst">
                     </div>
@@ -300,23 +226,21 @@
                                 <th>Source 1 Amount</th>
                                 <th>Source 2 Amount</th>
                                 <th>Difference</th>
+                                <th>Commission</th>
                                 <th>Status</th>
                             </tr>
                         </thead>
                         <tbody id="results-body"></tbody>
                     </table>
                 </div>
-                <button id="export-btn" class="export-btn">Export Results to Excel</button>
+                <button id="export-btn" class="export-btn" style="display: none;">Export Results to Excel</button>
             </div>
         </div>
     </div>
     
-    <div id="loading-overlay" class="loading-overlay">
-        <div class="spinner"></div>
-    </div>
+    <div id="loading-overlay" class="loading-overlay"><div class="spinner"></div></div>
     
     <script>
-        // --- GLOBAL STATE & CONFIGURATION ---
         const STATE = {
             source1: { files: [], data: [], headers: [], mappings: {} },
             source2: { file: null, data: [], headers: [], mappings: {} },
@@ -326,10 +250,10 @@
         const COLUMN_CONFIG = {
             appId: { label: 'Application ID', patterns: [/app.*id/i, /application.*id/i, /id/i], required: true },
             amount: { label: 'Amount', patterns: [/amount/i, /total/i, /value/i, /fee/i], required: true },
-            date: { label: 'Date', patterns: [/date/i, /timestamp/i, /created/i], required: false }
+            status: { label: 'Status', patterns: [/status/i, /state/i], required: false },
+            commission: { label: 'Commission', patterns: [/commission/i, /comm/i], required: false }
         };
 
-        // --- DOM ELEMENTS ---
         const DOM = {
             fileInput1: document.getElementById('file-input-1'),
             fileInput2: document.getElementById('file-input-2'),
@@ -337,23 +261,21 @@
             userInfo: document.getElementById('user-info'),
             columnMappingSection: document.getElementById('column-mapping-section'),
             exportBtn: document.getElementById('export-btn'),
-            resultsSection: document.getElementById('results')
+            resultsSection: document.getElementById('results'),
+            loadingOverlay: document.getElementById('loading-overlay')
         };
 
-        // --- CORE LOGIC ---
         function processFile(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = e => {
                     try {
-                        const data = new Uint8Array(e.target.result);
-                        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
-                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: "" });
+                        const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+                        const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1, defval: "" });
                         resolve(jsonData);
-                    } catch (err) { reject(err); }
+                    } catch (err) { reject(new Error(`Could not process file ${file.name}: ${err.message}`)); }
                 };
-                reader.onerror = reject;
+                reader.onerror = () => reject(new Error(`Could not read file ${file.name}`));
                 reader.readAsArrayBuffer(file);
             });
         }
@@ -364,106 +286,102 @@
             
             const sourceKey = `source${sourceNum}`;
             const stateObj = STATE[sourceKey];
-            
+
             try {
-                const allData = [];
-                for (const file of files) {
-                    const data = await processFile(file);
-                    if (data.length > 1) { // Ensure file has headers and data
-                        allData.push(...data.slice(1));
+                const firstFile = await processFile(files[0]);
+                stateObj.headers = firstFile.length > 0 ? firstFile[0] : [];
+                
+                let allData = firstFile.length > 1 ? firstFile.slice(1) : [];
+
+                if (files.length > 1) {
+                    for (let i = 1; i < files.length; i++) {
+                        const subsequentFileData = await processFile(files[i]);
+                        if (subsequentFileData.length > 1) {
+                            allData.push(...subsequentFileData.slice(1));
+                        }
                     }
                 }
                 
-                const firstFile = await processFile(files[0]);
-                stateObj.headers = firstFile[0];
                 stateObj.data = allData;
                 stateObj.files = Array.from(files);
+                stateObj.file = files[0]; // For single file sources
                 stateObj.mappings = detectColumnMappings(stateObj.headers);
 
                 updateFileInfo(sourceNum);
                 createColumnMappingUI(sourceNum);
             } catch (err) {
-                alert(`Error processing file: ${err.message}`);
+                alert(`Error: ${err.message}`);
+            } finally {
+                if (STATE.source1.files.length > 0 && STATE.source2.file) {
+                    DOM.columnMappingSection.style.display = 'block';
+                }
+                hideLoading();
+                updateAnalyzeButton();
             }
-            
-            DOM.columnMappingSection.style.display = 'block';
-            hideLoading();
-            updateAnalyzeButton();
         }
 
         function analyzeData() {
             showLoading();
             
-            // 1. Get filtered data
-            const s1Data = getFilteredData(1);
-            const s2Data = getFilteredData(2);
+            // 1. Filter Source 1 Data
+            const statusFilter = document.getElementById('status-filter').value;
+            const s1StatusCol = STATE.source1.mappings.status;
+            let s1FilteredData = STATE.source1.data;
+
+            if (statusFilter !== 'all' && s1StatusCol !== undefined) {
+                s1FilteredData = STATE.source1.data.filter(row => {
+                    const status = row[s1StatusCol]?.toString().toLowerCase() || '';
+                    return status === statusFilter;
+                });
+            }
 
             // 2. Create a map from Source 1 for quick lookups
             const s1Map = new Map();
-            s1Data.forEach(row => {
-                const appId = row[STATE.source1.mappings.appId];
+            const s1AppIdCol = STATE.source1.mappings.appId;
+            s1FilteredData.forEach(row => {
+                const appId = row[s1AppIdCol];
                 if (appId) s1Map.set(appId.toString(), row);
             });
 
             // 3. Perform comparison
-            const results = {
-                matches: 0,
-                mismatches: 0,
-                missingInSource2: 0,
-                missingInSource1: 0,
-                details: []
-            };
+            const results = { matches: 0, mismatches: 0, missingInSource2: 0, missingInSource1: 0, details: [] };
+            const s2AppIdCol = STATE.source2.mappings.appId;
+            const s2AmountCol = STATE.source2.mappings.amount;
+            const s1AmountCol = STATE.source1.mappings.amount;
+            const s1CommissionCol = STATE.source1.mappings.commission;
+            const applyGst = document.getElementById('apply-gst').checked;
 
-            s2Data.forEach(s2row => {
-                const s2AppId = s2row[STATE.source2.mappings.appId]?.toString();
+            STATE.source2.data.forEach(s2row => {
+                const s2AppId = s2row[s2AppIdCol]?.toString();
                 const s1row = s1Map.get(s2AppId);
                 
-                let s1Amount = 0;
-                let s2Amount = parseFloat(s2row[STATE.source2.mappings.amount]) || 0;
+                let s1Amount = 0, commission = 0;
+                let s2Amount = parseFloat(s2row[s2AmountCol]) || 0;
                 let status = '';
 
                 if (s1row) {
-                    s1Amount = parseFloat(s1row[STATE.source1.mappings.amount]) || 0;
-                    if (document.getElementById('apply-gst').checked) {
-                        s1Amount *= 1.18;
-                    }
+                    s1Amount = parseFloat(s1row[s1AmountCol]) || 0;
+                    if (applyGst) s1Amount *= 1.18;
                     
-                    if (Math.abs(s1Amount - s2Amount) < 0.01) {
-                        status = 'Match';
-                        results.matches++;
-                    } else {
-                        status = 'Mismatch';
-                        results.mismatches++;
-                    }
-                    s1Map.delete(s2AppId); // Remove from map to find what's left
+                    commission = (s1CommissionCol !== undefined) ? (parseFloat(s1row[s1CommissionCol]) || 0) : 0;
+
+                    status = Math.abs(s1Amount - s2Amount) < 0.01 ? 'Match' : 'Mismatch';
+                    results[status.toLowerCase() + 'es']++;
+                    s1Map.delete(s2AppId);
                 } else {
                     status = 'Missing in Source 1';
                     results.missingInSource1++;
                 }
 
-                results.details.push({
-                    appId: s2AppId,
-                    amount1: s1Amount,
-                    amount2: s2Amount,
-                    difference: s1Amount - s2Amount,
-                    status
-                });
+                results.details.push({ appId: s2AppId, amount1: s1Amount, amount2, difference: s1Amount - s2Amount, commission, status });
             });
 
-            // Any remaining items in s1Map are missing from Source 2
             s1Map.forEach(s1row => {
-                let amount1 = parseFloat(s1row[STATE.source1.mappings.amount]) || 0;
-                 if (document.getElementById('apply-gst').checked) {
-                    amount1 *= 1.18;
-                }
+                let amount1 = parseFloat(s1row[s1AmountCol]) || 0;
+                if (applyGst) amount1 *= 1.18;
+                const commission = (s1CommissionCol !== undefined) ? (parseFloat(s1row[s1CommissionCol]) || 0) : 0;
                 results.missingInSource2++;
-                results.details.push({
-                    appId: s1row[STATE.source1.mappings.appId],
-                    amount1: amount1,
-                    amount2: 0,
-                    difference: amount1,
-                    status: 'Missing in Source 2'
-                });
+                results.details.push({ appId: s1row[s1AppIdCol], amount1, amount2: 0, difference: amount1, commission, status: 'Missing in Source 2' });
             });
 
             STATE.analysisResults = results;
@@ -471,11 +389,10 @@
             hideLoading();
         }
 
-        // --- UI & UX FUNCTIONS ---
         function updateFileInfo(sourceNum) {
-            const files = STATE[`source${sourceNum}`].files;
+            const { files, data } = STATE[`source${sourceNum}`];
             const infoDiv = document.getElementById(`file-info-${sourceNum}`);
-            infoDiv.textContent = `${files.length} file(s) selected: ${files.map(f => f.name).join(', ')}`;
+            infoDiv.textContent = `${files.length} file(s) selected, ${data.length} records found.`;
             infoDiv.classList.add('show');
         }
 
@@ -486,40 +403,44 @@
             
             let html = `<h4>Source ${sourceNum}</h4>`;
             for (const [key, config] of Object.entries(COLUMN_CONFIG)) {
-                const options = headers.map((h, i) => `<option value="${i}" ${mappings[key] === i ? 'selected' : ''}>${h}</option>`).join('');
-                html += `
-                    <div class="mapping-row">
+                const options = headers.map((h, i) => `<option value="${i}" ${mappings[key] === i ? 'selected' : ''}>${h || `Column ${i+1}`}</option>`).join('');
+                html += `<div class="mapping-row">
                         <label class="mapping-label">${config.label}${config.required ? ' *' : ''}</label>
                         <select class="mapping-select" data-source="${sourceNum}" data-key="${key}">
-                            <option value="">-- Select Column --</option>
-                            ${options}
+                            <option value="">-- Select --</option>${options}
                         </select>
                     </div>`;
             }
             container.innerHTML = html;
 
-            // Add event listeners
             container.querySelectorAll('select').forEach(sel => {
                 sel.addEventListener('change', e => {
-                    STATE[`source${e.target.dataset.source}`].mappings[e.target.dataset.key] = parseInt(e.target.value);
+                    const val = e.target.value;
+                    STATE[`source${e.target.dataset.source}`].mappings[e.target.dataset.key] = val ? parseInt(val, 10) : undefined;
                     updateAnalyzeButton();
                 });
             });
         }
         
         function updateAnalyzeButton() {
-            const s1Ready = STATE.source1.files.length > 0 && COLUMN_CONFIG.appId.label && STATE.source1.mappings.amount !== undefined;
-            const s2Ready = STATE.source2.file && COLUMN_CONFIG.appId.label && STATE.source2.mappings.amount !== undefined;
-            const canAnalyze = s1Ready && s2Ready;
+            const s1Ready = STATE.source1.files.length > 0;
+            const s2Ready = STATE.source2.file;
             
-            DOM.analyzeBtn.disabled = !canAnalyze;
-            if (canAnalyze) {
-                DOM.analyzeBtn.textContent = 'Run Analysis';
-            } else if (STATE.source1.files.length === 0 || STATE.source2.file === null) {
-                DOM.analyzeBtn.textContent = 'Upload files to begin';
-            } else {
-                DOM.analyzeBtn.textContent = 'Please map required columns (*)';
+            let mappingsReady = false;
+            if (s1Ready && s2Ready) {
+                const s1Mappings = STATE.source1.mappings;
+                const s2Mappings = STATE.source2.mappings;
+                mappingsReady = Object.entries(COLUMN_CONFIG).every(([key, config]) => 
+                    (!config.required || (s1Mappings[key] !== undefined && s2Mappings[key] !== undefined))
+                );
             }
+            
+            const canAnalyze = s1Ready && s2Ready && mappingsReady;
+            DOM.analyzeBtn.disabled = !canAnalyze;
+
+            if (canAnalyze) DOM.analyzeBtn.textContent = 'Run Analysis';
+            else if (!s1Ready || !s2Ready) DOM.analyzeBtn.textContent = 'Upload files to begin';
+            else DOM.analyzeBtn.textContent = 'Please map required columns (*)';
         }
 
         function displayResults(results) {
@@ -533,13 +454,13 @@
 
             const detailsHtml = results.details.map(item => `
                 <tr>
-                    <td>${item.appId}</td>
+                    <td>${item.appId || 'N/A'}</td>
                     <td>${item.amount1.toFixed(2)}</td>
                     <td>${item.amount2.toFixed(2)}</td>
                     <td>${item.difference.toFixed(2)}</td>
+                    <td>${item.commission.toFixed(2)}</td>
                     <td class="status-${item.status.toLowerCase().replace(/ /g, '-')}">${item.status}</td>
-                </tr>
-            `).join('');
+                </tr>`).join('');
             document.getElementById('results-body').innerHTML = detailsHtml;
 
             DOM.resultsSection.classList.add('show');
@@ -548,50 +469,29 @@
 
         function exportResults() {
             const dataToExport = STATE.analysisResults.details.map(item => ({
-                'App ID': item.appId,
-                'Source 1 Amount': item.amount1,
-                'Source 2 Amount': item.amount2,
-                'Difference': item.difference,
-                'Status': item.status
+                'App ID': item.appId, 'Source 1 Amount': item.amount1, 'Source 2 Amount': item.amount2,
+                'Difference': item.difference, 'Commission': item.commission, 'Status': item.status
             }));
             const worksheet = XLSX.utils.json_to_sheet(dataToExport);
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "Analysis Results");
-            XLSX.writeFile(workbook, "App_ID_Analysis_Results.xlsx");
+            XLSX.writeFile(workbook, "Reconciliation_Results.xlsx");
         }
 
-        // --- HELPERS & INITIALIZATION ---
         function detectColumnMappings(headers) {
             const mappings = {};
             for (const [key, config] of Object.entries(COLUMN_CONFIG)) {
-                const foundIndex = headers.findIndex(h => config.patterns.some(p => p.test(h)));
+                const foundIndex = headers.findIndex(h => h && config.patterns.some(p => p.test(h)));
                 if (foundIndex !== -1) mappings[key] = foundIndex;
             }
             return mappings;
         }
 
-        function getFilteredData(sourceNum) {
-            const { data, mappings } = STATE[`source${sourceNum}`];
-            const dateFrom = document.getElementById(`date${sourceNum}-from`).valueAsDate;
-            const dateTo = document.getElementById(`date${sourceNum}-to`).valueAsDate;
-
-            if (!dateFrom && !dateTo) return data;
-
-            return data.filter(row => {
-                const dateVal = row[mappings.date];
-                if (!(dateVal instanceof Date)) return true; // Don't filter if date is invalid
-                
-                const fromOK = !dateFrom || dateVal >= dateFrom;
-                const toOK = !dateTo || dateVal <= dateTo;
-                return fromOK && toOK;
-            });
-        }
-
-        function showLoading() { document.getElementById('loading-overlay').classList.add('show'); }
-        function hideLoading() { document.getElementById('loading-overlay').classList.remove('show'); }
+        function showLoading() { DOM.loadingOverlay.classList.add('show'); }
+        function hideLoading() { DOM.loadingOverlay.classList.remove('show'); }
 
         function initialize() {
-            DOM.userInfo.textContent = `User: ksismad | UTC 2025-06-19 18:15:07`;
+            DOM.userInfo.textContent = `User: ksismad | UTC 2025-06-19 18:29:45`;
             DOM.fileInput1.addEventListener('change', e => handleFileSelection(e.target.files, 1));
             DOM.fileInput2.addEventListener('change', e => handleFileSelection(e.target.files, 2));
             DOM.analyzeBtn.addEventListener('click', analyzeData);
