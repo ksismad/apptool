@@ -220,12 +220,12 @@
             <div id="results" class="results">
                 <h2>Analysis Results</h2>
                 <div class="results-grid">
+                    <div id="financial-summary-box" class="result-box"></div>
                     <div id="red-alert-box" class="result-box red-alert"></div>
                     <div id="commission-deviation-box" class="result-box"></div>
                     <div id="matches-box" class="result-box"></div>
                     <div id="mismatches-box" class="result-box"></div>
                     <div id="missing2-box" class="result-box"></div>
-                    <div id="missing1-box" class="result-box" style="display:none;"></div>
                 </div>
                  <button id="export-btn" class="upload-btn" style="margin-top: 20px; display: none;">Export Spectacular Report</button>
             </div>
@@ -277,13 +277,6 @@
             });
         }
 
-        function generateFileSignature(data) {
-            const headers = data[0] || [];
-            const appIdIndex = headers.findIndex(h => COLUMN_CONFIG.appId.patterns.some(p => p.test(h)));
-            if (appIdIndex === -1) return headers.join(',');
-            return data.slice(1, 6).map(row => row[appIdIndex]).join(',');
-        }
-
         async function handleFileSelection(files, sourceNum) {
             if (!files.length) return;
             showLoading();
@@ -291,25 +284,19 @@
             const sourceKey = `source${sourceNum}`;
             const stateObj = STATE[sourceKey];
             
-            // Clear previous data for a fresh start
             stateObj.files.clear();
             stateObj.data = [];
             stateObj.headers = [];
-            stateObj.financialControls = {};
+            if(sourceNum === 1) stateObj.financialControls = {};
 
             try {
                 let headers = [];
                 for (const file of files) {
                     const fileData = await processFile(file);
                     if (fileData.length < 2) continue;
-                    if (headers.length === 0) headers = fileData[0]; // Take headers from the first valid file
+                    if (headers.length === 0) headers = fileData[0];
                     
-                    const signature = generateFileSignature(fileData);
-                    if (stateObj.files.has(signature)) {
-                        alert(`Skipping duplicate file: ${file.name}`);
-                        continue;
-                    }
-                    stateObj.files.set(signature, file.name);
+                    stateObj.files.set(file.name, file.name);
                     const records = fileData.slice(1).map(row => ({ __filename: file.name, data: row }));
                     stateObj.data.push(...records);
                 }
@@ -342,16 +329,29 @@
                 try {
                     checkForDuplicates();
 
-                    const { appId: s1AppIdCol, amount: s1AmountCol, commission: s1CommissionCol, status: s1StatusCol } = STATE.source1.mappings;
-                    const { appId: s2AppIdCol, amount: s2AmountCol } = STATE.source2.mappings;
+                    const { appId: s1AppIdCol, amount: s1AmountCol, commission: s1CommissionCol, status: s1StatusCol, date: s1DateCol } = STATE.source1.mappings;
+                    const { appId: s2AppIdCol, amount: s2AmountCol, date: s2DateCol } = STATE.source2.mappings;
                     const applyGst = document.getElementById('apply-gst').checked;
                     const roundOff = document.getElementById('round-off').checked;
                     const expectedCommissionRate = parseFloat(document.getElementById('expected-commission').value) / 100 || 0;
                     
+                    const finalFinancials = {};
+                    for(const fileName of STATE.source1.files.keys()){
+                        const controls = STATE.source1.financialControls[fileName];
+                        if(!controls.mergedInto){
+                            finalFinancials[fileName] = {
+                                commission: controls.originalCommission + controls.mergedCommission,
+                                tds: (controls.originalCommission + controls.mergedCommission) * (controls.tdsPercent / 100),
+                                additionalAmount: controls.additionalAmount,
+                                netPayable: (controls.originalCommission + controls.mergedCommission) - ((controls.originalCommission + controls.mergedCommission) * (controls.tdsPercent / 100)) + controls.additionalAmount
+                            };
+                        }
+                    }
+
                     const processedS1Data = STATE.source1.data.map(s1item => {
                         const controls = STATE.source1.financialControls[s1item.__filename];
                         const targetFilename = controls.mergedInto || s1item.__filename;
-                        return {...s1item, __filename: targetFilename }; // Overwrite filename for processing
+                        return {...s1item, __filename: targetFilename };
                     });
                     
                     const s1Map = new Map();
@@ -361,7 +361,7 @@
                     });
 
                     const s2Filtered = getFilteredData(2);
-                    const results = { matches: [], mismatches: [], redAlerts: [], commissionDeviations: [] };
+                    const results = { matches: [], mismatches: [], redAlerts: [], commissionDeviations: [], financialSummary: Object.entries(finalFinancials).map(([name, data]) => ({filename: name, ...data})) };
                     const s1ItemsFound = new Set();
 
                     s2Filtered.forEach(s2item => {
@@ -373,7 +373,7 @@
 
                         if (s1item) {
                             s1ItemsFound.add(s2AppId);
-                            const controls = STATE.source1.financialControls[s1item.__filename]; // Use the new, potentially merged filename
+                            const controls = STATE.source1.financialControls[s1item.__filename];
                             
                             let s1Amount = parseFloat(s1item.data[s1AmountCol]) || 0;
                             if (applyGst) s1Amount *= 1.18;
@@ -384,7 +384,7 @@
                             let tds = commission * (controls.tdsPercent / 100);
 
                             const status = Math.abs(s1Amount - s2Amount) < 0.01 ? 'Match' : 'Mismatch';
-                            results[status.toLowerCase() + 'es'].push({ appId: s2AppId, amount1: s1Amount, amount2: s2Amount, commission, tds, status, filename1: s1item.__filename, date1: parseDate(s1item.data[STATE.source1.mappings.date]), date2: parseDate(s2row[STATE.source2.mappings.date]) });
+                            results[status.toLowerCase() + 'es'].push({ appId: s2AppId, amount1: s1Amount, amount2: s2Amount, commission, tds, status, filename1: s1item.__filename, date1: parseDate(s1item.data[s1DateCol]), date2: parseDate(s2row[s2DateCol]) });
                             
                             const s1Status = s1item.data[s1StatusCol]?.toString().toLowerCase();
                             if (s1Status === 'unpaid') {
@@ -405,7 +405,7 @@
                             if (roundOff) amount1 = Math.round(amount1);
                             let commission = s1CommissionCol !== undefined ? (parseFloat(item.data[s1CommissionCol]) || 0) : 0;
                             let tds = commission * (controls.tdsPercent / 100);
-                            return { appId: item.data[s1AppIdCol], amount1, commission, tds, filename1: item.__filename, date1: parseDate(item.data[STATE.source1.mappings.date]) };
+                            return { appId: item.data[s1AppIdCol], amount1, commission, tds, filename1: item.__filename, date1: parseDate(item.data[s1DateCol]) };
                         });
 
                     if (expectedCommissionRate > 0 && s1CommissionCol !== undefined) {
@@ -475,13 +475,13 @@
         }
 
         function displayResults(results) {
+            buildResultTable('financial-summary', 'Final Financial Summary', ['Filename', 'Net Commission', 'TDS', 'Additional Received', 'Net Payable'], results.financialSummary);
             buildResultTable('red-alert', 'Red Alert Discrepancies', ['App ID', 'S2 Amount', 'Reason'], results.redAlerts);
             buildResultTable('commission-deviation', 'Commission Deviation Report', ['App ID', 'Taxable Value', 'Actual Commission', 'Actual Rate %', 'Expected Rate %', 'Deviation'], results.commissionDeviations);
             buildResultTable('matches', 'Matches', ['App ID', 'Amount', 'Date', 'Filename'], results.matches);
             buildResultTable('mismatches', 'Mismatches', ['App ID', 'S1 Amount', 'S2 Amount', 'Diff', 'Variance %', 'Commission', 'TDS', 'S1 Date', 'S2 Date', 'Filename'], results.mismatches);
             buildResultTable('missing2', 'Missing in Source 2', ['App ID', 'Amount', 'Commission', 'TDS', 'Date', 'Filename'], results.missingInSource2);
-            document.getElementById('missing1-box').style.display = 'none';
-
+            
             DOM.resultsSection.classList.add('show');
             DOM.exportBtn.style.display = 'inline-block';
         }
@@ -494,41 +494,36 @@
             }
             container.style.display = 'flex';
 
-            let totalAmount1 = 0, totalAmount2 = 0;
-            
-            let tableHTML = `<div class="result-header ${id.includes('red') ? 'red-alert' : ''}"><h3>${title}</h3><button class="view-full-btn">View Full</button></div>
-                             <div class="table-container"><table class="results-table"><thead><tr>`;
-            headers.forEach(h => tableHTML += `<th class="sortable" data-sort-key="${h.toLowerCase().replace(/ /g, '').replace('%', '')}">${h}</th>`);
-            tableHTML += `</tr></thead><tbody>`;
-
-            const dups = new Set(id.includes('1') ? [...STATE.duplicates.source2] : [...STATE.duplicates.source1]);
-            data.forEach(item => {
-                totalAmount1 += item.amount1 || 0;
-                totalAmount2 += item.amount2 || 0;
+            const tableBody = data.map(item => {
+                const dups = new Set(id.includes('1') ? [...STATE.duplicates.source2] : [...STATE.duplicates.source1]);
                 const isDuplicate = dups.has(item.appId);
                 const variance = item.amount1 && item.amount2 ? ((item.amount1 - item.amount2) / item.amount2 * 100).toFixed(2) : '0.00';
-                tableHTML += `<tr ${isDuplicate ? 'class="duplicate-row"' : ''}>`;
                 
+                let rowHtml = `<tr ${isDuplicate ? 'class="duplicate-row"' : ''}>`;
                 switch(id) {
-                    case 'matches': tableHTML += `<td>${item.appId}</td><td>${item.amount1.toFixed(2)}</td><td>${formatDate(item.date1)}</td><td>${item.filename1}</td>`; break;
-                    case 'mismatches': tableHTML += `<td>${item.appId}</td><td>${item.amount1.toFixed(2)}</td><td>${item.amount2.toFixed(2)}</td><td>${(item.amount1 - item.amount2).toFixed(2)}</td><td>${variance}%</td><td>${item.commission.toFixed(2)}</td><td>${item.tds.toFixed(2)}</td><td>${formatDate(item.date1)}</td><td>${formatDate(item.date2)}</td><td>${item.filename1}</td>`; break;
-                    case 'missing2': tableHTML += `<td>${item.appId}</td><td>${item.amount1.toFixed(2)}</td><td>${item.commission.toFixed(2)}</td><td>${item.tds.toFixed(2)}</td><td>${formatDate(item.date1)}</td><td>${item.filename1}</td>`; break;
-                    case 'red-alert': tableHTML += `<td>${item.appId}</td><td>${item.amount.toFixed(2)}</td><td>${item.reason}</td>`; break;
-                    case 'commission-deviation': tableHTML += `<td>${item.appId}</td><td>${item.taxableValue.toFixed(2)}</td><td>${item.actualCommission.toFixed(2)}</td><td>${item.actualRate.toFixed(2)}%</td><td>${item.expectedRate.toFixed(2)}%</td><td>${item.deviation.toFixed(2)}</td>`; break;
+                    case 'financial-summary': rowHtml += `<td>${item.filename}</td><td>${item.commission.toFixed(2)}</td><td>${item.tds.toFixed(2)}</td><td>${item.additionalAmount.toFixed(2)}</td><td>${item.netPayable.toFixed(2)}</td>`; break;
+                    case 'matches': rowHtml += `<td>${item.appId}</td><td>${item.amount1.toFixed(2)}</td><td>${formatDate(item.date1)}</td><td>${item.filename1}</td>`; break;
+                    case 'mismatches': rowHtml += `<td>${item.appId}</td><td>${item.amount1.toFixed(2)}</td><td>${item.amount2.toFixed(2)}</td><td>${(item.amount1 - item.amount2).toFixed(2)}</td><td>${variance}%</td><td>${item.commission.toFixed(2)}</td><td>${item.tds.toFixed(2)}</td><td>${formatDate(item.date1)}</td><td>${formatDate(item.date2)}</td><td>${item.filename1}</td>`; break;
+                    case 'missing2': rowHtml += `<td>${item.appId}</td><td>${item.amount1.toFixed(2)}</td><td>${item.commission.toFixed(2)}</td><td>${item.tds.toFixed(2)}</td><td>${formatDate(item.date1)}</td><td>${item.filename1}</td>`; break;
+                    case 'red-alert': rowHtml += `<td>${item.appId}</td><td>${item.amount.toFixed(2)}</td><td>${item.reason}</td>`; break;
+                    case 'commission-deviation': rowHtml += `<td>${item.appId}</td><td>${item.taxableValue.toFixed(2)}</td><td>${item.actualCommission.toFixed(2)}</td><td>${item.actualRate.toFixed(2)}%</td><td>${item.expectedRate.toFixed(2)}%</td><td>${item.deviation.toFixed(2)}</td>`; break;
                 }
-                tableHTML += '</tr>';
-            });
-            tableHTML += '</tbody></table></div>';
+                return rowHtml + '</tr>';
+            }).join('');
+
+            const total = id === 'financial-summary' ? data.reduce((s,r) => s + r.netPayable, 0) : (id.includes('1') ? data.reduce((s,r) => s + r.amount2, 0) : data.reduce((s,r) => s + (r.amount1 || r.amount || 0), 0));
+            const footerHtml = `<div class="result-footer"><span>Records: ${data.length}</span> | <span>Total Amount: ${total.toFixed(2)}</span></div>`;
             
-            const total = id.includes('1') ? totalAmount2 : (id === 'red-alert' ? data.reduce((s, r) => s + r.amount, 0) : totalAmount1);
-            tableHTML += `<div class="result-footer"><span>Records: ${data.length}</span> | <span>Total Amount: ${total.toFixed(2)}</span></div>`;
+            container.innerHTML = `<div class="result-header ${id.includes('red') ? 'red-alert' : ''}"><h3>${title}</h3><button class="view-full-btn">View Full</button></div>
+                                 <div class="table-container"><table class="results-table"><thead><tr>${headers.map(h => `<th class="sortable" data-sort-key="${h.toLowerCase().replace(/ /g, '').replace('%', '')}">${h}</th>`).join('')}</tr></thead><tbody>${tableBody}</tbody></table></div>
+                                 ${footerHtml}`;
             
-            container.innerHTML = tableHTML;
-            makeTableSortable(container.querySelector('table'), data, headers, id, title);
-            container.querySelector('.view-full-btn').addEventListener('click', () => openFullView(title, container.querySelector('table').outerHTML));
+            const table = container.querySelector('table');
+            makeTableSortable(table, data, id, title, headers);
+            container.querySelector('.view-full-btn').addEventListener('click', () => openFullView(title, table.outerHTML));
         }
         
-        function makeTableSortable(table, data, headers, id, title) {
+        function makeTableSortable(table, data, id, title, headers) {
             const headerCells = Array.from(table.querySelectorAll('th'));
             headerCells.forEach((header) => {
                 header.addEventListener('click', () => {
@@ -541,7 +536,8 @@
                         'diff': item => item.amount1 - item.amount2, 'variance': item => item.amount1 && item.amount2 ? ((item.amount1 - item.amount2) / item.amount2) : 0,
                         'commission': 'commission', 'tds': 'tds', 'date': 'date1', 's1date': 'date1', 's2date': 'date2', 'filename': 'filename1',
                         's2amount': 'amount', 'reason': 'reason', 'taxablevalue': 'taxableValue', 'actualcommission': 'actualCommission', 
-                        'actualrate': 'actualRate', 'expectedrate': 'expectedRate', 'deviation': 'deviation'
+                        'actualrate': 'actualRate', 'expectedrate': 'expectedRate', 'deviation': 'deviation', 'netcommission': 'commission',
+                        'additionalreceived': 'additionalAmount', 'netpayable': 'netPayable'
                     };
                     const key = keyMap[header.dataset.sortKey];
 
@@ -555,7 +551,7 @@
                         return isAsc ? valA - valB : valB - valA;
                     });
                     
-                    buildResultTable(id, title, headers.map(h => h.innerText), data);
+                    buildResultTable(id, title, headers, data); // Re-render the whole box to re-attach listeners correctly
                 });
             });
         }
@@ -568,7 +564,7 @@
         
         function renderFinancialControls() {
             const container = document.getElementById('commission-controls');
-            const fileNames = Array.from(STATE.source1.files.values());
+            const fileNames = Array.from(STATE.source1.files.keys());
             let html = '<table class="commission-table"><thead><tr><th>Filename</th><th>Original Commission</th><th>TDS %</th><th>Additional Received</th><th>Merge To</th><th>Action</th></tr></thead><tbody>';
             
             for (const fileName of fileNames) {
@@ -581,24 +577,21 @@
                     <td>${controls.originalCommission.toFixed(2)}</td>
                     <td><input type="number" class="commission-input" data-file="${fileName}" data-field="tdsPercent" value="${controls.tdsPercent}"></td>
                     <td><input type="number" class="commission-input" data-file="${fileName}" data-field="additionalAmount" value="${controls.additionalAmount}"></td>
-                    <td><select class="mapping-select merge-target" data-from-file="${fileName}"><option value="">-- No Merge --</option>${options}</select></td>
+                    <td><select class="mapping-select merge-target" data-from-file="${fileName}" ${fileNames.length < 2 ? 'disabled' : ''}><option value="">-- No Merge --</option>${options}</select></td>
                     <td><button data-from-file="${fileName}" class="view-full-btn merge-btn" ${fileNames.length < 2 ? 'disabled' : ''}>Merge</button></td>
                 </tr>`;
             }
             html += '</tbody></table>';
             container.innerHTML = html;
 
-            container.querySelectorAll('.commission-input').forEach(el => {
+            container.querySelectorAll('.commission-input, .merge-target').forEach(el => {
                 el.addEventListener('change', e => {
-                    const fileName = e.target.dataset.file;
-                    STATE.source1.financialControls[fileName][e.target.dataset.field] = parseFloat(e.target.value) || 0;
-                });
-            });
-            container.querySelectorAll('.merge-btn').forEach(btn => {
-                btn.addEventListener('click', e => {
-                    const fromFile = e.target.dataset.fromFile;
-                    const toFile = document.querySelector(`.merge-target[data-from-file="${fromFile}"]`).value;
-                    updateCommissionMerge(fromFile, toFile);
+                    const fileName = e.target.dataset.file || e.target.dataset.fromFile;
+                    if(e.target.classList.contains('merge-target')) {
+                         updateCommissionMerge(fileName, e.target.value);
+                    } else {
+                         STATE.source1.financialControls[fileName][e.target.dataset.field] = parseFloat(e.target.value) || 0;
+                    }
                 });
             });
         }
@@ -607,13 +600,8 @@
             const { data, mappings, financialControls } = STATE.source1;
             const commissionCol = mappings.commission;
 
-            for (const fileName of STATE.source1.files.values()) {
-                if (!financialControls[fileName]) {
-                    financialControls[fileName] = { originalCommission: 0, mergedCommission: 0, tdsPercent: 2, additionalAmount: 0, mergedInto: null };
-                } else {
-                    financialControls[fileName].originalCommission = 0;
-                    financialControls[fileName].mergedCommission = 0;
-                }
+            for (const fileName of STATE.source1.files.keys()) {
+                financialControls[fileName] = { originalCommission: 0, mergedCommission: 0, tdsPercent: 2, additionalAmount: 0, mergedInto: null };
             }
             
             if (commissionCol !== undefined) {
@@ -745,7 +733,7 @@
         }
         
         function exportResults() {
-            const { matches, mismatches, missingInSource2, redAlerts, commissionDeviations } = STATE.analysisResults;
+            const { matches, mismatches, missingInSource2, redAlerts, commissionDeviations, financialSummary } = STATE.analysisResults;
             const wb = XLSX.utils.book_new();
 
             const summaryData = [
@@ -755,8 +743,8 @@
                 ["Missing in Source 2", missingInSource2.length, missingInSource2.reduce((s,r)=>s+r.amount1,0), 0],
                 ["Red Alerts (Missing/Unpaid in S1)", redAlerts.length, 0, redAlerts.reduce((s,r)=>s+r.amount,0)],
             ];
-            const ws_summary = XLSX.utils.aoa_to_sheet([["Reconciliation Summary"],[],...summaryData]);
-            XLSX.utils.book_append_sheet(wb, ws_summary, "Summary");
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Reconciliation Summary"],[],...summaryData]), "Summary");
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(financialSummary), "Final Financial Summary");
             
             if (STATE.duplicates.source1.size > 0 || STATE.duplicates.source2.size > 0) {
                 const dupData = [
@@ -772,28 +760,13 @@
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mismatches.map(r => ({'App ID':r.appId, 'S1 Amount':r.amount1, 'S2 Amount':r.amount2, 'Difference': r.amount1 - r.amount2, 'Variance %': r.amount1 && r.amount2 ? ((r.amount1 - r.amount2) / r.amount2 * 100) : 0, 'S1 Commission': r.commission, 'TDS': r.tds, 'S1 Date': formatDate(r.date1), 'S2 Date': formatDate(r.date2), 'S1 Filename': r.filename1}))), "Mismatches");
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(missingInSource2.map(r => ({'App ID':r.appId, 'S1 Amount':r.amount1, 'S1 Commission': r.commission, 'TDS': r.tds, 'S1 Date': formatDate(r.date1), 'S1 Filename': r.filename1}))), "Missing in Source 2");
             
-            const s1RawData = getFilteredData(1).map(r => {
-                const controls = STATE.source1.financialControls[r.__filename];
-                const targetFilename = controls.mergedInto || r.__filename;
-                const taxableValue = parseFloat(r.data[STATE.source1.mappings.amount]) || 0;
-                const commission = parseFloat(r.data[STATE.source1.mappings.commission]) || 0;
-                const commissionRate = (taxableValue && commission) ? (commission / taxableValue) * 100 : 0;
-                let rowObject = { '__filename': targetFilename };
-                STATE.source1.headers.forEach((h, i) => rowObject[h] = r.data[i]);
-                rowObject['Commission Rate (%)'] = commissionRate.toFixed(2);
-                return rowObject;
+            const processedS1Data = STATE.source1.data.map(item => {
+                const controls = STATE.source1.financialControls[item.__filename];
+                const targetFilename = controls.mergedInto || item.__filename;
+                let row = { ...item.data, '__filename': targetFilename };
+                return Object.fromEntries(Object.keys(row).map((key, i) => [STATE.source1.headers[i] || key, row[key]]));
             });
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(s1RawData), "Processed Raw Data (S1)");
-            
-            const commissionSummary = Object.values(s1RawData.reduce((acc, row) => {
-                const rate = row['Commission Rate (%)'];
-                if(!acc[rate]) acc[rate] = { 'Commission Rate (%)': rate, 'Transaction Count': 0, 'Total Taxable Value': 0, 'Total Commission': 0 };
-                acc[rate]['Transaction Count']++;
-                acc[rate]['Total Taxable Value'] += parseFloat(row[STATE.source1.headers[STATE.source1.mappings.amount]]) || 0;
-                acc[rate]['Total Commission'] += parseFloat(row[STATE.source1.headers[STATE.source1.mappings.commission]]) || 0;
-                return acc;
-            }, {}));
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(commissionSummary), "Commission Rate Summary");
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(processedS1Data), "Processed Raw Data (S1)");
 
             XLSX.writeFile(wb, `Reconciliation_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
         }
@@ -820,7 +793,7 @@
         function hideLoading() { DOM.loadingOverlay.classList.remove('show'); }
 
         function initialize() {
-            DOM.userInfo.textContent = `User: ksismad | UTC 2025-06-19 20:36:35`;
+            DOM.userInfo.textContent = `User: ksismad | UTC 2025-06-19 20:43:43`;
             document.getElementById('file-input-1').addEventListener('change', e => handleFileSelection(e.target.files, 1));
             document.getElementById('file-input-2').addEventListener('change', e => handleFileSelection(e.target.files, 2));
             DOM.analyzeBtn.addEventListener('click', runAnalysis);
