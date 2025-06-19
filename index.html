@@ -77,8 +77,8 @@
         }
         .analyze-btn:hover { box-shadow: 0 4px 15px rgba(47, 133, 90, 0.4); }
         .analyze-btn:disabled { background: #a0aec0; cursor: not-allowed; box-shadow: none; }
-        .results, #duplicates-section { margin-top: 30px; display: none; }
-        .results.show, #duplicates-section.show { display: block; }
+        .results, #duplicates-section, #executive-summary { margin-top: 30px; display: none; }
+        .results.show, #duplicates-section.show, #executive-summary.show { display: block; }
         .results-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(600px, 1fr)); gap: 30px; }
         .result-box {
             background: var(--white); border: 1px solid var(--medium-gray);
@@ -114,6 +114,14 @@
         .commission-table { width: 100%; border-collapse: collapse; }
         .commission-table th { text-align: left; padding: 8px; font-size: 0.9em; }
         .commission-table td { padding: 8px; border-bottom: 1px solid var(--medium-gray); vertical-align: middle; }
+        #executive-summary {
+            background: linear-gradient(135deg, #eff6ff, #e0e7ff); border: 2px solid var(--primary-color);
+            padding: 25px; border-radius: 12px;
+        }
+        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+        .summary-card { text-align: center; }
+        .summary-card h4 { margin: 0 0 10px 0; color: var(--primary-dark); }
+        .summary-value { font-size: 2rem; font-weight: 700; color: var(--danger-color); }
         .loading-overlay {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(255,255,255,0.85); display: flex; align-items: center;
@@ -203,6 +211,7 @@
             
             <button id="analyze-btn" class="analyze-btn" disabled>Upload & Map Files to Begin</button>
             
+            <div id="executive-summary"></div>
             <div id="duplicates-section" class="commission-section">
                 <h3>Duplicate ID Report</h3>
                 <div id="duplicates-display"></div>
@@ -247,6 +256,7 @@
             commissionControlSection: document.getElementById('commission-control-section'),
             duplicatesSection: document.getElementById('duplicates-section'),
             duplicatesDisplay: document.getElementById('duplicates-display'),
+            executiveSummary: document.getElementById('executive-summary'),
             resultsSection: document.getElementById('results'),
             exportBtn: document.getElementById('export-btn'),
             loadingOverlay: document.getElementById('loading-overlay')
@@ -288,7 +298,6 @@
                 if (sourceNum === 2) { 
                     stateObj.files.clear();
                     stateObj.data = [];
-                    stateObj.financialControls = {};
                 }
 
                 for (const file of files) {
@@ -336,87 +345,105 @@
                     const applyGst = document.getElementById('apply-gst').checked;
                     const roundOff = document.getElementById('round-off').checked;
                     const expectedCommissionRate = parseFloat(document.getElementById('expected-commission').value) / 100 || 0;
-
-                    const s1Filtered = getFilteredData(1);
-                    const s2Filtered = getFilteredData(2);
                     
+                    const processedS1Data = STATE.source1.data.map(s1item => {
+                        const s1row = s1item.data;
+                        const controls = STATE.source1.financialControls[s1item.__filename];
+                        if (!controls) return s1item; // Should not happen, but a safeguard.
+
+                        const originalFilename = s1item.__filename;
+                        const targetFilename = controls.mergedInto || originalFilename;
+
+                        let amount = parseFloat(s1row[s1AmountCol]) || 0;
+                        if (applyGst) amount *= 1.18;
+                        amount += controls.additionalAmount;
+                        if (roundOff) amount = Math.round(amount);
+
+                        let commission = (s1CommissionCol !== undefined && !controls.mergedInto) ? (parseFloat(s1row[s1CommissionCol]) || 0) : 0;
+                        if (controls.mergedInto) {
+                            // If this file's commission is merged, its individual commission becomes zero.
+                            commission = 0;
+                        }
+
+                        let tds = commission * (controls.tdsPercent / 100);
+
+                        // Create a new object for the processed data
+                        return {
+                            ...s1item,
+                            processed: {
+                                amount,
+                                commission,
+                                tds,
+                                originalFilename,
+                                targetFilename
+                            }
+                        };
+                    });
+                    
+                    // Add merged commissions to target files
+                    for (const fileName in STATE.source1.financialControls) {
+                        const controls = STATE.source1.financialControls[fileName];
+                        if (controls.mergedInto) {
+                            processedS1Data.forEach(item => {
+                                if (item.processed.targetFilename === controls.mergedInto) {
+                                    const commissionToMerge = (STATE.source1.financialControls[fileName].originalCommission || 0);
+                                    item.processed.commission += commissionToMerge;
+                                    item.processed.tds = item.processed.commission * (STATE.source1.financialControls[controls.mergedInto].tdsPercent / 100);
+                                }
+                            });
+                        }
+                    }
+
                     const s1Map = new Map();
-                    s1Filtered.forEach(item => {
+                    processedS1Data.forEach(item => {
                         const appId = item.data[s1AppIdCol];
                         if (appId) s1Map.set(appId.toString(), item);
                     });
 
-                    const results = { matches: [], mismatches: [], missingInSource2: [], redAlerts: [], commissionDeviations: [] };
+                    const s2Filtered = getFilteredData(2);
+                    const results = { matches: [], mismatches: [], redAlerts: [], commissionDeviations: [] };
+                    const s1ItemsFound = new Set();
 
                     s2Filtered.forEach(s2item => {
                         const s2row = s2item.data;
                         const s2AppId = s2row[s2AppIdCol]?.toString();
                         const s1item = s1Map.get(s2AppId);
                         
-                        let s1Amount = 0, commission = 0, tds = 0;
                         let s2Amount = parseFloat(s2row[s2AmountCol]) || 0;
-                        let status = '', filename1 = 'N/A', date1 = null, date2 = null;
 
                         if (s1item) {
-                            const s1row = s1item.data;
-                            filename1 = s1item.__filename;
-                            const controls = STATE.source1.financialControls[filename1];
+                            s1ItemsFound.add(s2AppId);
+                            const { amount: s1Amount, commission, tds, targetFilename } = s1item.processed;
                             
-                            date1 = parseDate(s1row[STATE.source1.mappings.date]);
-                            date2 = parseDate(s2row[STATE.source2.mappings.date]);
-                            s1Amount = parseFloat(s1row[s1AmountCol]) || 0;
-                            if (applyGst) s1Amount *= 1.18;
-                            s1Amount += controls.additionalAmount;
-                            if (roundOff) s1Amount = Math.round(s1Amount);
+                            const status = Math.abs(s1Amount - s2Amount) < 0.01 ? 'Match' : 'Mismatch';
+                            results[status.toLowerCase() + 'es'].push({ appId: s2AppId, amount1: s1Amount, amount2: s2Amount, commission, tds, status, filename1: targetFilename, date1: parseDate(s1item.data[s1item.mappings.date]), date2: parseDate(s2row[s2item.mappings.date]) });
                             
-                            commission = s1CommissionCol !== undefined ? (parseFloat(s1row[s1CommissionCol]) || 0) : 0;
-                            commission += controls.mergedCommission;
-                            tds = commission * (controls.tdsPercent / 100);
-                            
-                            status = Math.abs(s1Amount - s2Amount) < 0.01 ? 'Match' : 'Mismatch';
-                            results[status.toLowerCase() + 'es'].push({ appId: s2AppId, amount1: s1Amount, amount2: s2Amount, commission, tds, status, filename1, date1, date2 });
-                            
-                            // Red Alert Check
-                            const s1Status = s1row[s1StatusCol]?.toString().toLowerCase();
+                            const s1Status = s1item.data[s1StatusCol]?.toString().toLowerCase();
                             if (s1Status === 'unpaid') {
-                                results.redAlerts.push({appId: s2AppId, amount: s2Amount, reason: `Paid in Source 2, but 'Unpaid' in Source 1`});
+                                results.redAlerts.push({appId: s2AppId, amount: s2Amount, reason: `Paid in S2, but 'Unpaid' in S1`});
                             }
-                            
-                            s1Map.delete(s2AppId);
                         } else {
-                            // Red Alert: Missing from Source 1
-                            results.redAlerts.push({appId: s2AppId, amount: s2Amount, reason: `Paid in Source 2, but MISSING in Source 1`});
+                            results.redAlerts.push({appId: s2AppId, amount: s2Amount, reason: `Paid in S2, but MISSING in S1`});
                         }
                     });
 
-                    s1Map.forEach(s1item => {
-                        const s1row = s1item.data;
-                        const controls = STATE.source1.financialControls[s1item.__filename];
-                        let amount1 = parseFloat(s1row[s1AmountCol]) || 0;
-                        if (applyGst) amount1 *= 1.18;
-                        amount1 += controls.additionalAmount;
-                        if (roundOff) amount1 = Math.round(amount1);
-                        let commission = s1CommissionCol !== undefined ? (parseFloat(s1row[s1CommissionCol]) || 0) : 0;
-                        commission += controls.mergedCommission;
-                        const tds = commission * (controls.tdsPercent / 100);
-                        results.missingInSource2.push({ appId: s1row[s1AppIdCol], amount1, amount2: 0, commission, tds, status: 'Missing in Source 2', filename1: s1item.__filename, date1: parseDate(s1row[STATE.source1.mappings.date]), date2: null });
-                    });
-                    
-                    // Commission Deviation Check
+                    results.missingInSource2 = processedS1Data
+                        .filter(item => !s1ItemsFound.has(item.data[s1AppIdCol]?.toString()))
+                        .map(item => {
+                            const { amount, commission, tds, targetFilename } = item.processed;
+                            return { appId: item.data[s1AppIdCol], amount1: amount, commission, tds, filename1: targetFilename, date1: parseDate(item.data[item.mappings.date]) };
+                        });
+
                     if (expectedCommissionRate > 0 && s1CommissionCol !== undefined) {
-                        s1Filtered.forEach(s1item => {
-                            const s1row = s1item.data;
-                            const taxableValue = parseFloat(s1row[s1AmountCol]) || 0;
-                            const actualCommission = parseFloat(s1row[s1CommissionCol]) || 0;
+                        processedS1Data.forEach(s1item => {
+                            const taxableValue = parseFloat(s1item.data[s1AmountCol]) || 0;
+                            const actualCommission = parseFloat(s1item.data[s1CommissionCol]) || 0;
                             if (taxableValue > 0) {
                                 const actualRate = actualCommission / taxableValue;
-                                if (Math.abs(actualRate - expectedCommissionRate) > 0.0001) { // Check for deviation
+                                if (Math.abs(actualRate - expectedCommissionRate) > 0.0001) {
                                     results.commissionDeviations.push({
-                                        appId: s1row[s1AppIdCol],
-                                        taxableValue,
-                                        actualCommission,
-                                        actualRate: actualRate * 100,
-                                        expectedRate: expectedCommissionRate * 100,
+                                        appId: s1item.data[s1AppIdCol], taxableValue, actualCommission,
+                                        actualRate: actualRate * 100, expectedRate: expectedCommissionRate * 100,
                                         deviation: actualCommission - (taxableValue * expectedCommissionRate)
                                     });
                                 }
@@ -425,7 +452,8 @@
                     }
 
                     STATE.analysisResults = results;
-                    displayResults(STATE.analysisResults);
+                    displayExecutiveSummary(results);
+                    displayResults(results);
                 } catch (error) {
                     console.error("Analysis Error:", error);
                     alert('An error occurred during analysis: ' + error.message);
@@ -435,15 +463,50 @@
             }, 50);
         }
         
+        function displayExecutiveSummary(results) {
+            DOM.executiveSummary.classList.add('show');
+            const totalRedAlertAmount = results.redAlerts.reduce((sum, item) => sum + item.amount, 0);
+            const totalCommissionDeviation = results.commissionDeviations.reduce((sum, item) => sum + item.deviation, 0);
+            const totalPotentialLoss = totalRedAlertAmount - totalCommissionDeviation; // Subtracting because negative deviation is a loss
+
+            const topMismatches = [...results.mismatches]
+                .sort((a,b) => Math.abs((b.amount1 - b.amount2)/b.amount2) - Math.abs((a.amount1 - a.amount2)/a.amount1))
+                .slice(0,3)
+                .map(item => `<li>${item.appId} (${(((item.amount1 - item.amount2)/item.amount2)*100).toFixed(2)}%)</li>`).join('');
+
+            DOM.executiveSummary.innerHTML = `
+                <h3>Executive Summary</h3>
+                <div class="summary-grid">
+                    <div class="summary-card">
+                        <h4>Total Potential Loss</h4>
+                        <div class="summary-value">${totalPotentialLoss.toFixed(2)}</div>
+                        <small>(Red Alerts + Commission Deviations)</small>
+                    </div>
+                    <div class="summary-card">
+                        <h4>Red Alert Items</h4>
+                        <div class="summary-value" style="color: var(--danger-color);">${results.redAlerts.length}</div>
+                        <small>Totaling ${totalRedAlertAmount.toFixed(2)}</small>
+                    </div>
+                     <div class="summary-card">
+                        <h4>Commission Deviations</h4>
+                        <div class="summary-value" style="color: var(--warning-color);">${results.commissionDeviations.length}</div>
+                        <small>Totaling ${totalCommissionDeviation.toFixed(2)}</small>
+                    </div>
+                    <div class="summary-card">
+                         <h4>Top 3 Mismatches by Variance</h4>
+                         <ul style="text-align: left; padding-left: 20px;">${topMismatches || '<li>N/A</li>'}</ul>
+                    </div>
+                </div>
+            `;
+        }
+
         function displayResults(results) {
             buildResultTable('red-alert', 'Red Alert Discrepancies', ['App ID', 'S2 Amount', 'Reason'], results.redAlerts);
             buildResultTable('commission-deviation', 'Commission Deviation Report', ['App ID', 'Taxable Value', 'Actual Commission', 'Actual Rate %', 'Expected Rate %', 'Deviation'], results.commissionDeviations);
             buildResultTable('matches', 'Matches', ['App ID', 'Amount', 'Date', 'Filename'], results.matches);
             buildResultTable('mismatches', 'Mismatches', ['App ID', 'S1 Amount', 'S2 Amount', 'Diff', 'Variance %', 'Commission', 'TDS', 'S1 Date', 'S2 Date', 'Filename'], results.mismatches);
             buildResultTable('missing2', 'Missing in Source 2', ['App ID', 'Amount', 'Commission', 'TDS', 'Date', 'Filename'], results.missingInSource2);
-            // Missing in Source 1 is now covered by Red Alerts, so this box is no longer needed.
-            document.getElementById('missing1-box').innerHTML = '';
-
+            document.getElementById('missing1-box').innerHTML = ''; // This box is now obsolete
 
             DOM.resultsSection.classList.add('show');
             DOM.exportBtn.style.display = 'inline-block';
@@ -469,7 +532,7 @@
                 totalAmount1 += item.amount1 || 0;
                 totalAmount2 += item.amount2 || 0;
                 const isDuplicate = dups.has(item.appId);
-                const variance = item.amount1 && item.amount2 ? ((item.amount1 - item.amount2) / item.amount2 * 100).toFixed(2) : 0;
+                const variance = item.amount1 && item.amount2 ? ((item.amount1 - item.amount2) / item.amount2 * 100).toFixed(2) : '0.00';
                 tableHTML += `<tr ${isDuplicate ? 'class="duplicate-row"' : ''}>`;
                 
                 switch(id) {
@@ -784,7 +847,7 @@
         function hideLoading() { DOM.loadingOverlay.classList.remove('show'); }
 
         function initialize() {
-            DOM.userInfo.textContent = `User: ksismad | UTC 2025-06-19 20:20:36`;
+            DOM.userInfo.textContent = `User: ksismad | UTC 2025-06-19 20:31:36`;
             document.getElementById('file-input-1').addEventListener('change', e => handleFileSelection(e.target.files, 1));
             document.getElementById('file-input-2').addEventListener('change', e => handleFileSelection(e.target.files, 2));
             DOM.analyzeBtn.addEventListener('click', runAnalysis);
