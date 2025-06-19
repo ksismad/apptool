@@ -217,7 +217,7 @@
     <script>
         const STATE = {
             source1: { files: new Map(), data: [], headers: [], mappings: {} },
-            source2: { file: null, data: [], headers: [], mappings: {} },
+            source2: { files: new Map(), data: [], headers: [], mappings: {} },
             analysisResults: null
         };
 
@@ -236,11 +236,26 @@
             loadingOverlay: document.getElementById('loading-overlay')
         };
 
+        async function processFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    try {
+                        const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array', cellDates: true });
+                        const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1, defval: "" });
+                        resolve(jsonData);
+                    } catch (err) { reject(new Error(`Could not process file ${file.name}: ${err.message}`)); }
+                };
+                reader.onerror = () => reject(new Error(`Could not read file ${file.name}`));
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
         function generateFileSignature(data) {
-            // Create a signature from the first 5 App IDs to detect duplicates
-            const { appId } = detectColumnMappings(data[0]);
-            if (appId === undefined) return data[0].join(','); // Fallback for no App ID
-            return data.slice(1, 6).map(row => row[appId]).join(',');
+            const headers = data[0] || [];
+            const appIdIndex = headers.findIndex(h => COLUMN_CONFIG.appId.patterns.some(p => p.test(h)));
+            if (appIdIndex === -1) return headers.join(',');
+            return data.slice(1, 6).map(row => row[appIdIndex]).join(',');
         }
 
         async function handleFileSelection(files, sourceNum) {
@@ -255,18 +270,20 @@
                 let headers = [];
                 
                 if (sourceNum === 1) {
+                    // For source 1, we append files. Headers are taken from the first-ever uploaded file in the session.
                     headers = stateObj.headers.length ? stateObj.headers : (await processFile(files[0]))[0];
                     stateObj.headers = headers;
                 } else {
+                    // For source 2, we replace files.
                     stateObj.files.clear();
                     const fileData = await processFile(files[0]);
                     headers = fileData[0] || [];
-                    allData = fileData.slice(1);
                     stateObj.headers = headers;
                 }
 
                 for (const file of files) {
                     const fileData = await processFile(file);
+                    if (fileData.length < 2) continue; // Skip empty or header-only files
                     const signature = generateFileSignature(fileData);
                     if (stateObj.files.has(signature)) {
                         alert(`Skipping duplicate file: ${file.name}`);
@@ -281,7 +298,12 @@
                     }
                 }
                 
-                stateObj.data = allData;
+                if (sourceNum === 1) {
+                    stateObj.data.push(...allData);
+                } else {
+                    stateObj.data = allData;
+                }
+                
                 stateObj.mappings = detectColumnMappings(stateObj.headers);
                 updateFileInfo(sourceNum);
                 createColumnMappingUI(sourceNum);
@@ -325,10 +347,10 @@
                         
                         let s1Amount = 0, commission = 0;
                         let s2Amount = parseFloat(s2row[s2AmountCol]) || 0;
-                        let status = '', s1row = null, filename1 = '', date1 = null, date2 = null;
+                        let status = '', filename1 = 'N/A', date1 = null, date2 = null;
 
                         if (s1item) {
-                            s1row = s1item.data;
+                            const s1row = s1item.data;
                             filename1 = s1item.__filename;
                             date1 = s1row[STATE.source1.mappings.date];
                             date2 = s2row[STATE.source2.mappings.date];
@@ -383,7 +405,7 @@
             const container = document.getElementById(`${id}-box`);
             let tableHTML = `<div class="result-header"><h3>${title} (${data.length})</h3><button class="view-full-btn">View Full</button></div>
                              <div class="table-container"><table class="results-table"><thead><tr>`;
-            headers.forEach(h => tableHTML += `<th class="sortable">${h}</th>`);
+            headers.forEach(h => tableHTML += `<th class="sortable" data-sort-key="${h.toLowerCase().replace(/ /g, '')}">${h}</th>`);
             tableHTML += `</tr></thead><tbody>`;
 
             data.forEach(item => {
@@ -399,30 +421,31 @@
 
             const table = container.querySelector('table');
             makeTableSortable(table, data);
-            container.querySelector('.view-full-btn').addEventListener('click', () => openFullView(title, table.innerHTML));
+            container.querySelector('.view-full-btn').addEventListener('click', () => openFullView(title, table.outerHTML));
         }
 
         function makeTableSortable(table, data) {
             const headers = Array.from(table.querySelectorAll('th'));
-            headers.forEach((header, index) => {
+            headers.forEach((header) => {
                 header.addEventListener('click', () => {
                     const isAsc = !header.classList.contains('asc');
                     headers.forEach(h => h.classList.remove('asc', 'desc'));
                     header.classList.toggle(isAsc ? 'asc' : 'desc');
                     
                     const keyMap = {
-                        'App ID': 'appId', 'Amount': 'amount1', 'S1 Amount': 'amount1', 'S2 Amount': 'amount2',
-                        'Diff': item => item.amount1 - item.amount2, 'Commission': 'commission',
-                        'Date': 'date1', 'S1 Date': 'date1', 'S2 Date': 'date2', 'Filename': 'filename1'
+                        'appid': 'appId', 'amount': 'amount1', 's1amount': 'amount1', 's2amount': 'amount2',
+                        'diff': item => item.amount1 - item.amount2, 'commission': 'commission',
+                        'date': 'date1', 's1date': 'date1', 's2date': 'date2', 'filename': 'filename1'
                     };
-                    const key = keyMap[header.innerText];
+                    const key = keyMap[header.dataset.sortKey];
 
                     data.sort((a, b) => {
                         const valA = typeof key === 'function' ? key(a) : a[key];
                         const valB = typeof key === 'function' ? key(b) : b[key];
                         if (valA === null || valA === undefined) return 1;
                         if (valB === null || valB === undefined) return -1;
-                        return valA > valB ? (isAsc ? 1 : -1) : (isAsc ? -1 : 1);
+                        if (typeof valA === 'string') return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                        return isAsc ? valA - valB : valB - valA;
                     });
                     
                     const parentId = table.closest('.result-box').id.replace('-box', '');
@@ -504,7 +527,7 @@
         }
 
         function formatDate(date) {
-            if (!(date instanceof Date)) return 'N/A';
+            if (!(date instanceof Date) || isNaN(date)) return 'N/A';
             return date.toISOString().split('T')[0];
         }
         
@@ -512,10 +535,19 @@
         function hideLoading() { DOM.loadingOverlay.classList.remove('show'); }
 
         function initialize() {
-            DOM.userInfo.textContent = `User: ksismad | UTC 2025-06-19 19:04:01`;
+            DOM.userInfo.textContent = `User: ksismad | UTC 2025-06-19 19:08:13`;
             document.getElementById('file-input-1').addEventListener('change', e => handleFileSelection(e.target.files, 1));
             document.getElementById('file-input-2').addEventListener('change', e => handleFileSelection(e.target.files, 2));
             DOM.analyzeBtn.addEventListener('click', runAnalysis);
+        }
+        
+        function detectColumnMappings(headers) {
+            const mappings = {};
+            for (const [key, config] of Object.entries(COLUMN_CONFIG)) {
+                const foundIndex = headers.findIndex(h => h && config.patterns.some(p => p.test(h)));
+                if (foundIndex !== -1) mappings[key] = foundIndex;
+            }
+            return mappings;
         }
 
         document.addEventListener('DOMContentLoaded', initialize);
