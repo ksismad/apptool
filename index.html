@@ -2,791 +2,415 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Professional Reconciliation & Analysis Suite (ksismad)</title>
+    <title>App ID Analyzer (Bird's Eye Red Alert Suite)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        :root {
-            --primary-color: #4C51BF; --primary-dark: #434190;
-            --secondary-color: #38A169; --secondary-dark: #2F855A;
-            --light-gray: #f7fafc; --medium-gray: #e2e8f0;
-            --dark-gray: #2d3748; --text-color: #4a5568;
-            --white: #fff; --danger-color: #c53030; --warning-color: #dd6b20;
-            --highlight-color: #fff3cd; --red-alert-bg: #fed7d7;
-        }
-        html, body { 
-            background: #f3f4f6; color: var(--text-color); 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-            margin: 0; padding: 0; line-height: 1.6;
-        }
-        .container { 
-            max-width: 1500px; margin: 30px auto; background: var(--white); 
-            border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); overflow: hidden;
-        }
-        .header { 
-            background: linear-gradient(135deg, #5A67D8 0%, #7F5AD5 100%); 
-            color: var(--white); padding: 30px 40px; position: relative;
-        }
-        .header h1 { margin: 0; font-size: 2.5rem; font-weight: 700; }
-        .user-info {
-            position: absolute; top: 20px; right: 30px; background: rgba(255,255,255,0.2);
-            padding: 8px 16px; border-radius: 99px; font-size: 0.9rem; font-weight: 500;
-        }
-        .main-content { padding: 30px 40px; }
-        .upload-section { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px; }
-        .upload-box {
-            background: var(--light-gray); border: 2px dashed var(--medium-gray);
-            border-radius: 12px; padding: 25px; transition: all 0.2s ease;
-        }
-        .upload-box:hover { border-color: #c3dafe; background: #f1f5f9; }
-        .upload-box h3 { margin-top: 0; margin-bottom: 15px; font-size: 1.25rem; color: var(--dark-gray); }
-        .file-input { display: none; }
-        .upload-btn {
-            background: var(--primary-color); color: var(--white); border: none; 
-            padding: 10px 20px; border-radius: 8px; cursor: pointer; 
-            font-weight: 600; transition: background 0.2s ease;
-        }
-        .upload-btn:hover { background: var(--primary-dark); }
-        .file-info {
-            margin-top: 15px; padding: 10px; background: #e6fffa; color: #2c7a7b; 
-            border-radius: 6px; font-weight: 500; display: none; word-break: break-all;
-        }
-        .file-info.show { display: block; }
-        .options-section, .column-mapping, .commission-section {
-            background: var(--light-gray); border-radius: 12px;
-            padding: 25px; margin-bottom: 30px;
-        }
-        .options-section h3, .column-mapping h3, .commission-section h3 { margin-top: 0; margin-bottom: 20px; color: var(--dark-gray); }
-        .options-grid, .mapping-grid {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 25px;
-        }
-        .mapping-box h4 { margin: 0 0 10px 0; font-size: 1.1rem; color: var(--dark-gray); }
-        .mapping-row { display: flex; align-items: center; margin-bottom: 12px; }
-        .mapping-label { flex: 1; font-weight: 600; padding-right: 10px;}
-        .mapping-select, .commission-input {
-            padding: 8px; border: 1px solid #cbd5e1;
-            border-radius: 6px; background: var(--white);
-        }
-        .commission-input { width: 80px; }
-        .analyze-btn {
-            width: 100%; padding: 16px;
-            background: linear-gradient(135deg, var(--secondary-color) 0%, var(--secondary-dark) 100%);
-            color: var(--white); border: none; border-radius: 12px; font-size: 1.25rem; 
-            font-weight: 700; cursor: pointer; transition: all 0.2s ease;
-        }
-        .analyze-btn:hover { box-shadow: 0 4px 15px rgba(47, 133, 90, 0.4); }
-        .analyze-btn:disabled { background: #a0aec0; cursor: not-allowed; box-shadow: none; }
-        .results, #executive-summary { margin-top: 30px; display: none; }
-        .results.show, #executive-summary.show { display: block; }
-        .results-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(600px, 1fr)); gap: 30px; }
-        .result-box {
-            background: var(--white); border: 1px solid var(--medium-gray);
-            border-radius: 12px; display: flex; flex-direction: column;
-        }
-        .result-box.red-alert { border-color: var(--danger-color); }
-        .result-header {
-            padding: 15px 20px; background: var(--light-gray);
-            border-bottom: 1px solid var(--medium-gray); display: flex;
-            justify-content: space-between; align-items: center;
-        }
-        .result-header.red-alert { background-color: var(--red-alert-bg); }
-        .result-header h3 { margin: 0; color: var(--dark-gray); }
-        .view-full-btn {
-            background: none; border: 1px solid #cbd5e1; color: var(--text-color);
-            padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 0.9rem;
-        }
-        .view-full-btn:hover { background: #edf2f7; }
-        .table-container { overflow: auto; height: 400px; flex-grow: 1; }
-        .results-table { width: 100%; border-collapse: collapse; }
-        .results-table th, .results-table td {
-            padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--medium-gray);
-            white-space: nowrap;
-        }
-        .results-table tr.duplicate-row td { background-color: var(--highlight-color); }
-        .results-table th { background: var(--light-gray); font-weight: 600; position: sticky; top: 0; z-index: 1;}
-        .results-table th.sortable { cursor: pointer; }
-        .results-table th.sortable:hover { background: #edf2f7; }
-        .result-footer {
-            padding: 10px 20px; background: var(--light-gray); font-weight: 600;
-            border-top: 1px solid var(--medium-gray); text-align: right;
-        }
-        .commission-table { width: 100%; border-collapse: collapse; }
-        .commission-table th { text-align: left; padding: 8px; font-size: 0.9em; }
-        .commission-table td { padding: 8px; border-bottom: 1px solid var(--medium-gray); vertical-align: middle; }
-        #executive-summary {
-            background: linear-gradient(135deg, #eff6ff, #e0e7ff); border: 2px solid var(--primary-color);
-            padding: 25px; border-radius: 12px;
-        }
-        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
-        .summary-card { text-align: center; }
-        .summary-card h4 { margin: 0 0 10px 0; color: var(--primary-dark); }
-        .summary-value { font-size: 2rem; font-weight: 700; color: var(--danger-color); }
-        .loading-overlay {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(255,255,255,0.85); display: flex; align-items: center;
-            justify-content: center; z-index: 9999; display: none;
-        }
-        .loading-overlay.show { display: flex; }
-        .spinner {
-            width: 40px; height: 40px; border: 4px solid #f3f3f3;
-            border-top: 4px solid var(--primary-color); border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        body {background:#f3f4f6;color:#1e293b;font-family:'Segoe UI',sans-serif;}
+        .container {max-width:1200px;margin:40px auto;background:#fff;border-radius:16px;box-shadow:0 4px 20px #ccc;}
+        .header {background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%);color:#fff;padding:32px;position:relative;}
+        .user-info {position:absolute;top:24px;right:40px;background:rgba(255,255,255,0.15);border-radius:16px;padding:6px 18px;}
+        .upload-section {display:flex;gap:28px;padding:32px;}
+        .upload-box {flex:1;min-width:300px;background:#f8fafc;border:2px dashed #cbd5e1;border-radius:12px;padding:24px;}
+        .file-info {margin-top:12px;background:#d1fae5;color:#059669;border-radius:6px;padding:8px 16px;display:none;}
+        .file-info.show {display:block;}
+        .upload-btn {background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%);color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-weight:600;}
+        .options-section {padding:0 32px;}
+        .option-group {margin-bottom:18px;}
+        .option-label {font-weight:600;margin-bottom:8px;}
+        .analyze-btn {width:calc(100% - 64px);margin:32px;padding:16px;background:linear-gradient(135deg,#10b981 0%,#059669 100%);color:#fff;border:none;border-radius:12px;font-size:1.2rem;font-weight:700;cursor:pointer;}
+        .analyze-btn:disabled {background:#9ca3af;cursor:not-allowed;}
+        .results {margin:32px;display:none;}
+        .results.show {display:block;}
+        .table-container {overflow-x:auto;background:#fff;border-radius:12px;box-shadow:0 2px 4px #eee;}
+        table {width:100%;border-collapse:collapse;}
+        th, td {padding:12px;text-align:left;border-bottom:1px solid #e2e8f0;}
+        th {background:#f8fafc;font-weight:600;}
+        .red-row td {background:#fed7d7;}
+        .pivot-summary {margin:24px 0;}
+        .export-btn {margin-top:24px;}
+        .loading-overlay {position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,0.9);display:none;align-items:center;justify-content:center;z-index:1000;}
+        .loading-overlay.show {display:flex;}
+        .spinner {width:40px;height:40px;border:4px solid #f3f3f3;border-top:4px solid #3498db;border-radius:50%;animation:spin 1s linear infinite;}
+        @keyframes spin {0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+        .commission-table th, .commission-table td {padding:6px 8px;}
+        .big-number {font-size:2.6em;font-weight:700;color:#c53030;}
+        .dashboard-cards {display:flex;gap:24px;margin:24px 0;}
+        .dashboard-card {background:#f8fafc;border-radius:10px;padding:28px 22px;box-shadow:0 1px 3px #eee;flex:1;text-align:center;}
+        .dashboard-card h2 {margin:0 0 12px 0;}
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <div class="user-info" id="user-info"></div>
-            <h1>Professional Reconciliation & Analysis Suite</h1>
-            <p>The definitive tool for intelligent financial data comparison and analysis.</p>
+<div class="container">
+    <div class="header">
+        <div class="user-info" id="user-info"></div>
+        <h1>🔍 App ID Analyzer & Bird's Eye Red Alert Suite</h1>
+        <p>Perfect bird's-eye reconciliation, financial pivot, and export</p>
+    </div>
+    <div class="upload-section">
+        <div class="upload-box">
+            <h3>Source 1 Files</h3>
+            <input type="file" id="file-input-1" class="file-input" multiple accept=".xlsx,.xls">
+            <button class="upload-btn" id="upload-btn-1">Choose Files</button>
+            <div id="file-info-1" class="file-info"></div>
         </div>
-        
-        <div class="main-content">
-            <div class="upload-section">
-                <div class="upload-box">
-                    <h3>Source 1 (Master Data)</h3>
-                    <input type="file" id="file-input-1" class="file-input" multiple accept=".xlsx,.xls,.csv">
-                    <button class="upload-btn" onclick="document.getElementById('file-input-1').click()">Choose Master File(s)</button>
-                    <div id="file-info-1" class="file-info"></div>
-                </div>
-                <div class="upload-box">
-                    <h3>Source 2 (Comparison Data - Paid by Default)</h3>
-                    <input type="file" id="file-input-2" class="file-input" accept=".xlsx,.xls,.csv">
-                    <button class="upload-btn" onclick="document.getElementById('file-input-2').click()">Choose Comparison File</button>
-                    <div id="file-info-2" class="file-info"></div>
-                </div>
-            </div>
-
-            <div id="column-mapping-section" class="column-mapping" style="display: none;">
-                <h3>Column Mapping</h3>
-                <p>Please verify the automatically detected columns. Fields marked with * are required for analysis.</p>
-                <div class="mapping-grid">
-                    <div id="source1-mappings"></div>
-                    <div id="source2-mappings"></div>
-                </div>
-            </div>
-            
-            <div id="commission-control-section" class="commission-section" style="display: none;">
-                <h3>Financial Control Center</h3>
-                <p>Manage file-specific commission, TDS, and additional amounts before analysis.</p>
-                <div id="commission-controls"></div>
-            </div>
-
-            <div class="options-section">
-                <h3>Global Filters & Options</h3>
-                <div class="options-grid">
-                    <div>
-                        <label for="date1-from" class="mapping-label">Source 1 Date Range</label>
-                        <input type="date" id="date1-from"> to <input type="date" id="date1-to">
-                    </div>
-                    <div>
-                        <label for="date2-from" class="mapping-label">Source 2 Date Range</label>
-                        <input type="date" id="date2-from"> to <input type="date" id="date2-to">
-                    </div>
-                    <div>
-                        <label for="status-filter" class="mapping-label">Filter Source 1 by Status</label>
-                        <select id="status-filter" class="mapping-select">
-                            <option value="all">All Records</option>
-                            <option value="paid">Paid</option>
-                            <option value="unpaid">Unpaid</option>
-                        </select>
-                    </div>
-                     <div>
-                        <label for="apply-gst" class="mapping-label">Apply 18% GST to Source 1</label>
-                        <input type="checkbox" id="apply-gst">
-                    </div>
-                    <div>
-                        <label for="round-off" class="mapping-label">Round Off Source 1 Amount</label>
-                        <input type="checkbox" id="round-off">
-                    </div>
-                    <div>
-                         <label for="expected-commission" class="mapping-label">Expected Commission %</label>
-                         <input type="number" id="expected-commission" class="commission-input" value="0">
-                    </div>
-                </div>
-            </div>
-            
-            <button id="analyze-btn" class="analyze-btn" disabled>Upload & Map Files to Begin</button>
-            
-            <div id="executive-summary"></div>
-
-            <div id="results" class="results">
-                <h2>Red Alert Reports</h2>
-                <div class="results-grid">
-                    <div id="red-alert-box" class="result-box red-alert"></div>
-                    <div id="commission-deviation-box" class="result-box"></div>
-                    <div id="financial-summary-box" class="result-box"></div>
-                </div>
-                 <button id="export-btn" class="upload-btn" style="margin-top: 20px; display: none;">Export Spectacular Report</button>
-            </div>
+        <div class="upload-box">
+            <h3>Source 2 File</h3>
+            <input type="file" id="file-input-2" class="file-input" accept=".xlsx,.xls">
+            <button class="upload-btn" id="upload-btn-2">Choose File</button>
+            <div id="file-info-2" class="file-info"></div>
         </div>
     </div>
-    
-    <div id="loading-overlay" class="loading-overlay"><div class="spinner"></div></div>
-    
-    <script>
-        const STATE = {
-            source1: { files: new Map(), data: [], headers: [], mappings: {}, financialControls: {} },
-            source2: { files: new Map(), data: [], headers: [], mappings: {} },
-            analysisResults: null,
-            duplicates: { source1: new Set(), source2: new Set() }
+    <div class="options-section">
+        <div class="option-group">
+            <span class="option-label">Commission % (Expected)</span>
+            <input type="number" id="expected-commission" value="0" style="width:70px;"> %
+        </div>
+        <div class="option-group">
+            <label><input type="checkbox" id="apply-gst"> Apply 18% GST</label>
+            <label style="margin-left:18px;"><input type="checkbox" id="round-off"> Round Off S1 Amount</label>
+        </div>
+    </div>
+    <div class="commission-section" id="commission-section" style="padding:0 32px 24px 32px;">
+        <h3>Financial Control Center</h3>
+        <div id="commission-controls"></div>
+    </div>
+    <button id="analyze-btn" class="analyze-btn" disabled>Analyze Data</button>
+    <div id="results" class="results"></div>
+</div>
+<div id="loading-overlay" class="loading-overlay">
+    <div class="spinner"></div>
+</div>
+<script>
+const STATE = {
+    s1Files: [], s2File: null,
+    s1Rows: [], s2Rows: [],
+    s1Headers: [], s2Headers: [],
+    s1Cols: {}, s2Cols: {},
+    s1Fin: {},
+    userInfo: {login:'ksismad', currentUTC: ''}
+};
+const DOM = {
+    fileInput1: document.getElementById('file-input-1'),
+    fileInput2: document.getElementById('file-input-2'),
+    uploadBtn1: document.getElementById('upload-btn-1'),
+    uploadBtn2: document.getElementById('upload-btn-2'),
+    fileInfo1: document.getElementById('file-info-1'),
+    fileInfo2: document.getElementById('file-info-2'),
+    analyzeBtn: document.getElementById('analyze-btn'),
+    results: document.getElementById('results'),
+    loadingOverlay: document.getElementById('loading-overlay'),
+    userInfo: document.getElementById('user-info'),
+    commissionControls: document.getElementById('commission-controls')
+};
+function showLoading() { DOM.loadingOverlay.classList.add('show'); }
+function hideLoading() { DOM.loadingOverlay.classList.remove('show'); }
+function updateUserInfo() {
+    const now = new Date();
+    const utcString = now.toISOString().replace('T',' ').slice(0,19);
+    STATE.userInfo.currentUTC = utcString;
+    DOM.userInfo.textContent = `User: ${STATE.userInfo.login} | UTC ${utcString}`;
+}
+document.addEventListener('DOMContentLoaded', function() {
+    updateUserInfo();
+    setInterval(updateUserInfo, 15000);
+});
+DOM.uploadBtn1.onclick = ()=>DOM.fileInput1.click();
+DOM.uploadBtn2.onclick = ()=>DOM.fileInput2.click();
+DOM.fileInput1.onchange = (e)=>handleS1Files(e.target.files);
+DOM.fileInput2.onchange = (e)=>handleS2File(e.target.files);
+function handleS1Files(files) {
+    showLoading();
+    STATE.s1Files = [];
+    STATE.s1Fin = {};
+    let loaded = 0;
+    STATE.s1Rows = [];
+    for (const file of files) {
+        processExcelFile(file, (err, data)=>{
+            if(!err && data.length>1){
+                STATE.s1Files.push({file,data});
+                if (STATE.s1Headers.length === 0) STATE.s1Headers = data[0];
+                STATE.s1Rows.push(...data.slice(1).map(row=>({filename:file.name, row})));
+            }
+            loaded++;
+            if(loaded === files.length){
+                initFinancialControls();
+                renderFinancialControls();
+                hideLoading(); updateFileInfo(1,files); updateAnalyzeButton();
+            }
+        });
+    }
+}
+function handleS2File(files) {
+    showLoading();
+    const file = files[0];
+    processExcelFile(file, (err, data)=>{
+        if(!err && data.length>1){
+            STATE.s2File = {file,data};
+            STATE.s2Headers = data[0];
+            STATE.s2Rows = data.slice(1).map(row=>({filename:file.name, row}));
+        }
+        hideLoading(); updateFileInfo(2,[file]);
+        updateAnalyzeButton();
+    });
+}
+function processExcelFile(file, cb) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const workbook = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
+            cb(null, jsonData);
+        } catch (err) { cb(err); }
+    };
+    reader.onerror = function(err) { cb(err); };
+    reader.readAsArrayBuffer(file);
+}
+function updateFileInfo(src, files) {
+    const info = src===1?DOM.fileInfo1:DOM.fileInfo2;
+    info.textContent = Array.from(files).map(f=>f.name).join(', ');
+    info.classList.add('show');
+}
+function updateAnalyzeButton() {
+    const ready = STATE.s1Files.length > 0 && STATE.s2File;
+    DOM.analyzeBtn.disabled = !ready;
+}
+DOM.analyzeBtn.onclick = runAnalysis;
+function getColIdx(headers, patterns) {
+    for (let i=0;i<headers.length;i++) {
+        const h = headers[i]||'';
+        for (const p of patterns)
+            if (p.test(h)) return i;
+    }
+    return -1;
+}
+//--- financial controls ---
+function initFinancialControls() {
+    STATE.s1Fin = {};
+    for(const f of STATE.s1Files) {
+        if(!STATE.s1Fin[f.file.name])
+            STATE.s1Fin[f.file.name] = {tds:2, additional:0, mergedTo:'', origComm:0};
+    }
+    const commIdx = getColIdx(STATE.s1Headers,[/commission/i]);
+    if(commIdx>=0) {
+        for(const f of STATE.s1Files) {
+            let sum = 0;
+            for(const r of STATE.s1Rows) if(r.filename===f.file.name) sum+=parseFloat(r.row[commIdx])||0;
+            STATE.s1Fin[f.file.name].origComm = sum;
+        }
+    }
+}
+function renderFinancialControls() {
+    let html = `<table class="commission-table"><thead><tr><th>Filename</th><th>Orig. Comm</th><th>TDS %</th><th>Additional</th><th>Merge To</th></tr></thead><tbody>`;
+    for(const k in STATE.s1Fin) {
+        html += `<tr>
+            <td>${k}</td>
+            <td>${STATE.s1Fin[k].origComm.toFixed(2)}</td>
+            <td><input type="number" style="width:50px" value="${STATE.s1Fin[k].tds}" onchange="STATE.s1Fin['${k}'].tds=this.value"></td>
+            <td><input type="number" style="width:70px" value="${STATE.s1Fin[k].additional}" onchange="STATE.s1Fin['${k}'].additional=this.value"></td>
+            <td><select onchange="STATE.s1Fin['${k}'].mergedTo=this.value"><option value="">--No Merge--</option>${Object.keys(STATE.s1Fin).filter(f=>f!==k).map(f=>`<option value="${f}">${f}</option>`).join('')}</select></td>
+        </tr>`;
+    }
+    html += '</tbody></table>';
+    DOM.commissionControls.innerHTML = html;
+}
+//--- main analysis ---
+function runAnalysis() {
+    showLoading();
+    setTimeout(()=>{
+        analyzeAndDisplay();
+        hideLoading();
+    },50);
+}
+function analyzeAndDisplay() {
+    const s1h = STATE.s1Headers, s2h = STATE.s2Headers;
+    STATE.s1Cols = {
+        appId: getColIdx(s1h,[/app.*id|application.*id|id/i]),
+        amount: getColIdx(s1h,[/amount|total/i]),
+        status: getColIdx(s1h,[/status|state/i]),
+        commission: getColIdx(s1h,[/commission/i])
+    };
+    STATE.s2Cols = {
+        appId: getColIdx(s2h,[/app.*id|application.*id|id/i]),
+        amount: getColIdx(s2h,[/amount|total/i])
+    };
+    const S1_ALL = {}, S1_PAID = {}, S1_UNPAID = {};
+    for (const item of STATE.s1Rows) {
+        const appId = (item.row[STATE.s1Cols.appId]||"").toString().trim();
+        const status = (STATE.s1Cols.status>=0? (item.row[STATE.s1Cols.status]||"").toLowerCase().trim() : "paid");
+        S1_ALL[appId] = item;
+        if(status==="paid") S1_PAID[appId]=item;
+        else if(status==="unpaid") S1_UNPAID[appId]=item;
+    }
+    const S2 = {};
+    for (const item of STATE.s2Rows) {
+        const appId = (item.row[STATE.s2Cols.appId]||"").toString().trim();
+        S2[appId]=item;
+    }
+    const s1dups = findDuplicates(STATE.s1Rows.map(r=>r.row[STATE.s1Cols.appId]));
+    const s2dups = findDuplicates(STATE.s2Rows.map(r=>r.row[STATE.s2Cols.appId]));
+    const redAlerts = [], matches=[], mismatches=[], allComparisons=[];
+    for(const id of s1dups) redAlerts.push({appId:id,amount:0,reason:'Duplicate in Source 1'});
+    for(const id of s2dups) redAlerts.push({appId:id,amount:0,reason:'Duplicate in Source 2'});
+    for(const appId in S2) {
+        if(!S1_ALL[appId]) redAlerts.push({appId,amount:getAmount(S2[appId],STATE.s2Cols.amount),"reason":"Paid in S2, missing in S1"});
+    }
+    for(const appId in S1_PAID) {
+        if(!S2[appId]) redAlerts.push({appId,amount:getAmount(S1_PAID[appId],STATE.s1Cols.amount),"reason":"Paid in S1, missing in S2"});
+    }
+    for(const appId in S2) {
+        if(S1_ALL[appId]) {
+            const s1item = S1_ALL[appId], s2item = S2[appId];
+            const status = (STATE.s1Cols.status>=0? (s1item.row[STATE.s1Cols.status]||"").toLowerCase().trim() : "paid");
+            let s1amt = getAmount(s1item,STATE.s1Cols.amount);
+            let s2amt = getAmount(s2item,STATE.s2Cols.amount);
+            if(document.getElementById('apply-gst').checked) s1amt*=1.18;
+            s1amt += getFileFin(s1item.filename).additional||0;
+            if(document.getElementById('round-off').checked) s1amt = Math.round(s1amt);
+            const amtMatch = Math.abs(s1amt - s2amt) < 0.01;
+            allComparisons.push({
+                appId, s1filename:s1item.filename, s2filename:s2item.filename, s1amt, s2amt, status
+            });
+            if(status==="unpaid" && !amtMatch) {
+                redAlerts.push({appId,amount:s2amt,reason:"Paid in S2, Unpaid in S1 & Amount Mismatch"});
+                mismatches.push({appId, s1amt, s2amt, s1filename:s1item.filename, s2filename:s2item.filename, status, scenario:"5"});
+            }
+            else if(status==="unpaid") {
+                redAlerts.push({appId,amount:s2amt,reason:"Paid in S2, Unpaid in S1"});
+                mismatches.push({appId, s1amt, s2amt, s1filename:s1item.filename, s2filename:s2item.filename, status, scenario:"3"});
+            }
+            else if(status==="paid" && !amtMatch) {
+                redAlerts.push({appId,amount:s2amt,reason:`Paid in S2 & S1, Amount Mismatch (S1:${s1amt}, S2:${s2amt})`});
+                mismatches.push({appId, s1amt, s2amt, s1filename:s1item.filename, s2filename:s2item.filename, status, scenario:"4/8"});
+            }
+            else matches.push({appId, s1amt, s2amt, s1filename:s1item.filename, s2filename:s2item.filename, status});
+        }
+    }
+    const expectedComm = parseFloat(document.getElementById('expected-commission').value)/100 || 0;
+    const commDevs = [];
+    if(STATE.s1Cols.commission>=0 && expectedComm>0){
+        for(const appId in S1_PAID){
+            const s1item = S1_PAID[appId];
+            const taxableValue = parseFloat(s1item.row[STATE.s1Cols.amount])||0;
+            const actualComm = parseFloat(s1item.row[STATE.s1Cols.commission])||0;
+            const expected = taxableValue*expectedComm;
+            if(Math.abs(actualComm-expected) > 0.01){
+                commDevs.push({
+                    appId,
+                    filename:getMergedFilename(s1item.filename),
+                    taxableValue,
+                    actualComm,
+                    expected,
+                    dev:actualComm-expected,
+                    devPerc: expected===0?0:((actualComm-expected)/expected*100).toFixed(2)
+                });
+            }
+        }
+    }
+    const mergedFin = {};
+    for(const fname in STATE.s1Fin) {
+        let netComm = STATE.s1Fin[fname].origComm;
+        let tdsPerc = parseFloat(STATE.s1Fin[fname].tds)||0;
+        let addl = parseFloat(STATE.s1Fin[fname].additional)||0;
+        for(const k in STATE.s1Fin) if(STATE.s1Fin[k].mergedTo===fname) netComm += STATE.s1Fin[k].origComm;
+        const tds = netComm*tdsPerc/100;
+        mergedFin[fname] = {
+            filename:fname,
+            netCommission:netComm,
+            tds:tds,
+            additional:addl,
+            netPayable:netComm-tds+addl
         };
-
-        const COLUMN_CONFIG = {
-            appId: { label: 'Application ID', patterns: [/app.*id/i, /application.*id/i, /id/i], required: true },
-            amount: { label: 'Amount (Taxable Value)', patterns: [/amount/i, /total/i, /value/i, /fee/i], required: true },
-            date: { label: 'Date', patterns: [/date/i, /timestamp/i, /created/i], required: false },
-            status: { label: 'Status', patterns: [/status/i, /state/i], required: false },
-            commission: { label: 'Commission', patterns: [/commission/i, /comm/i], required: false }
-        };
-        const DOM = {
-            analyzeBtn: document.getElementById('analyze-btn'),
-            userInfo: document.getElementById('user-info'),
-            columnMappingSection: document.getElementById('column-mapping-section'),
-            commissionControlSection: document.getElementById('commission-control-section'),
-            executiveSummary: document.getElementById('executive-summary'),
-            resultsSection: document.getElementById('results'),
-            exportBtn: document.getElementById('export-btn'),
-            loadingOverlay: document.getElementById('loading-overlay')
-        };
-        
-        async function processFile(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = e => {
-                    try {
-                        const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array', cellDates: true });
-                        const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1, defval: "" });
-                        resolve(jsonData);
-                    } catch (err) { reject(new Error(`Could not process file ${file.name}: ${err.message}`)); }
-                };
-                reader.onerror = () => reject(new Error(`Could not read file ${file.name}`));
-                reader.readAsArrayBuffer(file);
-            });
-        }
-
-        async function handleFileSelection(files, sourceNum) {
-            if (!files.length) return;
-            showLoading();
-            
-            const sourceKey = `source${sourceNum}`;
-            const stateObj = STATE[sourceKey];
-            
-            stateObj.files.clear();
-            stateObj.data = [];
-            stateObj.headers = [];
-            if(sourceNum === 1) stateObj.financialControls = {};
-
-            try {
-                let headers = [];
-                for (const file of files) {
-                    const fileData = await processFile(file);
-                    if (fileData.length < 2) continue;
-                    if (headers.length === 0) headers = fileData[0];
-                    
-                    stateObj.files.set(file.name, file.name);
-                    const records = fileData.slice(1).map(row => ({ __filename: file.name, data: row }));
-                    stateObj.data.push(...records);
-                }
-                
-                stateObj.headers = headers;
-                stateObj.mappings = detectColumnMappings(stateObj.headers);
-                updateFileInfo(sourceNum);
-                createColumnMappingUI(sourceNum);
-
-                if (sourceNum === 1 && stateObj.files.size > 0) {
-                    initializeFinancialControls();
-                    renderFinancialControls();
-                    DOM.commissionControlSection.style.display = 'block';
-                }
-
-            } catch (err) {
-                alert(`Error: ${err.message}`);
-            } finally {
-                if (STATE.source1.files.size > 0 && STATE.source2.files.size > 0) {
-                    DOM.columnMappingSection.style.display = 'block';
-                }
-                hideLoading();
-                updateAnalyzeButton();
-            }
-        }
-        
-        function runAnalysis() {
-            showLoading();
-            setTimeout(() => {
-                try {
-                    const { appId: s1AppIdCol, amount: s1AmountCol, commission: s1CommissionCol, status: s1StatusCol, date: s1DateCol } = STATE.source1.mappings;
-                    const { appId: s2AppIdCol, amount: s2AmountCol, date: s2DateCol } = STATE.source2.mappings;
-                    const applyGst = document.getElementById('apply-gst').checked;
-                    const roundOff = document.getElementById('round-off').checked;
-                    const expectedCommissionRate = parseFloat(document.getElementById('expected-commission').value) / 100 || 0;
-                    
-                    checkForDuplicates();
-
-                    const results = { matches: [], mismatches: [], redAlerts: [], commissionDeviations: [], financialSummary: [] };
-                    
-                    STATE.duplicates.source1.forEach(appId => results.redAlerts.push({ appId, amount: 0, reason: `Duplicate ID in Source 1` }));
-                    STATE.duplicates.source2.forEach(appId => results.redAlerts.push({ appId, amount: 0, reason: `Duplicate ID in Source 2` }));
-
-                    const finalFinancials = {};
-                    for(const fileName of STATE.source1.files.keys()){
-                        const controls = STATE.source1.financialControls[fileName];
-                        if(!controls.mergedInto){
-                             finalFinancials[fileName] = {
-                                commission: controls.originalCommission + controls.mergedCommission,
-                                tds: (controls.originalCommission + controls.mergedCommission) * (controls.tdsPercent / 100),
-                                additionalAmount: controls.additionalAmount,
-                                netPayable: (controls.originalCommission + controls.mergedCommission) - ((controls.originalCommission + controls.mergedCommission) * (controls.tdsPercent / 100)) + controls.additionalAmount
-                            };
-                        }
-                    }
-                    results.financialSummary = Object.entries(finalFinancials).map(([name, data]) => ({filename: name, ...data}));
-
-                    const processedS1Data = STATE.source1.data.map(s1item => {
-                        const controls = STATE.source1.financialControls[s1item.__filename];
-                        const targetFilename = controls.mergedInto || s1item.__filename;
-                        return {...s1item, __filename: targetFilename };
-                    });
-                    
-                    const s1Map = new Map();
-                    processedS1Data.forEach(item => {
-                        const appId = item.data[s1AppIdCol];
-                        if (appId) s1Map.set(appId.toString(), item);
-                    });
-
-                    const s2Data = getFilteredData(2);
-                    const s1Data = getFilteredData(1);
-                    const s1ItemsFound = new Set();
-                    
-                    // Main loop through Source 2 (Paid by default)
-                    s2Data.forEach(s2item => {
-                        const s2row = s2item.data;
-                        const s2AppId = s2row[s2AppIdCol]?.toString();
-                        if (STATE.duplicates.source2.has(s2AppId)) return;
-                        
-                        s1ItemsFound.add(s2AppId);
-                        const s1item = s1Map.get(s2AppId);
-                        const s2Amount = parseFloat(s2row[s2AmountCol]) || 0;
-
-                        if (!s1item) { // Scenario 2
-                            results.redAlerts.push({appId: s2AppId, amount: s2Amount, reason: `Paid in S2, but MISSING in S1`});
-                            return;
-                        }
-
-                        const controls = STATE.source1.financialControls[s1item.__filename];
-                        let s1Amount = parseFloat(s1item.data[s1AmountCol]) || 0;
-                        if (applyGst) s1Amount *= 1.18;
-                        s1Amount += controls.additionalAmount;
-                        if (roundOff) s1Amount = Math.round(s1Amount);
-                        
-                        const commission = s1CommissionCol !== undefined ? (parseFloat(s1item.data[s1CommissionCol]) || 0) : 0;
-                        const tds = commission * (controls.tdsPercent / 100);
-                        const amountMatch = Math.abs(s1Amount - s2Amount) < 0.01;
-                        const s1Status = s1item.data[s1StatusCol]?.toString().toLowerCase();
-
-                        if (s1Status === 'unpaid') {
-                             if (!amountMatch) { // Scenario 5
-                                results.redAlerts.push({appId: s2AppId, amount: s2Amount, reason: `Paid in S2, but Unpaid in S1 AND Amount Mismatch`});
-                             } else { // Scenario 3
-                                results.redAlerts.push({appId: s2AppId, amount: s2Amount, reason: `Paid in S2, but 'Unpaid' in S1`});
-                             }
-                             results.mismatches.push({ appId: s2AppId, amount1: s1Amount, amount2: s2Amount, commission, tds, filename1: s1item.__filename, date1: parseDate(s1item.data[s1DateCol]), date2: parseDate(s2row[s2DateCol]) });
-                        } else if (s1Status === 'paid') {
-                            if (!amountMatch) { // Scenario 4 & 8
-                                results.redAlerts.push({appId: s2AppId, amount: s2Amount, reason: `Amount Mismatch (S1: ${s1Amount.toFixed(2)}, S2: ${s2Amount.toFixed(2)})`});
-                                results.mismatches.push({ appId: s2AppId, amount1: s1Amount, amount2: s2Amount, commission, tds, filename1: s1item.__filename, date1: parseDate(s1item.data[s1DateCol]), date2: parseDate(s2row[s2DateCol]) });
-                            } else {
-                                results.matches.push({ appId: s2AppId, amount1: s1Amount, amount2: s2Amount, commission, tds, filename1: s1item.__filename, date1: parseDate(s1item.data[s1DateCol]), date2: parseDate(s2row[s2DateCol]) });
-                            }
-                        }
-                    });
-                    
-                    // Check for items Paid in S1 but not found in S2
-                    processedS1Data.forEach(s1item => {
-                        const appId = s1item.data[s1AppIdCol]?.toString();
-                        const status = s1item.data[s1StatusCol]?.toString().toLowerCase();
-                        if (status === 'paid' && !s1ItemsFound.has(appId) && !STATE.duplicates.source1.has(appId)) {
-                             results.redAlerts.push({appId, amount: parseFloat(s1item.data[s1AmountCol]) || 0, reason: `Paid in S1, but MISSING in S2`});
-                        }
-                    });
-                    
-                    // Scenario 6: Commission Deviation
-                    if (expectedCommissionRate > 0 && s1CommissionCol !== undefined) {
-                        processedS1Data.forEach(s1item => {
-                            const status = s1item.data[s1StatusCol]?.toString().toLowerCase();
-                            if (status !== 'paid') return;
-
-                            const taxableValue = parseFloat(s1item.data[s1AmountCol]) || 0;
-                            const actualCommission = parseFloat(s1item.data[s1CommissionCol]) || 0;
-                            if (taxableValue > 0) {
-                                const actualRate = actualCommission / taxableValue;
-                                if (Math.abs(actualRate - expectedCommissionRate) > 0.0001) {
-                                    results.commissionDeviations.push({
-                                        appId: s1item.data[s1AppIdCol], taxableValue, actualCommission,
-                                        actualRate: actualRate * 100, expectedRate: expectedCommissionRate * 100,
-                                        deviation: actualCommission - (taxableValue * expectedCommissionRate)
-                                    });
-                                }
-                            }
-                        });
-                    }
-
-                    STATE.analysisResults = results;
-                    displayExecutiveSummary(results);
-                    displayResults(results);
-                } catch (error) {
-                    console.error("Analysis Error:", error);
-                    alert('An error occurred during analysis: ' + error.message);
-                } finally {
-                    hideLoading();
-                }
-            }, 50);
-        }
-        
-        function displayExecutiveSummary(results) {
-            DOM.executiveSummary.classList.add('show');
-            const totalRedAlertAmount = results.redAlerts.reduce((sum, item) => sum + item.amount, 0);
-            const totalCommissionDeviation = results.commissionDeviations.reduce((sum, item) => sum + item.deviation, 0);
-            const totalPotentialLoss = totalRedAlertAmount - totalCommissionDeviation;
-
-            const topMismatches = [...results.mismatches]
-                .sort((a,b) => Math.abs((b.amount1 - b.amount2)/b.amount2) - Math.abs((a.amount1 - a.amount2)/a.amount1))
-                .slice(0,3)
-                .map(item => `<li>${item.appId} (${(((item.amount1 - item.amount2)/item.amount2)*100).toFixed(2)}%)</li>`).join('');
-
-            DOM.executiveSummary.innerHTML = `
-                <h3>Executive Summary</h3>
-                <div class="summary-grid">
-                    <div class="summary-card">
-                        <h4>Total Potential Loss</h4>
-                        <div class="summary-value">${totalPotentialLoss.toFixed(2)}</div>
-                        <small>(Red Alerts + Commission Deviations)</small>
-                    </div>
-                    <div class="summary-card">
-                        <h4>Red Alert Items</h4>
-                        <div class="summary-value" style="color: var(--danger-color);">${results.redAlerts.length}</div>
-                        <small>Totaling ${totalRedAlertAmount.toFixed(2)}</small>
-                    </div>
-                     <div class="summary-card">
-                        <h4>Commission Deviations</h4>
-                        <div class="summary-value" style="color: var(--warning-color);">${results.commissionDeviations.length}</div>
-                        <small>Totaling ${totalCommissionDeviation.toFixed(2)}</small>
-                    </div>
-                    <div class="summary-card">
-                         <h4>Top 3 Mismatches by Variance</h4>
-                         <ul style="text-align: left; padding-left: 20px;">${topMismatches || '<li>N/A</li>'}</ul>
-                    </div>
-                </div>
-            `;
-        }
-
-        function displayResults(results) {
-            buildResultTable('red-alert', 'Red Alert Discrepancies', ['App ID', 'Amount', 'Reason'], results.redAlerts);
-            buildResultTable('commission-deviation', 'Commission Deviation Report', ['App ID', 'Taxable Value', 'Actual Commission', 'Actual Rate %', 'Expected Rate %', 'Deviation'], results.commissionDeviations);
-            buildResultTable('financial-summary', 'Final Financial Summary', ['Filename', 'Net Commission', 'TDS', 'Additional Received', 'Net Payable'], results.financialSummary);
-            
-            DOM.resultsSection.classList.add('show');
-            DOM.exportBtn.style.display = 'inline-block';
-        }
-
-        function buildResultTable(id, title, headers, data) {
-            const container = document.getElementById(`${id}-box`);
-            if (!container) return;
-            if (!data || data.length === 0) {
-                container.style.display = 'none';
-                return;
-            }
-            container.style.display = 'flex';
-
-            const tableBody = data.map(item => {
-                let rowHtml = `<tr>`;
-                switch(id) {
-                    case 'red-alert': rowHtml += `<td>${item.appId}</td><td>${item.amount.toFixed(2)}</td><td>${item.reason}</td>`; break;
-                    case 'commission-deviation': rowHtml += `<td>${item.appId}</td><td>${item.taxableValue.toFixed(2)}</td><td>${item.actualCommission.toFixed(2)}</td><td>${item.actualRate.toFixed(2)}%</td><td>${item.expectedRate.toFixed(2)}%</td><td>${item.deviation.toFixed(2)}</td>`; break;
-                    case 'financial-summary': rowHtml += `<td>${item.filename}</td><td>${item.commission.toFixed(2)}</td><td>${item.tds.toFixed(2)}</td><td>${item.additionalAmount.toFixed(2)}</td><td>${item.netPayable.toFixed(2)}</td>`; break;
-                }
-                return rowHtml + '</tr>';
-            }).join('');
-
-            const total = id === 'financial-summary' ? data.reduce((s,r) => s + r.netPayable, 0) : data.reduce((s,r) => s + (r.amount || 0), 0);
-            const footerHtml = `<div class="result-footer"><span>Records: ${data.length}</span> | <span>Total Amount: ${total.toFixed(2)}</span></div>`;
-            
-            container.innerHTML = `<div class="result-header ${id.includes('red') ? 'red-alert' : ''}"><h3>${title}</h3><button class="view-full-btn">View Full</button></div>
-                                 <div class="table-container"><table class="results-table"><thead><tr>${headers.map(h => `<th class="sortable" data-sort-key="${h.toLowerCase().replace(/ /g, '').replace('%', '')}">${h}</th>`).join('')}</tr></thead><tbody>${tableBody}</tbody></table></div>
-                                 ${footerHtml}`;
-            
-            const table = container.querySelector('table');
-            makeTableSortable(table, data, id, title, headers);
-            container.querySelector('.view-full-btn').addEventListener('click', () => openFullView(title, table.outerHTML));
-        }
-        
-        function makeTableSortable(table, data, id, title, headers) {
-            const headerCells = Array.from(table.querySelectorAll('th'));
-            headerCells.forEach((header) => {
-                header.addEventListener('click', () => {
-                    const isAsc = !header.classList.contains('asc');
-                    headerCells.forEach(h => h.classList.remove('asc', 'desc'));
-                    header.classList.toggle(isAsc ? 'asc' : 'desc');
-                    
-                    const keyMap = {
-                        'appid': 'appId', 'amount': 'amount', 'reason': 'reason', 
-                        'taxablevalue': 'taxableValue', 'actualcommission': 'actualCommission', 
-                        'actualrate': 'actualRate', 'expectedrate': 'expectedRate', 'deviation': 'deviation',
-                        'filename': 'filename', 'netcommission': 'commission', 'tds': 'tds', 
-                        'additionalreceived': 'additionalAmount', 'netpayable': 'netPayable'
-                    };
-                    const key = keyMap[header.dataset.sortKey];
-
-                    data.sort((a, b) => {
-                        const valA = a[key];
-                        const valB = b[key];
-                        if (valA === null || valA === undefined) return 1;
-                        if (valB === null || valB === undefined) return -1;
-                        if (valA instanceof Date) return isAsc ? valA - valB : valB - valA;
-                        if (typeof valA === 'string') return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
-                        return isAsc ? valA - valB : valB - valA;
-                    });
-                    
-                    buildResultTable(id, title, headers, data);
-                });
-            });
-        }
-        
-        function openFullView(title, tableHTML) {
-            const newWindow = window.open("");
-            newWindow.document.write(`<html><head><title>${title}</title><style>body{font-family:sans-serif;padding:20px} table{border-collapse:collapse;width:100%} th,td{border:1px solid #ccc;padding:8px} th{background:#f0f0f0;text-align:left} .duplicate-row td{background:#fff3cd}</style></head><body><h1>${title}</h1>${tableHTML}</body></html>`);
-            newWindow.document.close();
-        }
-        
-        function renderFinancialControls() {
-            const container = document.getElementById('commission-controls');
-            const fileNames = Array.from(STATE.source1.files.keys());
-            let html = '<table class="commission-table"><thead><tr><th>Filename</th><th>Original Commission</th><th>TDS %</th><th>Additional Received</th><th>Merge To</th></tr></thead><tbody>';
-            
-            for (const fileName of fileNames) {
-                const controls = STATE.source1.financialControls[fileName];
-                if (!controls) continue;
-                let options = fileNames.filter(f => f !== fileName).map(f => `<option value="${f}" ${controls.mergedInto === f ? 'selected' : ''}>${f}</option>`).join('');
-                
-                html += `<tr>
-                    <td>${fileName}</td>
-                    <td>${controls.originalCommission.toFixed(2)}</td>
-                    <td><input type="number" class="commission-input" data-file="${fileName}" data-field="tdsPercent" value="${controls.tdsPercent}"></td>
-                    <td><input type="number" class="commission-input" data-file="${fileName}" data-field="additionalAmount" value="${controls.additionalAmount}"></td>
-                    <td><select class="mapping-select merge-target" data-from-file="${fileName}" ${fileNames.length < 2 ? 'disabled' : ''}><option value="">-- No Merge --</option>${options}</select></td>
-                </tr>`;
-            }
-            html += '</tbody></table>';
-            container.innerHTML = html;
-
-            container.querySelectorAll('.commission-input, .merge-target').forEach(el => {
-                el.addEventListener('change', e => {
-                    const fileName = e.target.dataset.file || e.target.dataset.fromFile;
-                    if(e.target.classList.contains('merge-target')) {
-                         updateCommissionMerge(fileName, e.target.value);
-                    } else {
-                         STATE.source1.financialControls[fileName][e.target.dataset.field] = parseFloat(e.target.value) || 0;
-                    }
-                });
-            });
-        }
-        
-        function initializeFinancialControls() {
-            const { data, mappings, financialControls } = STATE.source1;
-            const commissionCol = mappings.commission;
-
-            for (const fileName of STATE.source1.files.keys()) {
-                financialControls[fileName] = { originalCommission: 0, mergedCommission: 0, tdsPercent: 2, additionalAmount: 0, mergedInto: null };
-            }
-            
-            if (commissionCol !== undefined) {
-                for (const item of data) {
-                    const fileName = item.__filename;
-                    if (financialControls[fileName]) {
-                         financialControls[fileName].originalCommission += parseFloat(item.data[commissionCol]) || 0;
-                    }
-                }
-            }
-        }
-        
-        function updateCommissionMerge(fromFile, toFile) {
-            const { financialControls } = STATE.source1;
-            const fromControl = financialControls[fromFile];
-            
-            const oldTargetFile = fromControl.mergedInto;
-            if(oldTargetFile && financialControls[oldTargetFile]) {
-                financialControls[oldTargetFile].mergedCommission -= fromControl.originalCommission;
-            }
-
-            fromControl.mergedInto = toFile;
-            if(toFile && financialControls[toFile]) {
-                financialControls[toFile].mergedCommission += fromControl.originalCommission;
-                alert(`Commission from ${fromFile} will now be added to ${toFile} during analysis.`);
-            } else {
-                 alert(`Commission from ${fromFile} will no longer be merged.`);
-            }
-        }
-
-        function getFilteredData(sourceNum) {
-            const { data, mappings } = STATE[`source${sourceNum}`];
-            const dateFrom = document.getElementById(`date${sourceNum}-from`).valueAsDate;
-            const dateTo = document.getElementById(`date${sourceNum}-to`).valueAsDate;
-            const dateCol = mappings.date;
-
-            let filteredData = data;
-            if ((dateFrom || dateTo) && dateCol !== undefined) {
-                filteredData = filteredData.filter(item => {
-                    const dateVal = parseDate(item.data[dateCol]);
-                    if (!dateVal) return false;
-                    const fromOK = !dateFrom || dateVal >= dateFrom;
-                    const toOK = !dateTo || dateVal <= new Date(dateTo.getTime() + 86400000);
-                    return fromOK && toOK;
-                });
-            }
-            if (sourceNum === 1) {
-                const statusFilter = document.getElementById('status-filter').value;
-                const statusCol = mappings.status;
-                if (statusFilter !== 'all' && statusCol !== undefined) {
-                    filteredData = filteredData.filter(item => (item.data[statusCol]?.toString().toLowerCase() || '') === statusFilter);
-                }
-            }
-            return filteredData;
-        }
-        
-        function checkForDuplicates() {
-            const findDups = (data, appIdCol) => {
-                if (appIdCol === undefined) return new Set();
-                const appIds = new Map();
-                const duplicates = new Set();
-                data.forEach(item => {
-                    const appId = item.data[appIdCol];
-                    if(appId) {
-                        if(appIds.has(appId)) duplicates.add(appId);
-                        else appIds.set(appId, 1);
-                    }
-                });
-                return duplicates;
-            };
-
-            STATE.duplicates.source1 = findDups(STATE.source1.data, STATE.source1.mappings.appId);
-            STATE.duplicates.source2 = findDups(STATE.source2.data, STATE.source2.mappings.appId);
-        }
-
-        function updateFileInfo(sourceNum) {
-            const filesMap = STATE[`source${sourceNum}`].files;
-            document.getElementById(`file-info-${sourceNum}`).innerHTML = `<b>${filesMap.size} file(s)</b> selected, <b>${STATE[`source${sourceNum}`].data.length} records</b> found.`;
-            document.getElementById(`file-info-${sourceNum}`).classList.add('show');
-        }
-
-        function createColumnMappingUI(sourceNum) {
-            const sourceKey = `source${sourceNum}`;
-            const { headers, mappings } = STATE[sourceKey];
-            const container = document.getElementById(`${sourceKey}-mappings`);
-            let html = `<h4>Source ${sourceNum}</h4>`;
-            for (const [key, config] of Object.entries(COLUMN_CONFIG)) {
-                const options = headers.map((h, i) => `<option value="${i}" ${mappings[key] === i ? 'selected' : ''}>${h || `Column ${i+1}`}</option>`).join('');
-                html += `<div class="mapping-row"><label class="mapping-label">${config.label}${config.required ? ' *' : ''}</label><select class="mapping-select" data-source="${sourceNum}" data-key="${key}"><option value="">-- Select --</option>${options}</select></div>`;
-            }
-            container.innerHTML = html;
-            container.querySelectorAll('select').forEach(sel => sel.addEventListener('change', e => {
-                const val = e.target.value;
-                STATE[`source${e.target.dataset.source}`].mappings[e.target.dataset.key] = val ? parseInt(val, 10) : undefined;
-                if(e.target.dataset.key === 'commission') {
-                    initializeFinancialControls();
-                    renderFinancialControls();
-                }
-                updateAnalyzeButton();
-            }));
-        }
-        
-        function updateAnalyzeButton() {
-            const s1Ready = STATE.source1.files.size > 0;
-            const s2Ready = STATE.source2.files.size > 0;
-            let mappingsReady = false;
-            if (s1Ready && s2Ready) {
-                const s1Mappings = STATE.source1.mappings;
-                const s2Mappings = STATE.source2.mappings;
-                mappingsReady = Object.entries(COLUMN_CONFIG).every(([key, config]) => 
-                    !config.required || (s1Mappings[key] !== undefined && s2Mappings[key] !== undefined)
-                );
-            }
-            DOM.analyzeBtn.disabled = !mappingsReady;
-            if (mappingsReady) DOM.analyzeBtn.textContent = 'Run Analysis';
-            else if (!s1Ready || !s2Ready) DOM.analyzeBtn.textContent = 'Upload & Map Files to Begin';
-            else DOM.analyzeBtn.textContent = 'Please map required columns (*)';
-        }
-        
-        function exportResults() {
-            const { matches, mismatches, redAlerts, commissionDeviations, financialSummary } = STATE.analysisResults;
-            const wb = XLSX.utils.book_new();
-
-            const summaryData = [
-                ["Category", "Record Count", "Total S1 Amount", "Total S2 Amount"],
-                ["Matches", matches.length, matches.reduce((s,r)=>s+r.amount1,0), matches.reduce((s,r)=>s+r.amount2,0)],
-                ["Mismatches", mismatches.length, mismatches.reduce((s,r)=>s+r.amount1,0), mismatches.reduce((s,r)=>s+r.amount2,0)],
-                ["Red Alerts", redAlerts.length, 0, redAlerts.reduce((s,r)=>s+r.amount,0)],
-            ];
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Reconciliation Summary"],[],...summaryData]), "Summary");
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(financialSummary), "Final Financial Summary");
-            
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(redAlerts.map(r => ({'App ID':r.appId, 'Amount':r.amount, 'Reason': r.reason}))), "Red Alerts");
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(commissionDeviations.map(r => ({'App ID':r.appId, 'Taxable Value':r.taxableValue, 'Actual Commission': r.actualCommission, 'Actual Rate %': r.actualRate, 'Expected Rate %': r.expectedRate, 'Deviation Amount': r.deviation}))), "Commission Deviations");
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(matches.map(r => ({'App ID':r.appId, 'Amount':r.amount1, 'Date': formatDate(r.date1), 'Source 1 Filename': r.filename1}))), "Matches");
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mismatches.map(r => ({'App ID':r.appId, 'S1 Amount':r.amount1, 'S2 Amount':r.amount2, 'Difference': r.amount1 - r.amount2, 'Variance %': r.amount1 && r.amount2 ? ((r.amount1 - r.amount2) / r.amount2 * 100) : 0, 'S1 Commission': r.commission, 'TDS': r.tds, 'S1 Date': formatDate(r.date1), 'S2 Date': formatDate(r.date2), 'S1 Filename': r.filename1}))), "Mismatches");
-            
-            const processedS1Data = STATE.source1.data.map(item => {
-                const controls = STATE.source1.financialControls[item.__filename];
-                const targetFilename = controls.mergedInto || item.__filename;
-                let row = { ...item.data, '__filename': targetFilename };
-                return Object.fromEntries(Object.keys(row).map((key, i) => [STATE.source1.headers[i] || key, row[key]]));
-            });
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(processedS1Data), "Processed Raw Data (S1)");
-
-            XLSX.writeFile(wb, `Reconciliation_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
-        }
-
-        function parseDate(date) {
-            if (date instanceof Date && !isNaN(date)) return date;
-            if (typeof date === 'number') {
-                const excelEpoch = new Date(Date.UTC(1899, 11, 30));
-                return new Date(excelEpoch.getTime() + date * 86400000);
-            }
-            if (typeof date === 'string') {
-                const parsed = new Date(date);
-                if (!isNaN(parsed)) return parsed;
-            }
-            return null;
-        }
-
-        function formatDate(date) {
-            if (!(date instanceof Date) || isNaN(date)) return 'N/A';
-            return date.toISOString().split('T')[0];
-        }
-        
-        function showLoading() { DOM.loadingOverlay.classList.add('show'); }
-        function hideLoading() { DOM.loadingOverlay.classList.remove('show'); }
-
-        function initialize() {
-            DOM.userInfo.textContent = `User: ksismad | UTC 2025-06-19 21:44:48`;
-            document.getElementById('file-input-1').addEventListener('change', e => handleFileSelection(e.target.files, 1));
-            document.getElementById('file-input-2').addEventListener('change', e => handleFileSelection(e.target.files, 2));
-            DOM.analyzeBtn.addEventListener('click', runAnalysis);
-            DOM.exportBtn.addEventListener('click', exportResults);
-        }
-        
-        function detectColumnMappings(headers) {
-            const mappings = {};
-            for (const [key, config] of Object.entries(COLUMN_CONFIG)) {
-                const foundIndex = headers.findIndex(h => h && config.patterns.some(p => p.test(h)));
-                if (foundIndex !== -1) mappings[key] = foundIndex;
-            }
-            return mappings;
-        }
-
-        document.addEventListener('DOMContentLoaded', initialize);
-    </script>
+    }
+    // Bird's Eye Dashboard
+    const totalRedAlerts = redAlerts.length, totalCommDev = commDevs.length, totalDuplicates = s1dups.length+s2dups.length;
+    const totalPotentialLoss = redAlerts.reduce((sum, x)=>sum+Number(x.amount||0),0) + commDevs.reduce((sum,x)=>sum+Number(x.dev||0),0);
+    let html = `<div class="dashboard-cards">
+        <div class="dashboard-card"><h2>Total Red Alerts</h2><div class="big-number">${totalRedAlerts}</div></div>
+        <div class="dashboard-card"><h2>Commission Deviations</h2><div class="big-number">${totalCommDev}</div></div>
+        <div class="dashboard-card"><h2>Duplicates</h2><div class="big-number">${totalDuplicates}</div></div>
+        <div class="dashboard-card"><h2>Potential Loss</h2><div class="big-number">${totalPotentialLoss.toFixed(2)}</div></div>
+    </div>`;
+    html += `<h3>Red Alerts</h3>
+        <div class="table-container"><table><thead><tr><th>App ID</th><th>Amount</th><th>Reason</th></tr></thead><tbody>`;
+    for(const r of redAlerts)
+        html += `<tr class="red-row"><td>${r.appId}</td><td>${r.amount}</td><td>${r.reason}</td></tr>`;
+    html += `</tbody></table></div>`;
+    html += `<h3>Commission Deviation (S1 Paid)</h3>
+        <div class="table-container"><table><thead><tr><th>App ID</th><th>Merged File</th><th>Taxable Value</th><th>Actual</th><th>Expected</th><th>Dev</th><th>Dev %</th></tr></thead><tbody>`;
+    for(const c of commDevs)
+        html += `<tr><td>${c.appId}</td><td>${c.filename}</td><td>${c.taxableValue}</td><td>${c.actualComm}</td><td>${c.expected}</td><td>${c.dev}</td><td>${c.devPerc}%</td></tr>`;
+    html += `</tbody></table></div>`;
+    html += `<h3>Merged Filename-wise Net Commission</h3>
+        <div class="table-container pivot-summary"><table><thead><tr><th>Filename</th><th>Net Commission</th><th>TDS</th><th>Additional</th><th>Net Payable</th></tr></thead><tbody>`;
+    for(const k in mergedFin){
+        const f = mergedFin[k];
+        html += `<tr><td>${f.filename}</td><td>${f.netCommission.toFixed(2)}</td><td>${f.tds.toFixed(2)}</td><td>${f.additional.toFixed(2)}</td><td>${f.netPayable.toFixed(2)}</td></tr>`;
+    }
+    html += `</tbody></table></div>`;
+    html += `<h3>Matches</h3>
+        <div class="table-container"><table><thead><tr><th>App ID</th><th>S1 Amount</th><th>S2 Amount</th><th>S1 Filename</th><th>Status</th></tr></thead><tbody>`;
+    for(const m of matches)
+        html += `<tr><td>${m.appId}</td><td>${m.s1amt}</td><td>${m.s2amt}</td><td>${m.s1filename}</td><td>${m.status}</td></tr>`;
+    html += `</tbody></table></div>`;
+    html += `<h3>Mismatches</h3>
+        <div class="table-container"><table><thead><tr><th>App ID</th><th>S1 Amount</th><th>S2 Amount</th><th>S1 Filename</th><th>Status</th><th>Scenario</th></tr></thead><tbody>`;
+    for(const m of mismatches)
+        html += `<tr><td>${m.appId}</td><td>${m.s1amt}</td><td>${m.s2amt}</td><td>${m.s1filename}</td><td>${m.status}</td><td>${m.scenario}</td></tr>`;
+    html += `</tbody></table></div>`;
+    html += `<h3>All S1-S2 Comparisons</h3>
+        <div class="table-container"><table><thead><tr><th>App ID</th><th>S1 Amount</th><th>S2 Amount</th><th>S1 Filename</th><th>S2 Filename</th><th>Status</th></tr></thead><tbody>`;
+    for(const m of allComparisons)
+        html += `<tr><td>${m.appId}</td><td>${m.s1amt}</td><td>${m.s2amt}</td><td>${m.s1filename}</td><td>${m.s2filename}</td><td>${m.status}</td></tr>`;
+    html += `</tbody></table></div>`;
+    html += `<button class="upload-btn export-btn" id="export-btn">Export Full Excel Report</button>`;
+    DOM.results.innerHTML = html;
+    DOM.results.classList.add('show');
+    document.getElementById('export-btn').onclick = ()=>exportExcel(redAlerts,commDevs,mergedFin,matches,mismatches,allComparisons);
+}
+function getAmount(item, idx) {
+    let v = parseFloat(item.row[idx]);
+    return isFinite(v)?v:0;
+}
+function getFileFin(fname) {
+    let t = fname;
+    for(let loop=0;loop<10;loop++) {
+        const mt = STATE.s1Fin[t]&&STATE.s1Fin[t].mergedTo;
+        if(mt && mt!==t) t = mt; else break;
+    }
+    return STATE.s1Fin[t]||{tds:2,additional:0,origComm:0};
+}
+function getMergedFilename(fname) {
+    let t = fname;
+    for(let loop=0;loop<10;loop++) {
+        const mt = STATE.s1Fin[t]&&STATE.s1Fin[t].mergedTo;
+        if(mt && mt!==t) t = mt; else break;
+    }
+    return t;
+}
+function findDuplicates(arr) {
+    const seen = new Set(), dups = new Set();
+    for(const x of arr){
+        const v = (x||"").toString().trim();
+        if(seen.has(v)) dups.add(v);
+        else seen.add(v);
+    }
+    dups.delete("");
+    return Array.from(dups);
+}
+// Excel Export
+function exportExcel(redAlerts,commDevs,mergedFin,matches,mismatches,allComparisons){
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(redAlerts),"Red Alerts");
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(commDevs),"Commission Deviations");
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(Object.values(mergedFin)),"Merged Net Commission");
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(matches),"Matches");
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(mismatches),"Mismatches");
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(allComparisons),"All Comparisons");
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([["Filename",...STATE.s1Headers],...STATE.s1Rows.map(r=>[getMergedFilename(r.filename),...r.row])]),"Raw Source 1");
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([["Filename",...STATE.s2Headers],...STATE.s2Rows.map(r=>[r.filename,...r.row])]),"Raw Source 2");
+    XLSX.writeFile(wb,`Reconciliation_Report_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+</script>
 </body>
 </html>
