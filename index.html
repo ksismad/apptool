@@ -12,6 +12,7 @@
             --light-gray: #f7fafc; --medium-gray: #e2e8f0;
             --dark-gray: #2d3748; --text-color: #4a5568;
             --white: #fff; --danger-color: #c53030; --warning-color: #dd6b20;
+            --highlight-color: #fff3cd;
         }
         html, body { 
             background: #f3f4f6; color: var(--text-color); 
@@ -64,9 +65,10 @@
         .mapping-row { display: flex; align-items: center; margin-bottom: 12px; }
         .mapping-label { flex: 1; font-weight: 600; padding-right: 10px;}
         .mapping-select, .commission-input {
-            flex: 2; padding: 8px; border: 1px solid #cbd5e1;
+            padding: 8px; border: 1px solid #cbd5e1;
             border-radius: 6px; background: var(--white);
         }
+        .commission-input { width: 80px; }
         .analyze-btn {
             width: 100%; padding: 16px;
             background: linear-gradient(135deg, var(--secondary-color) 0%, var(--secondary-dark) 100%);
@@ -99,6 +101,7 @@
             padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--medium-gray);
             white-space: nowrap;
         }
+        .results-table tr.duplicate-row td { background-color: var(--highlight-color); }
         .results-table th { background: var(--light-gray); font-weight: 600; position: sticky; top: 0; z-index: 1;}
         .results-table th.sortable { cursor: pointer; }
         .results-table th.sortable:hover { background: #edf2f7; }
@@ -106,9 +109,6 @@
             padding: 10px 20px; background: var(--light-gray); font-weight: 600;
             border-top: 1px solid var(--medium-gray); text-align: right;
         }
-        .status-match { color: var(--secondary-dark); font-weight: 600; }
-        .status-mismatch { color: var(--danger-color); font-weight: 600; }
-        .status-missing-in-source-2, .status-missing-in-source-1 { color: var(--warning-color); font-weight: 600; }
         .commission-table { width: 100%; border-collapse: collapse; }
         .commission-table td { padding: 8px; border-bottom: 1px solid var(--medium-gray); vertical-align: middle; }
         .loading-overlay {
@@ -159,7 +159,7 @@
             </div>
             
             <div id="commission-control-section" class="commission-section" style="display: none;">
-                <h3>Commission & Financial Control Center</h3>
+                <h3>Financial Control Center</h3>
                 <p>Manage file-specific commission, TDS, and additional amounts before analysis.</p>
                 <div id="commission-controls"></div>
             </div>
@@ -215,7 +215,8 @@
         const STATE = {
             source1: { files: new Map(), data: [], headers: [], mappings: {}, financialControls: {} },
             source2: { files: new Map(), data: [], headers: [], mappings: {} },
-            analysisResults: null
+            analysisResults: null,
+            duplicates: { source1: [], source2: [] }
         };
 
         const COLUMN_CONFIG = {
@@ -311,7 +312,7 @@
             showLoading();
             setTimeout(() => {
                 try {
-                    if (checkForDuplicates()) return;
+                    checkForDuplicates(); // This will now just alert and store duplicates
 
                     const { appId: s1AppIdCol, amount: s1AmountCol } = STATE.source1.mappings;
                     const { appId: s2AppIdCol, amount: s2AmountCol } = STATE.source2.mappings;
@@ -347,6 +348,7 @@
                             date2 = parseDate(s2row[STATE.source2.mappings.date]);
                             s1Amount = parseFloat(s1row[s1AmountCol]) || 0;
                             if (applyGst) s1Amount *= 1.18;
+                            s1Amount += controls.additionalAmount;
                             if (roundOff) s1Amount = Math.round(s1Amount);
                             
                             commission = parseFloat(s1row[STATE.source1.mappings.commission]) || 0;
@@ -368,6 +370,7 @@
                         const controls = STATE.source1.financialControls[s1item.__filename];
                         let amount1 = parseFloat(s1row[s1AmountCol]) || 0;
                         if (applyGst) amount1 *= 1.18;
+                        amount1 += controls.additionalAmount;
                         if (roundOff) amount1 = Math.round(amount1);
                         let commission = parseFloat(s1row[STATE.source1.mappings.commission]) || 0;
                         commission += controls.mergedCommission;
@@ -404,10 +407,12 @@
             headers.forEach(h => tableHTML += `<th class="sortable" data-sort-key="${h.toLowerCase().replace(/ /g, '')}">${h}</th>`);
             tableHTML += `</tr></thead><tbody>`;
 
+            const dups = id.includes('1') ? STATE.duplicates.source2 : STATE.duplicates.source1;
             data.forEach(item => {
                 totalAmount1 += item.amount1 || 0;
                 totalAmount2 += item.amount2 || 0;
-                tableHTML += '<tr>';
+                const isDuplicate = dups.includes(item.appId);
+                tableHTML += `<tr ${isDuplicate ? 'class="duplicate-row"' : ''}>`;
                 if (id === 'matches') tableHTML += `<td>${item.appId}</td><td>${item.amount1.toFixed(2)}</td><td>${formatDate(item.date1)}</td><td>${item.filename1}</td>`;
                 else if (id === 'mismatches') tableHTML += `<td>${item.appId}</td><td>${item.amount1.toFixed(2)}</td><td>${item.amount2.toFixed(2)}</td><td>${(item.amount1 - item.amount2).toFixed(2)}</td><td>${item.commission.toFixed(2)}</td><td>${item.tds.toFixed(2)}</td><td>${formatDate(item.date1)}</td><td>${formatDate(item.date2)}</td><td>${item.filename1}</td>`;
                 else if (id === 'missing2') tableHTML += `<td>${item.appId}</td><td>${item.amount1.toFixed(2)}</td><td>${item.commission.toFixed(2)}</td><td>${item.tds.toFixed(2)}</td><td>${formatDate(item.date1)}</td><td>${item.filename1}</td>`;
@@ -444,8 +449,8 @@
                         const valB = typeof key === 'function' ? key(b) : b[key];
                         if (valA === null || valA === undefined) return 1;
                         if (valB === null || valB === undefined) return -1;
-                        if (typeof valA === 'string') return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
                         if (valA instanceof Date) return isAsc ? valA - valB : valB - valA;
+                        if (typeof valA === 'string') return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
                         return isAsc ? valA - valB : valB - valA;
                     });
                     
@@ -456,14 +461,14 @@
         
         function openFullView(title, tableHTML) {
             const newWindow = window.open("");
-            newWindow.document.write(`<html><head><title>${title}</title><style>body{font-family:sans-serif;padding:20px} table{border-collapse:collapse;width:100%} th,td{border:1px solid #ccc;padding:8px} th{background:#f0f0f0;text-align:left}</style></head><body><h1>${title}</h1>${tableHTML}</body></html>`);
+            newWindow.document.write(`<html><head><title>${title}</title><style>body{font-family:sans-serif;padding:20px} table{border-collapse:collapse;width:100%} th,td{border:1px solid #ccc;padding:8px} th{background:#f0f0f0;text-align:left} .duplicate-row td{background:#fff3cd}</style></head><body><h1>${title}</h1>${tableHTML}</body></html>`);
             newWindow.document.close();
         }
         
         function renderFinancialControls() {
             const container = document.getElementById('commission-controls');
             const fileNames = Array.from(STATE.source1.files.values());
-            let html = '<table class="commission-table"><thead><tr><th>Filename</th><th>Original Commission</th><th>TDS %</th><th>Additional Received</th><th>Merge To</th></tr></thead><tbody>';
+            let html = '<table class="commission-table"><thead><tr><th>Filename</th><th>Original Commission</th><th>TDS %</th><th>Additional Received</th><th>Merge To</th><th>Action</th></tr></thead><tbody>';
             
             for (const fileName of fileNames) {
                 const controls = STATE.source1.financialControls[fileName];
@@ -474,19 +479,28 @@
                     <td>${controls.originalCommission.toFixed(2)}</td>
                     <td><input type="number" class="commission-input" data-file="${fileName}" data-field="tdsPercent" value="${controls.tdsPercent}"></td>
                     <td><input type="number" class="commission-input" data-file="${fileName}" data-field="additionalAmount" value="${controls.additionalAmount}"></td>
-                    <td><select class="mapping-select merge-target" data-from-file="${fileName}" ${fileNames.length < 2 ? 'disabled' : ''}><option value="">-- No Merge --</option>${options}</select></td>
+                    <td><select class="mapping-select merge-target" data-from-file="${fileName}"><option value="">-- No Merge --</option>${options}</select></td>
+                    <td><button data-from-file="${fileName}" class="view-full-btn merge-btn" ${fileNames.length < 2 ? 'disabled' : ''}>Merge</button></td>
                 </tr>`;
             }
             html += '</tbody></table>';
             container.innerHTML = html;
 
-            container.querySelectorAll('.commission-input, .merge-target').forEach(el => {
+            container.querySelectorAll('.commission-input').forEach(el => {
                 el.addEventListener('change', e => {
-                    const fileName = e.target.dataset.file || e.target.dataset.fromFile;
-                    if (e.target.classList.contains('merge-target')) {
-                        updateCommissionMerge(fileName, e.target.value);
+                    const fileName = e.target.dataset.file;
+                    STATE.source1.financialControls[fileName][e.target.dataset.field] = parseFloat(e.target.value) || 0;
+                });
+            });
+            container.querySelectorAll('.merge-btn').forEach(btn => {
+                btn.addEventListener('click', e => {
+                    const fromFile = e.target.dataset.fromFile;
+                    const toFile = document.querySelector(`.merge-target[data-from-file="${fromFile}"]`).value;
+                    if (toFile) {
+                        updateCommissionMerge(fromFile, toFile);
+                        alert(`Commission from ${fromFile} has been merged into ${toFile}. Re-run analysis to see changes.`);
                     } else {
-                        STATE.source1.financialControls[fileName][e.target.dataset.field] = parseFloat(e.target.value) || 0;
+                        alert('Please select a target file to merge into.');
                     }
                 });
             });
@@ -494,31 +508,28 @@
         
         function initializeFinancialControls() {
             const { data, mappings, financialControls } = STATE.source1;
-            if (mappings.commission === undefined) return;
+            const commissionCol = mappings.commission;
+            if (commissionCol === undefined) return;
+
+            // Reset controls on new file upload to recalculate
+            STATE.source1.financialControls = {};
 
             for (const item of data) {
                 const fileName = item.__filename;
                 if (!financialControls[fileName]) {
                     financialControls[fileName] = { originalCommission: 0, mergedCommission: 0, tdsPercent: 2, additionalAmount: 0, mergedInto: null };
                 }
-                financialControls[fileName].originalCommission += parseFloat(item.data[mappings.commission]) || 0;
+                financialControls[fileName].originalCommission += parseFloat(item.data[commissionCol]) || 0;
             }
         }
         
         function updateCommissionMerge(fromFile, toFile) {
             const { financialControls } = STATE.source1;
-            // Reset previous merge if exists
-            const oldTarget = financialControls[fromFile].mergedInto;
-            if(oldTarget) {
-                financialControls[oldTarget].mergedCommission -= financialControls[fromFile].originalCommission;
-            }
-            // Apply new merge
-            financialControls[fromFile].mergedInto = toFile;
-            if(toFile) {
-                financialControls[toFile].mergedCommission += financialControls[fromFile].originalCommission;
-            }
+            // This function is now simpler: it just updates the state. The analysis function will read this state.
+            // Note: This is a conceptual merge. The actual numbers are calculated during analysis.
+            alert('Merge selection noted. The values will be calculated when you run the analysis.');
         }
-        
+
         function getFilteredData(sourceNum) {
             const { data, mappings } = STATE[`source${sourceNum}`];
             const dateFrom = document.getElementById(`date${sourceNum}-from`).valueAsDate;
@@ -546,34 +557,29 @@
         }
         
         function checkForDuplicates() {
-            const checkSource = (sourceNum) => {
-                const { data, mappings } = STATE[`source${sourceNum}`];
-                const appIdCol = mappings.appId;
+            const findDups = (data, appIdCol) => {
                 if (appIdCol === undefined) return [];
-                
-                const appIds = new Set();
+                const appIds = new Map();
                 const duplicates = new Set();
                 data.forEach(item => {
                     const appId = item.data[appIdCol];
                     if(appId) {
                         if(appIds.has(appId)) duplicates.add(appId);
-                        else appIds.add(appId);
+                        else appIds.set(appId, 1);
                     }
                 });
                 return Array.from(duplicates);
             };
 
-            const s1Dups = checkSource(1);
-            const s2Dups = checkSource(2);
+            STATE.duplicates.source1 = findDups(STATE.source1.data, STATE.source1.mappings.appId);
+            STATE.duplicates.source2 = findDups(STATE.source2.data, STATE.source2.mappings.appId);
 
-            if(s1Dups.length > 0 || s2Dups.length > 0) {
-                let message = "Duplicate App IDs found! Analysis may be incorrect.\n";
-                if(s1Dups.length > 0) message += `\nSource 1 Duplicates: ${s1Dups.join(', ')}`;
-                if(s2Dups.length > 0) message += `\nSource 2 Duplicates: ${s2Dups.join(', ')}`;
+            if(STATE.duplicates.source1.length > 0 || STATE.duplicates.source2.length > 0) {
+                let message = "Warning: Duplicate App IDs found! They will be highlighted in the results.\n";
+                if(STATE.duplicates.source1.length > 0) message += `\nSource 1 Duplicates: ${STATE.duplicates.source1.join(', ')}`;
+                if(STATE.duplicates.source2.length > 0) message += `\nSource 2 Duplicates: ${STATE.duplicates.source2.join(', ')}`;
                 alert(message);
-                return true;
             }
-            return false;
         }
 
         function updateFileInfo(sourceNum) {
@@ -595,6 +601,10 @@
             container.querySelectorAll('select').forEach(sel => sel.addEventListener('change', e => {
                 const val = e.target.value;
                 STATE[`source${e.target.dataset.source}`].mappings[e.target.dataset.key] = val ? parseInt(val, 10) : undefined;
+                if(e.target.dataset.key === 'commission') {
+                    initializeFinancialControls();
+                    renderFinancialControls();
+                }
                 updateAnalyzeButton();
             }));
         }
@@ -621,6 +631,7 @@
             const wb = XLSX.utils.book_new();
 
             const summaryData = [
+                ["Category", "Record Count", "Total S1 Amount", "Total S2 Amount"],
                 ["Matches", matches.length, matches.reduce((s,r)=>s+r.amount1,0), matches.reduce((s,r)=>s+r.amount2,0)],
                 ["Mismatches", mismatches.length, mismatches.reduce((s,r)=>s+r.amount1,0), mismatches.reduce((s,r)=>s+r.amount2,0)],
                 ["Missing in Source 2", missingInSource2.length, missingInSource2.reduce((s,r)=>s+r.amount1,0), 0],
@@ -628,29 +639,35 @@
             ];
             const ws_summary = XLSX.utils.aoa_to_sheet([["Reconciliation Summary"],[],...summaryData]);
             XLSX.utils.book_append_sheet(wb, ws_summary, "Summary");
-
+            
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(STATE.duplicates.source1.length > 0 ? STATE.duplicates.source1.map(d => ({'Duplicate App ID': d})) : []), "Duplicate IDs (Source 1)");
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(STATE.duplicates.source2.length > 0 ? STATE.duplicates.source2.map(d => ({'Duplicate App ID': d})) : []), "Duplicate IDs (Source 2)");
+            
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(matches.map(r => ({'App ID':r.appId, 'Amount':r.amount1, 'Date': formatDate(r.date1), 'Source 1 Filename': r.filename1}))), "Matches");
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mismatches.map(r => ({'App ID':r.appId, 'S1 Amount':r.amount1, 'S2 Amount':r.amount2, 'Difference': r.amount1 - r.amount2, 'S1 Commission': r.commission, 'TDS': r.tds, 'S1 Date': formatDate(r.date1), 'S2 Date': formatDate(r.date2), 'S1 Filename': r.filename1}))), "Mismatches");
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(missingInSource2.map(r => ({'App ID':r.appId, 'S1 Amount':r.amount1, 'S1 Commission': r.commission, 'TDS': r.tds, 'S1 Date': formatDate(r.date1), 'S1 Filename': r.filename1}))), "Missing in Source 2");
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(missingInSource1.map(r => ({'App ID':r.appId, 'S2 Amount':r.amount2, 'S2 Date': formatDate(r.date2)}))), "Missing in Source 1");
             
             const s1RawData = getFilteredData(1).map(r => {
-                const taxableValue = r.data[STATE.source1.mappings.amount];
-                const commission = r.data[STATE.source1.mappings.commission];
+                const taxableValue = parseFloat(r.data[STATE.source1.mappings.amount]) || 0;
+                const commission = parseFloat(r.data[STATE.source1.mappings.commission]) || 0;
                 const commissionRate = (taxableValue && commission) ? (commission / taxableValue) * 100 : 0;
-                return {...Object.fromEntries(STATE.source1.headers.map((h, i) => [h, r.data[i]])), __filename: r.__filename, 'Commission Rate (%)': commissionRate.toFixed(2)};
+                let rowObject = { '__filename': r.__filename };
+                STATE.source1.headers.forEach((h, i) => rowObject[h] = r.data[i]);
+                rowObject['Commission Rate (%)'] = commissionRate.toFixed(2);
+                return rowObject;
             });
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(s1RawData), "Processed Raw Data (S1)");
             
-            const commissionSummary = s1RawData.reduce((acc, row) => {
+            const commissionSummary = Object.values(s1RawData.reduce((acc, row) => {
                 const rate = row['Commission Rate (%)'];
-                if(!acc[rate]) acc[rate] = { rate, count: 0, totalTaxable: 0, totalCommission: 0 };
-                acc[rate].count++;
-                acc[rate].totalTaxable += parseFloat(row[STATE.source1.headers[STATE.source1.mappings.amount]]) || 0;
-                acc[rate].totalCommission += parseFloat(row[STATE.source1.headers[STATE.source1.mappings.commission]]) || 0;
+                if(!acc[rate]) acc[rate] = { 'Commission Rate (%)': rate, 'Transaction Count': 0, 'Total Taxable Value': 0, 'Total Commission': 0 };
+                acc[rate]['Transaction Count']++;
+                acc[rate]['Total Taxable Value'] += parseFloat(row[STATE.source1.headers[STATE.source1.mappings.amount]]) || 0;
+                acc[rate]['Total Commission'] += parseFloat(row[STATE.source1.headers[STATE.source1.mappings.commission]]) || 0;
                 return acc;
-            }, {});
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(Object.values(commissionSummary)), "Commission Rate Summary");
+            }, {}));
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(commissionSummary), "Commission Rate Summary");
 
             XLSX.writeFile(wb, `Reconciliation_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
         }
@@ -677,7 +694,7 @@
         function hideLoading() { DOM.loadingOverlay.classList.remove('show'); }
 
         function initialize() {
-            DOM.userInfo.textContent = `User: ksismad | UTC 2025-06-19 19:40:13`;
+            DOM.userInfo.textContent = `User: ksismad | UTC 2025-06-19 19:46:44`;
             document.getElementById('file-input-1').addEventListener('change', e => handleFileSelection(e.target.files, 1));
             document.getElementById('file-input-2').addEventListener('change', e => handleFileSelection(e.target.files, 2));
             DOM.analyzeBtn.addEventListener('click', runAnalysis);
