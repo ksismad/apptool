@@ -77,8 +77,8 @@
         }
         .analyze-btn:hover { box-shadow: 0 4px 15px rgba(47, 133, 90, 0.4); }
         .analyze-btn:disabled { background: #a0aec0; cursor: not-allowed; box-shadow: none; }
-        .results, #duplicates-section, #executive-summary { margin-top: 30px; display: none; }
-        .results.show, #duplicates-section.show, #executive-summary.show { display: block; }
+        .results, #executive-summary { margin-top: 30px; display: none; }
+        .results.show, #executive-summary.show { display: block; }
         .results-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(600px, 1fr)); gap: 30px; }
         .result-box {
             background: var(--white); border: 1px solid var(--medium-gray);
@@ -212,10 +212,6 @@
             <button id="analyze-btn" class="analyze-btn" disabled>Upload & Map Files to Begin</button>
             
             <div id="executive-summary"></div>
-            <div id="duplicates-section" class="commission-section">
-                <h3>Duplicate ID Report</h3>
-                <div id="duplicates-display"></div>
-            </div>
 
             <div id="results" class="results">
                 <h2>Red Alert Reports</h2>
@@ -251,8 +247,6 @@
             userInfo: document.getElementById('user-info'),
             columnMappingSection: document.getElementById('column-mapping-section'),
             commissionControlSection: document.getElementById('commission-control-section'),
-            duplicatesSection: document.getElementById('duplicates-section'),
-            duplicatesDisplay: document.getElementById('duplicates-display'),
             executiveSummary: document.getElementById('executive-summary'),
             resultsSection: document.getElementById('results'),
             exportBtn: document.getElementById('export-btn'),
@@ -369,7 +363,7 @@
                     s2Filtered.forEach(s2item => {
                         const s2row = s2item.data;
                         const s2AppId = s2row[s2AppIdCol]?.toString();
-                        if (STATE.duplicates.source2.has(s2AppId)) return; // Skip duplicate processing
+                        if (STATE.duplicates.source2.has(s2AppId)) return;
                         
                         const s1item = s1Map.get(s2AppId);
                         s1ItemsFound.add(s2AppId);
@@ -402,8 +396,9 @@
                             results.redAlerts.push({appId: s2AppId, amount: s2Amount, reason: `Paid in S2, but MISSING in S1`});
                         }
                     });
-
-                    processedS1Data.forEach(item => {
+                    
+                    const s1Filtered = getFilteredData(1);
+                    s1Filtered.forEach(item => {
                         const appId = item.data[s1AppIdCol]?.toString();
                         const status = item.data[s1StatusCol]?.toString().toLowerCase();
                         if (status === 'paid' && !s1ItemsFound.has(appId) && !STATE.duplicates.source1.has(appId)) {
@@ -412,7 +407,7 @@
                     });
 
                     if (expectedCommissionRate > 0 && s1CommissionCol !== undefined) {
-                        processedS1Data.forEach(s1item => {
+                        s1Filtered.forEach(s1item => {
                             const status = s1item.data[s1StatusCol]?.toString().toLowerCase();
                             if (status !== 'paid') return;
 
@@ -670,17 +665,6 @@
 
             STATE.duplicates.source1 = findDups(STATE.source1.data, STATE.source1.mappings.appId);
             STATE.duplicates.source2 = findDups(STATE.source2.data, STATE.source2.mappings.appId);
-
-            if(STATE.duplicates.source1.size > 0 || STATE.duplicates.source2.size > 0) {
-                DOM.duplicatesSection.classList.add('show');
-                let html = '<ul>';
-                if(STATE.duplicates.source1.size > 0) html += `<li><strong>Source 1 Duplicates:</strong> ${Array.from(STATE.duplicates.source1).join(', ')}</li>`;
-                if(STATE.duplicates.source2.size > 0) html += `<li><strong>Source 2 Duplicates:</strong> ${Array.from(STATE.duplicates.source2).join(', ')}</li>`;
-                html += '</ul>';
-                DOM.duplicatesDisplay.innerHTML = html;
-            } else {
-                 DOM.duplicatesSection.classList.remove('show');
-            }
         }
 
         function updateFileInfo(sourceNum) {
@@ -740,14 +724,6 @@
             XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Reconciliation Summary"],[],...summaryData]), "Summary");
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(financialSummary), "Final Financial Summary");
             
-            if (STATE.duplicates.source1.size > 0 || STATE.duplicates.source2.size > 0) {
-                const dupData = [
-                    ...Array.from(STATE.duplicates.source1).map(d => ({ Source: 1, 'Duplicate App ID': d })),
-                    ...Array.from(STATE.duplicates.source2).map(d => ({ Source: 2, 'Duplicate App ID': d }))
-                ];
-                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dupData), "Duplicate IDs Found");
-            }
-            
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(redAlerts.map(r => ({'App ID':r.appId, 'Amount':r.amount, 'Reason': r.reason}))), "Red Alerts");
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(commissionDeviations.map(r => ({'App ID':r.appId, 'Taxable Value':r.taxableValue, 'Actual Commission': r.actualCommission, 'Actual Rate %': r.actualRate, 'Expected Rate %': r.expectedRate, 'Deviation Amount': r.deviation}))), "Commission Deviations");
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(matches.map(r => ({'App ID':r.appId, 'Amount':r.amount1, 'Date': formatDate(r.date1), 'Source 1 Filename': r.filename1}))), "Matches");
@@ -786,7 +762,7 @@
         function hideLoading() { DOM.loadingOverlay.classList.remove('show'); }
 
         function initialize() {
-            DOM.userInfo.textContent = `User: ksismad | UTC 2025-06-19 21:23:11`;
+            DOM.userInfo.textContent = `User: ksismad | UTC 2025-06-19 21:32:12`;
             document.getElementById('file-input-1').addEventListener('change', e => handleFileSelection(e.target.files, 1));
             document.getElementById('file-input-2').addEventListener('change', e => handleFileSelection(e.target.files, 2));
             DOM.analyzeBtn.addEventListener('click', runAnalysis);
