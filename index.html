@@ -1,887 +1,464 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>App ID Analyzer</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
-  <style>
-    html, body { background: #f3f4f6; color: #1e293b; font-family: 'Segoe UI', Arial, sans-serif; margin:0; padding:0;}
-    .container { max-width: 1100px; margin: 36px auto 20px auto; background: #fff; border-radius: 18px; box-shadow: 0 8px 32px rgba(60,60,100,0.11); overflow: hidden; padding: 0 0 32px 0;}
-    .header { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; text-align: left; padding: 32px 32px 20px 32px; position: relative; border-radius: 0 0 20px 20px; }
-    .header h1 { margin: 0 0 8px 0; font-size: 2.25rem; display: flex; align-items: center; gap: 10px;}
-    .header p { margin: 0; opacity: 0.95; font-size: 1.10rem; line-height: 1.5; }
-    .user-info { position: absolute; top: 16px; right: 32px; background: rgba(255,255,255,0.15); padding: 7px 16px; border-radius: 20px; font-size: 0.93rem; }
-    .main-content { padding: 32px; display: flex; flex-direction: column; gap: 28px;}
-    .upload-section { display: flex; gap: 24px; flex-wrap: wrap;}
-    .upload-box { background: #f8fafc; border-radius: 12px; padding: 24px; flex: 1 1 355px; min-width: 280px; border: 2px dashed #cbd5e1; position: relative; transition: all 0.3s ease;}
-    .upload-box:hover { border-color: #6366f1; }
-    .upload-box h3 { font-size: 1.13rem; font-weight: 600; margin: 0 0 6px 0; display: flex; gap: 8px; align-items: center;}
-    .file-info { margin-top: 10px; color: #059669; font-weight: 600; padding: 8px 16px; background: #d1fae5; border-radius: 6px; display: inline-block; font-size: 0.98rem;}
-    .file-input { display: none; }
-    .file-input-wrapper { position: relative; overflow: visible; display: inline-block; margin-top: 8px;}
-    .upload-btn { border: none; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: #fff; border-radius: 8px; padding: 10px 18px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-left: 0; }
-    .upload-btn:focus { outline: 2px solid #6366f1; }
-    .upload-btn:hover { background: linear-gradient(135deg,#4f46e5 0%, #a78bfa 100%);}
-    .section { background: #f8fafc; border-radius: 12px; padding: 18px 22px 22px 22px; margin-bottom: 0; border: 1px solid #e2e8f0;}
-    .section-title { font-size: 1.09rem; font-weight: 600; color: #4f46e5; margin: 0 0 14px 0; display: flex; align-items: center; gap: 8px;}
-    .options-grid { display: flex; gap: 38px; flex-wrap: wrap; margin-top: 9px;}
-    .option-group { display: flex; flex-direction: column; gap: 4px; min-width: 200px;}
-    .option-label { font-weight: 600; color: #374151; font-size: 0.97rem; margin-bottom: 1px;}
-    .col-select, .date-filter { width: 100%; padding: 7px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.98rem; background: #fff;}
-    .checkbox-group { display: flex; align-items: center; gap: 8px; margin: 5px 0 0 0;}
-    .validation-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 1.01rem;}
-    .validation-item.valid { color: #059669; }
-    .validation-item.invalid { color: #dc2626; }
-    .validation-item.valid::before { content: "✅"; }
-    .validation-item.invalid::before { content: "❌"; }
-    .analyze-btn { width: 100%; padding: 15px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; border-radius: 12px; font-size: 1.13rem; font-weight: 700; cursor: pointer; margin-top: 5px; }
-    .analyze-btn:focus { outline: 2px solid #10b981; }
-    .analyze-btn:hover:not(:disabled) { background: linear-gradient(135deg, #059669 0%, #10b981 100%);}
-    .analyze-btn:disabled { background: #9ca3af; cursor: not-allowed;}
-    .results { margin-top: 28px; }
-    .results-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding: 16px; background: #f8fafc; border-radius: 8px;}
-    .results-title { font-size: 1.32rem; font-weight: 700; color: #1e293b; margin: 0;}
-    .results-meta { font-size: 0.89rem; color: #6b7280; text-align: right;}
-    .stats-grid { display: flex; flex-wrap: wrap; gap: 18px; margin-bottom: 18px; margin-top: 6px;}
-    .stat-card { background: #fff; padding: 16px 18px; border-radius: 12px; box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.08); text-align: center; border-left: 4px solid #6366f1; flex: 1 1 140px; min-width: 130px;}
-    .stat-card.success { border-left-color: #10b981; }
-    .stat-card.warning { border-left-color: #f59e0b; }
-    .stat-card.danger { border-left-color: #ef4444; }
-    .table-container { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 6px -1px rgba(0, 0, 0, 0.09); margin-bottom: 24px;}
-    .table-header { background: #f8fafc; padding: 12px 18px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;}
-    .table-title { font-size: 1.05rem; font-weight: 600; color: #1e293b;}
-    .table-wrapper { overflow-x: auto; max-height: 350px; overflow-y: auto;}
-    table { width: 100%; border-collapse: collapse; font-size: 0.97rem;}
-    th, td { padding: 10px 13px; text-align: left; border-bottom: 1px solid #e2e8f0; white-space: nowrap;}
-    th { background: #f8fafc; font-weight: 600; color: #374151; position: sticky; top: 0;}
-    tr:hover { background: #f1f5f9; }
-    .highlight-warning { background: #fef3c7; }
-    .highlight-danger { background: #fee2e2; }
-    .status-badge { padding: 4px 8px; border-radius: 12px; font-size: 0.85rem; font-weight: 600; text-transform: uppercase;}
-    .status-badge.match { background: #d1fae5; color: #065f46; }
-    .status-badge.amount-mismatch { background: #fee2e2; color: #991b1b; }
-    .error-msg, .success-msg { padding: 11px 15px; border-radius: 8px; margin: 13px 0; border-left-width: 4px; border-left-style: solid;}
-    .error-msg { color: #dc2626; background: #fef2f2; border-color: #dc2626; }
-    .success-msg { color: #059669; background: #ecfdf5; border-color: #059669; }
-    .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255, 255, 255, 0.8); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; transition: opacity 0.25s;}
-    .loading-overlay.hidden { opacity: 0; pointer-events: none; visibility: hidden;}
-    .loading-spinner { width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 16px;}
-    @keyframes spin { 0% { transform: rotate(0deg);} 100% { transform: rotate(360deg);} }
-    .export-section { display: flex; gap: 16px; justify-content: center; margin-top: 32px; flex-wrap: wrap;}
-    .export-btn, .fullview-btn { padding: 12px 24px; background: #059669; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;}
-    .export-btn:hover, .fullview-btn:hover { background: #047857; transform: translateY(-1px);}
-    .fullview-btn { background: #6366f1; margin-right: 8px;}
-    .fullview-btn:hover { background: #4338ca; }
-    .date-pickers { display: flex; gap: 10px; align-items: center; margin-top:4px;}
-    .date-filter { min-width: 140px; }
-    .hidden { display: none; }
-    @media (max-width: 950px) { .main-content { padding: 18px 4vw; } .container { margin-top: 15px; } }
-    @media (max-width: 700px) { .upload-section { flex-direction: column; } .main-content { padding: 8px 2vw; } .header { padding: 22px 10px 12px 10px; } .user-info { right: 10px; } }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App ID Analyzer (ksismad)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
+    <style>
+        /* Core styles */
+        html, body { 
+            background: #f3f4f6; 
+            color: #1e293b; 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            margin: 0; 
+            padding: 0;
+        }
+        .container { 
+            max-width: 1100px; 
+            margin: 36px auto 20px auto; 
+            background: #fff; 
+            border-radius: 18px; 
+            box-shadow: 0 8px 32px rgba(60,60,100,0.11); 
+            overflow: hidden; 
+            padding: 0 0 32px 0;
+        }
+        
+        /* Header styles */
+        .header { 
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); 
+            color: white; 
+            text-align: left; 
+            padding: 32px; 
+            position: relative; 
+            border-radius: 0 0 20px 20px;
+        }
+        .header h1 { 
+            margin: 0 0 8px 0; 
+            font-size: 2.25rem;
+        }
+        .user-info {
+            position: absolute;
+            top: 16px;
+            right: 32px;
+            background: rgba(255,255,255,0.15);
+            padding: 7px 16px;
+            border-radius: 20px;
+            font-size: 0.93rem;
+        }
+        
+        /* Upload section styles */
+        .upload-section {
+            display: flex;
+            gap: 24px;
+            padding: 32px;
+            flex-wrap: wrap;
+        }
+        .upload-box {
+            flex: 1;
+            min-width: 300px;
+            background: #f8fafc;
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            padding: 24px;
+        }
+        .file-input { display: none; }
+        .upload-btn {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        /* File info and validation styles */
+        .file-info {
+            margin-top: 12px;
+            padding: 8px 16px;
+            background: #d1fae5;
+            color: #059669;
+            border-radius: 6px;
+            display: none;
+        }
+        .file-info.show { display: inline-block; }
+        
+        /* Options section styles */
+        .options-section {
+            padding: 0 32px;
+        }
+        .option-group {
+            margin-bottom: 16px;
+        }
+        .option-label {
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        /* Analysis button styles */
+        .analyze-btn {
+            width: calc(100% - 64px);
+            margin: 32px;
+            padding: 16px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .analyze-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        
+        /* Results styles */
+        .results {
+            margin: 32px;
+            display: none;
+        }
+        .results.show { display: block; }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        /* Table styles */
+        .table-container {
+            overflow-x: auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        th { 
+            background: #f8fafc;
+            font-weight: 600;
+        }
+        
+        /* Loading overlay styles */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            display: none;
+        }
+        .loading-overlay.show { display: flex; }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <div class="user-info" id="user-info"></div>
-      <h1><span style="font-size:1.5em;">🔍</span> App ID Analyzer</h1>
-      <p>Advanced multi-file Excel analysis with sorting, full-view, and comprehensive reporting.</p>
-    </div>
-    <div class="main-content">
-      <div class="upload-section">
-        <div class="upload-box" id="upload-box-1">
-          <h3><span style="font-size:1.2em;">📁</span> Source 1 Files</h3>
-          <p>Select one or more Excel files</p>
-          <div class="file-input-wrapper">
-            <input type="file" id="file-input-1" class="file-input" multiple accept=".xlsx,.xls">
-            <button class="upload-btn" id="upload-btn-1" type="button" tabindex="0">Choose Source 1 Files</button>
-          </div>
-          <div id="file-info-1" class="file-info hidden"></div>
-          <div class="date-pickers">
-            <label class="option-label">Date Filter:</label>
-            <input type="date" id="date1-from" class="date-filter">
-            <span>to</span>
-            <input type="date" id="date1-to" class="date-filter">
-          </div>
+    <div class="container">
+        <div class="header">
+            <div class="user-info" id="user-info">User: ksismad | UTC 2025-06-19 04:54:31</div>
+            <h1>🔍 App ID Analyzer</h1>
+            <p>Compare and analyze Excel files efficiently</p>
         </div>
-        <div class="upload-box" id="upload-box-2">
-          <h3><span style="font-size:1.2em;">📁</span> Source 2 File</h3>
-          <p>Select a single Excel file</p>
-          <div class="file-input-wrapper">
-            <input type="file" id="file-input-2" class="file-input" accept=".xlsx,.xls">
-            <button class="upload-btn" id="upload-btn-2" type="button" tabindex="0">Choose Source 2 File</button>
-          </div>
-          <div id="file-info-2" class="file-info hidden"></div>
-          <div class="date-pickers">
-            <label class="option-label">Date Filter:</label>
-            <input type="date" id="date2-from" class="date-filter">
-            <span>to</span>
-            <input type="date" id="date2-to" class="date-filter">
-          </div>
-        </div>
-      </div>
-      <div class="section" style="margin-bottom:0;">
-        <div class="section-title">⚙️ Options</div>
-        <div class="options-grid">
-          <div class="option-group">
-            <label class="option-label" for="source1-paid-filter">Paid/Unpaid Filter <span style="color:#64748b;font-weight:400;font-size:0.93em;">(Source 1)</span></label>
-            <select id="source1-paid-filter" class="col-select">
-              <option value="all">Include All</option>
-              <option value="paid">Only Paid</option>
-              <option value="unpaid">Only Unpaid</option>
-            </select>
-          </div>
-          <div class="option-group">
-            <label class="option-label" for="apply-gst">GST Adjustment <span style="color:#64748b;font-weight:400;font-size:0.93em;">(Source 1)</span></label>
-            <div class="checkbox-group">
-              <input type="checkbox" id="apply-gst">
-              <label for="apply-gst">Apply 18% GST to Source 1 Amount</label>
+        
+        <div class="upload-section">
+            <div class="upload-box">
+                <h3>Source 1 Files</h3>
+                <input type="file" id="file-input-1" class="file-input" multiple accept=".xlsx,.xls">
+                <button class="upload-btn" id="upload-btn-1">Choose Files</button>
+                <div id="file-info-1" class="file-info"></div>
             </div>
-            <div style="font-size:0.92em;color:#4b5563;margin-top:2px;">
-              (When checked, all Source 1 Amounts will include GST in analysis and export)
-            </div>
-          </div>
-        </div>
-      </div>
-      <div id="dynamic-cols-1"></div>
-      <div id="dynamic-cols-2"></div>
-      <div id="validation-status" class="section">
-        <h3 class="section-title"><span style="font-size:1.1em;">📝</span> Validation Status</h3>
-        <div id="validation-items"></div>
-      </div>
-      <button id="analyze-btn" class="analyze-btn" disabled>Please complete setup</button>
-      <div id="error-container"></div>
-      <div id="results" class="results hidden"></div>
-      <div class="export-section hidden" id="export-section">
-        <button class="fullview-btn" id="fullview-btn">Open Full View (New Tab)</button>
-        <button class="export-btn" id="export-excel-btn">Export Report (Excel)</button>
-      </div>
-    </div>
-  </div>
-  <div id="loading-overlay" class="loading-overlay hidden">
-    <div class="loading-spinner" aria-label="Loading..."></div>
-    <p>Processing data, please wait...</p>
-  </div>
-  <script>
-    // --- GLOBAL STATE ---
-    const STATE = {
-      source1Files: [],
-      source2File: null,
-      isProcessing: false,
-      results: null,
-      exportRows: [],
-    };
-
-    // --- DOM ELEMENTS ---
-    const DOM = {
-      fileInput1: document.getElementById('file-input-1'),
-      fileInput2: document.getElementById('file-input-2'),
-      uploadBtn1: document.getElementById('upload-btn-1'),
-      uploadBtn2: document.getElementById('upload-btn-2'),
-      fileInfo1: document.getElementById('file-info-1'),
-      fileInfo2: document.getElementById('file-info-2'),
-      dynamicCols1: document.getElementById('dynamic-cols-1'),
-      dynamicCols2: document.getElementById('dynamic-cols-2'),
-      analyzeBtn: document.getElementById('analyze-btn'),
-      errorContainer: document.getElementById('error-container'),
-      results: document.getElementById('results'),
-      loadingOverlay: document.getElementById('loading-overlay'),
-      validationItems: document.getElementById('validation-items'),
-      userInfo: document.getElementById('user-info'),
-      exportSection: document.getElementById('export-section'),
-      exportExcelBtn: document.getElementById('export-excel-btn'),
-      fullviewBtn: document.getElementById('fullview-btn'),
-      paidFilter: document.getElementById('source1-paid-filter'),
-      applyGST: document.getElementById('apply-gst')
-    };
-
-    // --- UPLOAD BUTTON HANDLERS (FIX FOR FILE SELECTION) ---
-    DOM.uploadBtn1.onclick = function() {
-      DOM.fileInput1.value = '';
-      DOM.fileInput1.click();
-    };
-    DOM.uploadBtn2.onclick = function() {
-      DOM.fileInput2.value = '';
-      DOM.fileInput2.click();
-    };
-    DOM.fileInput1.onkeydown = function(e) {
-      if (e.key === ' ' || e.key === 'Enter') DOM.fileInput1.click();
-    };
-    DOM.fileInput2.onkeydown = function(e) {
-      if (e.key === ' ' || e.key === 'Enter') DOM.fileInput2.click();
-    };
-
-    // --- HEADER DETECTION ---
-    const HEADER_MAP = [
-      { key: 'appId', labels: [/app\s*id/i, /application\s*id/i, /^id$/i, /appid/i, /applicant id/i] },
-      { key: 'amount', labels: [/amount/i, /total/i, /amt/i, /price/i, /fee/i, /cost/i, /paid amount/i, /payment/i, /value/i, /rs/i, /inr/i, /₹/i, /\$/i] },
-      { key: 'commission', labels: [/commission/i, /comm/i, /brokerage/i, /agent fee/i, /agent comm/i] },
-      { key: 'paid', labels: [/paid/i, /status/i, /payment\s*status/i, /state/i, /is\s*paid/i] },
-      { key: 'date', labels: [/date/i, /created/i, /timestamp/i, /txn\s*date/i, /order date/i] }
-    ];
-    function autoDetectCols(headers) {
-      const cols = {};
-      headers = headers.map(h => String(h).trim());
-      for (const {key, labels} of HEADER_MAP) {
-        cols[key] = null;
-        for (let i = 0; i < headers.length; ++i) {
-          let normalized = headers[i].replace(/\s+/g, ' ').toLowerCase();
-          if (labels.some(re => re.test(normalized))) {
-            cols[key] = i;
-            break;
-          }
-        }
-      }
-      return cols;
-    }
-
-    // --- COLUMN SELECTOR UI ---
-    function renderColSelector(headers, cols, container, fileIdx, isSource1) {
-      if (!headers || headers.length === 0) return;
-      let html = '<div class="options-grid">';
-      for (const {key} of HEADER_MAP) {
-        if (key === 'commission' && !isSource1) continue;
-        html += `<div class="option-group">
-          <label class="option-label" for="col-${key}-${fileIdx}">${key.charAt(0).toUpperCase()+key.slice(1)} Column${(key==='appId'||key==='amount'||(key==='commission'&&isSource1))?' *':''}</label>
-          <select class="col-select" id="col-${key}-${fileIdx}" data-key="${key}" data-fileidx="${fileIdx}" data-source="${isSource1?'1':'2'}">
-            <option value="">Select...</option>
-            ${headers.map((h,i) =>
-              `<option value="${i}" ${cols[key]===i?'selected':''}>${sanitizeHtml(h)}</option>`
-            ).join('')}
-          </select>
-        </div>`;
-      }
-      html += '</div>';
-      container.innerHTML = html;
-      HEADER_MAP.forEach(({key})=>{
-        if (key === 'commission' && !isSource1) return;
-        const sel = container.querySelector(`#col-${key}-${fileIdx}`);
-        if (sel) {
-          sel.addEventListener('change', (e) => {
-            const idx = Number(e.target.value);
-            if (isSource1) {
-              STATE.source1Files[fileIdx].cols[key] = isNaN(idx) ? null : idx;
-            } else {
-              STATE.source2File.cols[key] = isNaN(idx) ? null : idx;
-            }
-            updateValidation();
-          });
-        }
-      });
-    }
-
-    // --- FILE PROCESSING ---
-    function processFile(file, cb) {
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        try {
-          const wb = XLSX.read(e.target.result, {type: 'array', cellDates: true});
-          const ws = wb.Sheets[wb.SheetNames[0]];
-          const data = XLSX.utils.sheet_to_json(ws, {header: 1, raw: false, cellDates: true});
-          const headers = data[0] || [];
-          const cols = autoDetectCols(headers);
-          cb(null, {file, headers, data, cols});
-        } catch (err) {
-          cb(err);
-        }
-      };
-      reader.onerror = () => cb(new Error('File read error'));
-      reader.readAsArrayBuffer(file);
-    }
-
-    // --- FILE INPUT HANDLERS ---
-    DOM.fileInput1.addEventListener('change', () => {
-      const files = Array.from(DOM.fileInput1.files);
-      if (!files.length) return;
-      STATE.source1Files = [];
-      let processed = 0;
-      showLoading();
-      files.forEach((file, idx) => {
-        processFile(file, (err, res) => {
-          processed++;
-          if (err) showError(`Source 1 file "${file.name}": ${err.message}`);
-          else {
-            STATE.source1Files.push({...res, branding: String.fromCharCode(65+idx)});
-          }
-          if (processed === files.length) {
-            hideLoading();
-            updateFileInfo();
-            renderColSelectorForSource1();
-            updateValidation();
-          }
-        });
-      });
-    });
-
-    DOM.fileInput2.addEventListener('change', () => {
-      const file = DOM.fileInput2.files[0];
-      if (!file) return;
-      showLoading();
-      processFile(file, (err, res) => {
-        hideLoading();
-        if (err) showError(`Source 2 file: ${err.message}`);
-        else {
-          STATE.source2File = res;
-          updateFileInfo();
-          renderColSelectorForSource2();
-          updateValidation();
-        }
-      });
-    });
-
-    function updateFileInfo() {
-      if (STATE.source1Files.length) {
-        DOM.fileInfo1.textContent = `${STATE.source1Files.length} file(s): ${STATE.source1Files.map(f=>f.file.name).join(', ')}`;
-        DOM.fileInfo1.classList.remove('hidden');
-      } else {
-        DOM.fileInfo1.classList.add('hidden');
-      }
-      if (STATE.source2File) {
-        DOM.fileInfo2.textContent = STATE.source2File.file.name;
-        DOM.fileInfo2.classList.remove('hidden');
-      } else {
-        DOM.fileInfo2.classList.add('hidden');
-      }
-    }
-
-    function renderColSelectorForSource1() {
-      DOM.dynamicCols1.innerHTML = STATE.source1Files.map((f, i) =>
-        `<div class="section"><h4>Source 1 File: ${sanitizeHtml(f.file.name)}</h4><div id="col-sel-s1-${i}"></div></div>`
-      ).join('');
-      STATE.source1Files.forEach((f,i)=>{
-        renderColSelector(f.headers, f.cols, DOM.dynamicCols1.querySelector(`#col-sel-s1-${i}`), i, true);
-      });
-    }
-    function renderColSelectorForSource2() {
-      if (!STATE.source2File) {DOM.dynamicCols2.innerHTML=''; return;}
-      DOM.dynamicCols2.innerHTML = `<div class="section"><h4>Source 2 File: ${sanitizeHtml(STATE.source2File.file.name)}</h4><div id="col-sel-s2"></div></div>`;
-      renderColSelector(STATE.source2File.headers, STATE.source2File.cols, DOM.dynamicCols2.querySelector('#col-sel-s2'), 0, false);
-    }
-
-    // --- DUPLICATE FILE DATA DETECTION ---
-    function fileAppIdFingerprint(fileObj, cols) {
-      if (!fileObj || !cols || cols.appId == null) return '';
-      return fileObj.data.slice(1)
-        .filter(row => row && row.length > 0)
-        .map(row => row[cols.appId] != null ? String(row[cols.appId]).trim() : '')
-        .filter(id => id !== '')
-        .join('|');
-    }
-
-    // --- VALIDATION ---
-    function updateValidation() {
-      const hasSrc1 = STATE.source1Files.length > 0;
-      const hasSrc2 = !!STATE.source2File;
-      const src1ColsOk = hasSrc1 && STATE.source1Files.every(f=>
-        f.cols.appId!==null && f.cols.amount!==null
-      );
-      const src2ColsOk = hasSrc2 && STATE.source2File.cols.appId!==null && STATE.source2File.cols.amount!==null;
-
-      // Duplicate file content detection for Source 1
-      let duplicateDataFilesMsg = '';
-      if (hasSrc1) {
-        const seen = new Map();
-        STATE.source1Files.forEach((f, idx) => {
-          const fp = fileAppIdFingerprint(f, f.cols);
-          if (fp && seen.has(fp)) {
-            duplicateDataFilesMsg = `⚠️ Source 1 files "${f.file.name}" and "${seen.get(fp)}" contain identical App ID data in the same order.`;
-          } else if (fp) {
-            seen.set(fp, f.file.name);
-          }
-        });
-      }
-      // Duplicate file content detection for Source 2 vs Source 1
-      let duplicateDataSrc2Msg = '';
-      if (hasSrc2 && hasSrc1) {
-        const fp2 = fileAppIdFingerprint(STATE.source2File, STATE.source2File.cols);
-        STATE.source1Files.forEach(f => {
-          const fp1 = fileAppIdFingerprint(f, f.cols);
-          if (fp1 && fp2 && fp1 === fp2) {
-            duplicateDataSrc2Msg = `⚠️ Source 2 file "${STATE.source2File.file.name}" contains identical App ID data as Source 1 file "${f.file.name}" in the same order.`;
-          }
-        });
-      }
-
-      DOM.validationItems.innerHTML = [
-        {text: `Source 1 files selected (${STATE.source1Files.length})`, valid: hasSrc1},
-        {text: 'Source 2 file selected', valid: hasSrc2},
-        {text: 'Source 1 columns configured (App ID, Amount)', valid: src1ColsOk},
-        {text: 'Source 2 columns configured (App ID, Amount)', valid: src2ColsOk},
-      ].map(item=>
-        `<div class="validation-item ${item.valid?'valid':'invalid'}">${item.text}</div>`
-      ).join('') +
-      (duplicateDataFilesMsg
-        ? `<div class="validation-item invalid" style="color:#c2410c;">${sanitizeHtml(duplicateDataFilesMsg)}</div>`
-        : '') +
-      (duplicateDataSrc2Msg
-        ? `<div class="validation-item invalid" style="color:#c2410c;">${sanitizeHtml(duplicateDataSrc2Msg)}</div>`
-        : '');
-
-      const canAnalyze = hasSrc1 && hasSrc2 && src1ColsOk && src2ColsOk;
-      DOM.analyzeBtn.disabled = !canAnalyze || STATE.isProcessing;
-      DOM.analyzeBtn.textContent = STATE.isProcessing ? '⏳ Processing...' : (canAnalyze ? '🔍 Analyze Data' : '📋 Please complete setup');
-    }
-
-    // --- Date Filter Helpers ---
-    const date1From = document.getElementById('date1-from');
-    const date1To = document.getElementById('date1-to');
-    const date2From = document.getElementById('date2-from');
-    const date2To = document.getElementById('date2-to');
-    
-    function parseExcelDate(val) {
-      if (!val) return null;
-      if (val instanceof Date) return val;
-      if (typeof val === 'number') {
-        // Excel dates are days since 1900-01-01
-        return new Date(1900, 0, val - 1);
-      }
-      const parsed = new Date(val);
-      if (!isNaN(parsed.getTime())) return parsed;
-      const parts = String(val).split(/[-\/]/);
-      if (parts.length === 3) {
-        let [a, b, c] = parts.map(Number);
-        if (a > 31 && c < 31) [a, c] = [c, a]; // Switch for different date formats
-        if (a > 999) return new Date(a, b-1, c);
-        if (c > 999) return new Date(c, b-1, a);
-      }
-      return null;
-    }
-    
-    function isDateInRange(dateVal, from, to) {
-      if (!from && !to) return true; // No date filter
-      
-      const d = parseExcelDate(dateVal);
-      if (!d) return !from && !to; // If can't parse date, only pass if no filter
-      
-      const dTime = d.getTime();
-      if (from && dTime < from.getTime()) return false;
-      if (to && dTime > to.getTime()) return false;
-      return true;
-    }
-    
-    function getDateRangeInputs(source) {
-      if (source === 1) {
-        return {
-          from: date1From.value ? new Date(date1From.value) : null,
-          to: date1To.value ? new Date(date1To.value + "T23:59:59") : null
-        };
-      } else {
-        return {
-          from: date2From.value ? new Date(date2From.value) : null,
-          to: date2To.value ? new Date(date2To.value + "T23:59:59") : null
-        };
-      }
-    }
-
-    // --- Row Processing and Filters ---
-    function processFileRows(fileObj, cols, branding, paidFilter, applyGST, dateRange=null) {
-      const out = [];
-      const data = fileObj.data;
-      
-      // Skip header row
-      for (let i = 1; i < data.length; i++) {
-        const row = data[i];
-        if (!row || row.length === 0) continue;
-        
-        // Get App ID
-        let appId = row[cols.appId];
-        if (appId == null || String(appId).trim() === "") continue;
-        
-        // Date filter
-        let rowDate = cols.date != null ? row[cols.date] : undefined;
-        if (dateRange && dateRange.from || dateRange && dateRange.to) {
-          if (!isDateInRange(rowDate, dateRange.from, dateRange.to)) continue;
-        }
-        
-        // Amount and Commission
-        let amount = parseAmount(row[cols.amount]);
-        let commission = cols.commission != null ? parseAmount(row[cols.commission]) : null;
-        let paidStatus = cols.paid != null ? parsePaid(row[cols.paid]) : "";
-        
-        // Paid/unpaid filter
-        if (typeof paidFilter === "string" && paidFilter !== "all") {
-          if (paidFilter === "paid" && paidStatus.toLowerCase() !== "paid") continue;
-          if (paidFilter === "unpaid" && paidStatus.toLowerCase() !== "unpaid") continue;
-        }
-        
-        // GST calculation
-        let gstAmount = applyGST ? Math.round(amount * 0.18 * 100) / 100 : 0;
-        let amountWithGST = applyGST ? Math.round(amount * 1.18 * 100) / 100 : amount;
-        let commissionPct = (commission != null && amount) ? (commission/amount*100) : null;
-        
-        out.push({
-          appId: String(appId).trim(),
-          amount: amountWithGST,
-          gstAmount: gstAmount,
-          commission: commission,
-          commissionPct: commissionPct != null ? commissionPct.toFixed(2)+"%" : "",
-          branding: branding,
-          rowNum: i+1,
-          paidStatus: paidStatus,
-          date: rowDate ? (parseExcelDate(rowDate)?.toISOString().slice(0,10) || rowDate) : ""
-        });
-      }
-      return out;
-    }
-    
-    function parseAmount(value) {
-      if (value === null || value === undefined || value === '') return 0;
-      if (typeof value === 'number') return isNaN(value) ? 0 : value;
-      if (typeof value === 'string') {
-        const cleaned = value.replace(/[^\d.-]/g, '');
-        const num = parseFloat(cleaned);
-        return isNaN(num) ? 0 : num;
-      }
-      return 0;
-    }
-    
-    function parsePaid(value) {
-      if (value === null || value === undefined) return "";
-      const stringValue = String(value).trim().toLowerCase();
-      if (['paid', 'yes', 'y', 'true', '1', 'complete', 'completed', 'success'].includes(stringValue)) {
-        return 'Paid';
-      }
-      if (['unpaid', 'no', 'n', 'false', '0', 'pending', 'incomplete', 'failed'].includes(stringValue)) {
-        return 'Unpaid';
-      }
-      return value;
-    }
-    
-    function rowHtml(r, status, statusClass, src) {
-      return `<tr class="highlight-${statusClass}">
-        <td>${sanitizeHtml(r.appId)}</td>
-        <td>₹${(r.amount||0).toLocaleString()}</td>
-        <td>${r.gstAmount ? "₹"+r.gstAmount.toLocaleString() : ""}</td>
-        <td>${r.commission !== undefined && r.commission !== null ? "₹" + r.commission.toLocaleString() : ""}</td>
-        <td>${r.commissionPct||""}</td>
-        <td>${sanitizeHtml(r.branding||'')}</td>
-        <td>${sanitizeHtml(r.paidStatus||'')}</td>
-        <td>${sanitizeHtml(r.date||'')}</td>
-        <td>${sanitizeHtml(src)}</td>
-      </tr>`;
-    }
-
-    // --- ANALYSIS LOGIC ---
-    DOM.analyzeBtn.addEventListener('click', () => {
-      showLoading();
-      setTimeout(() => {
-        try {
-          const paidFilter = DOM.paidFilter.value;
-          const applyGST = DOM.applyGST.checked;
-          const dateRange1 = getDateRangeInputs(1);
-          const dateRange2 = getDateRangeInputs(2);
-          let s1data = [], s2data = [];
-          
-          STATE.source1Files.forEach((f, idx) => {
-            s1data = s1data.concat(processFileRows(f, f.cols, f.branding, paidFilter, applyGST, dateRange1));
-          });
-          
-          s2data = processFileRows(STATE.source2File, STATE.source2File.cols, "S2", undefined, false, dateRange2);
-
-          // Index S2 by App ID for quick lookup
-          const s2Index = Object.create(null);
-          for (const row of s2data) {
-            if (!s2Index[row.appId]) s2Index[row.appId] = [];
-            s2Index[row.appId].push(row);
-          }
-
-          // Find matches, missing, duplicates
-          const matched = [], missingInS2 = [], duplicatesS1 = [], duplicatesS2 = [];
-          const s1AppIdCount = {}, s2AppIdCount = {};
-
-          // Count and identify duplicates
-          for (const row of s1data) {
-            s1AppIdCount[row.appId] = (s1AppIdCount[row.appId] || 0) + 1;
-          }
-          for (const row of s2data) {
-            s2AppIdCount[row.appId] = (s2AppIdCount[row.appId] || 0) + 1;
-          }
-
-          // Now process S1 data to find matches and missing
-          for (const row of s1data) {
-            if (s1AppIdCount[row.appId] > 1) duplicatesS1.push(row);
             
-            if (s2Index[row.appId]) {
-              const s2rows = s2Index[row.appId];
-              for (const s2row of s2rows) {
-                matched.push({...row, matchedWith: s2row});
-              }
-            } else {
-              missingInS2.push(row);
+            <div class="upload-box">
+                <h3>Source 2 File</h3>
+                <input type="file" id="file-input-2" class="file-input" accept=".xlsx,.xls">
+                <button class="upload-btn" id="upload-btn-2">Choose File</button>
+                <div id="file-info-2" class="file-info"></div>
+            </div>
+        </div>
+        
+        <div class="options-section">
+            <div class="option-group">
+                <div class="option-label">Date Range (Source 1)</div>
+                <input type="date" id="date1-from"> to <input type="date" id="date1-to">
+            </div>
+            <div class="option-group">
+                <div class="option-label">Date Range (Source 2)</div>
+                <input type="date" id="date2-from"> to <input type="date" id="date2-to">
+            </div>
+            <div class="option-group">
+                <div class="option-label">Filters</div>
+                <select id="paid-filter">
+                    <option value="all">All Records</option>
+                    <option value="paid">Paid Only</option>
+                    <option value="unpaid">Unpaid Only</option>
+                </select>
+                <label>
+                    <input type="checkbox" id="apply-gst">
+                    Apply 18% GST
+                </label>
+            </div>
+        </div>
+        
+        <div id="column-mappings"></div>
+        
+        <button id="analyze-btn" class="analyze-btn" disabled>Please select files</button>
+        
+        <div id="results" class="results">
+            <!-- Results will be dynamically inserted here -->
+        </div>
+    </div>
+    
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="spinner"></div>
+    </div>
+    
+    <script>
+        // --- STATE MANAGEMENT ---
+        const STATE = {
+            source1Files: [],
+            source2File: null,
+            userInfo: {
+                login: 'ksismad',
+                currentUTC: '2025-06-19 04:54:31'
             }
-          }
+        };
 
-          // Find duplicates in S2 and items missing in S1
-          for (const row of s2data) {
-            if (s2AppIdCount[row.appId] > 1) duplicatesS2.push(row);
-          }
-          
-          const missingInS1 = s2data.filter(row => !s1data.some(r => r.appId === row.appId));
+        // --- DOM ELEMENTS ---
+        const DOM = {
+            fileInput1: document.getElementById('file-input-1'),
+            fileInput2: document.getElementById('file-input-2'),
+            uploadBtn1: document.getElementById('upload-btn-1'),
+            uploadBtn2: document.getElementById('upload-btn-2'),
+            fileInfo1: document.getElementById('file-info-1'),
+            fileInfo2: document.getElementById('file-info-2'),
+            analyzeBtn: document.getElementById('analyze-btn'),
+            results: document.getElementById('results'),
+            loadingOverlay: document.getElementById('loading-overlay'),
+            userInfo: document.getElementById('user-info'),
+            columnMappings: document.getElementById('column-mappings')
+        };
 
-          // Totals for money impact and commission
-          const sum = arr => arr.reduce((s, r) => s + (r.amount || 0), 0);
-          const gstSum = arr => arr.reduce((s, r) => s + (r.gstAmount || 0), 0);
-          const commissionSum = arr => arr.reduce((s, r) => s + (r.commission || 0), 0);
-          
-          const stats = {
-            matched: matched.length,
-            matchedAmount: sum(matched),
-            missingInS2: missingInS2.length,
-            missingInS2Amount: sum(missingInS2),
-            missingInS1: missingInS1.length,
-            missingInS1Amount: sum(missingInS1),
-            duplicatesS1: duplicatesS1.length,
-            duplicatesS1Amount: sum(duplicatesS1),
-            duplicatesS2: duplicatesS2.length,
-            duplicatesS2Amount: sum(duplicatesS2),
-            totalS1: s1data.length,
-            totalS1Amount: sum(s1data),
-            totalS2: s2data.length,
-            totalS2Amount: sum(s2data),
-            totalGST: gstSum(s1data),
-            totalCommission: commissionSum(s1data),
-            avgCommissionPct: s1data.length && sum(s1data) ? (commissionSum(s1data) / sum(s1data)) * 100 : 0
-          };
+        // --- FILE SELECTION HANDLERS ---
+        DOM.uploadBtn1.addEventListener('click', function(e) {
+            e.preventDefault();
+            DOM.fileInput1.click();
+        });
 
-          // Prepare export rows
-          STATE.exportRows = [
-            ["Reconciliation Summary"],
-            ["Metric","Count","Amount","GST Amount","Commission %"],
-            ["Matched", stats.matched, stats.matchedAmount, "", ""],
-            ["Missing in Source 2", stats.missingInS2, stats.missingInS2Amount, "", ""],
-            ["Missing in Source 1", stats.missingInS1, stats.missingInS1Amount, "", ""],
-            ["Duplicates in Source 1", stats.duplicatesS1, stats.duplicatesS1Amount, "", ""],
-            ["Duplicates in Source 2", stats.duplicatesS2, stats.duplicatesS2Amount, "", ""],
-            ["Total GST (Source 1)", "", "", stats.totalGST, ""],
-            ["Total Commission (Source 1)", "", stats.totalCommission, "", stats.avgCommissionPct.toFixed(2)+"%"],
-            [],
-            ["Details"],
-            ["Type","App ID","Amount","GST Amount","Commission","Commission %","Branding","Status","Date","Source"],
-          ];
-          
-          missingInS2.forEach(r => STATE.exportRows.push([
-            "Missing in Source 2", r.appId, r.amount, r.gstAmount||"", r.commission||"", r.commissionPct||"", r.branding, r.paidStatus, r.date||"", "S1"
-          ]));
-          duplicatesS1.forEach(r => STATE.exportRows.push([
-            "Duplicate in Source 1", r.appId, r.amount, r.gstAmount||"", r.commission||"", r.commissionPct||"", r.branding, r.paidStatus, r.date||"", "S1"
-          ]));
-          missingInS1.forEach(r => STATE.exportRows.push([
-            "Missing in Source 1", r.appId, r.amount, "", "", "", r.branding, "", r.date||"", "S2"
-          ]));
-          duplicatesS2.forEach(r => STATE.exportRows.push([
-            "Duplicate in Source 2", r.appId, r.amount, "", "", "", r.branding, "", r.date||"", "S2"
-          ]));
+        DOM.uploadBtn2.addEventListener('click', function(e) {
+            e.preventDefault();
+            DOM.fileInput2.click();
+        });
 
-          // Render results
-          DOM.results.innerHTML = `
-            <div class="results-header">
-              <div class="results-title">🔎 Data Reconciliation Summary</div>
-              <div class="results-meta">Report generated at UTC ${new Date().toISOString().slice(0,19).replace('T',' ')}</div>
-            </div>
-            <div class="stats-grid">
-              <div class="stat-card success">
-                <div class="stat-number">${stats.matched}</div>
-                <div class="stat-label">Matched Entries</div>
-                <div class="stat-meta">Total Amount: ₹${stats.matchedAmount.toLocaleString()}</div>
-              </div>
-              <div class="stat-card warning">
-                <div class="stat-number">${stats.missingInS2}</div>
-                <div class="stat-label">Missing in Source 2</div>
-                <div class="stat-meta">Potential Loss: ₹${stats.missingInS2Amount.toLocaleString()}</div>
-              </div>
-              <div class="stat-card danger">
-                <div class="stat-number">${stats.duplicatesS1}</div>
-                <div class="stat-label">Duplicates in Source 1</div>
-                <div class="stat-meta">Double Count: ₹${stats.duplicatesS1Amount.toLocaleString()}</div>
-              </div>
-              <div class="stat-card danger">
-                <div class="stat-number">${stats.duplicatesS2}</div>
-                <div class="stat-label">Duplicates in Source 2</div>
-                <div class="stat-meta">Double Count: ₹${stats.duplicatesS2Amount.toLocaleString()}</div>
-              </div>
-              <div class="stat-card" style="border-left-color:#3b82f6;">
-                <div class="stat-number">₹${stats.totalGST.toLocaleString()}</div>
-                <div class="stat-label">Total GST (Source 1)</div>
-                <div class="stat-meta"></div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-number">₹${stats.totalCommission.toLocaleString()}</div>
-                <div class="stat-label">Total Commission (Source 1)</div>
-                <div class="stat-meta">Average: ${stats.avgCommissionPct.toFixed(2)}%</div>
-              </div>
-            </div>
-            <div class="table-container">
-              <div class="table-header">
-                <span class="table-title">Detailed Data Issues</span>
-              </div>
-              <div class="table-wrapper" id="main-table-wrapper">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>App ID</th>
-                      <th>Amount</th>
-                      <th>GST Amt</th>
-                      <th>Commission</th>
-                      <th>Commission %</th>
-                      <th>Branding</th>
-                      <th>Status</th>
-                      <th>Date</th>
-                      <th>Source</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${[
-                      ...missingInS2.map(r => rowHtml(r, "Missing in Source 2", "warning", "S1")),
-                      ...duplicatesS1.map(r => rowHtml(r, "Duplicate in Source 1", "danger", "S1")),
-                      ...missingInS1.map(r => rowHtml(r, "Missing in Source 1", "warning", "S2")),
-                      ...duplicatesS2.map(r => rowHtml(r, "Duplicate in Source 2", "danger", "S2")),
-                    ].join('')}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            <div class="success-msg">Analysis complete. Review the summary and details above.</div>
-          `;
-          
-          DOM.results.classList.remove('hidden');
-          DOM.exportSection.classList.remove('hidden');
-          
-          // Store full table data for full view
-          window._appIdAnalyzerLastFullView = {
-            headers: ["Type","App ID","Amount","GST Amount","Commission","Commission %","Branding","Status","Date","Source"],
-            rows: [
-              ...missingInS2.map(r => ["Missing in Source 2", r.appId, r.amount, r.gstAmount||"", r.commission||"", r.commissionPct||"", r.branding, r.paidStatus, r.date||"", "S1"]),
-              ...duplicatesS1.map(r => ["Duplicate in Source 1", r.appId, r.amount, r.gstAmount||"", r.commission||"", r.commissionPct||"", r.branding, r.paidStatus, r.date||"", "S1"]),
-              ...missingInS1.map(r => ["Missing in Source 1", r.appId, r.amount, "", "", "", r.branding, "", r.date||"", "S2"]),
-              ...duplicatesS2.map(r => ["Duplicate in Source 2", r.appId, r.amount, "", "", "", r.branding, "", r.date||"", "S2"])
-            ]
-          };
-          
-          showSuccess('Analysis completed!');
-        } catch (error) {
-          console.error("Analysis error:", error);
-          showError("Error during analysis: " + (error.message || "Unknown error"));
-        } finally {
-          hideLoading();
+        DOM.fileInput1.addEventListener('change', function(e) {
+            handleFileSelection(e.target.files, 1);
+        });
+
+        DOM.fileInput2.addEventListener('change', function(e) {
+            handleFileSelection(e.target.files, 2);
+        });
+
+        // --- FILE PROCESSING ---
+        function handleFileSelection(files, source) {
+            if (!files.length) return;
+            
+            showLoading();
+            
+            if (source === 1) {
+                STATE.source1Files = [];
+                Array.from(files).forEach((file, idx) => {
+                    processExcelFile(file, (err, data) => {
+                        if (!err) {
+                            STATE.source1Files.push({
+                                file: file,
+                                data: data,
+                                columns: detectColumns(data[0])
+                            });
+                            updateFileInfo(1, files);
+                        }
+                        if (idx === files.length - 1) {
+                            hideLoading();
+                            updateAnalyzeButton();
+                        }
+                    });
+                });
+            } else {
+                const file = files[0];
+                processExcelFile(file, (err, data) => {
+                    if (!err) {
+                        STATE.source2File = {
+                            file: file,
+                            data: data,
+                            columns: detectColumns(data[0])
+                        };
+                        updateFileInfo(2, [file]);
+                    }
+                    hideLoading();
+                    updateAnalyzeButton();
+                });
+            }
         }
-      }, 400);
-    });
 
-    // Open Full View Button
-    DOM.fullviewBtn.addEventListener('click', () => {
-      const fullViewData = window._appIdAnalyzerLastFullView;
-      if (!fullViewData) {
-        alert("No data available to view. Please run analysis first.");
-        return;
-      }
-      const win = window.open("", "_blank");
-      win.document.write(`
-        <html><head>
-        <title>Full View - App ID Analyzer</title>
-        <style>
-        body { font-family: Segoe UI, Arial, sans-serif; background:#f3f4f6; margin:0; padding: 20px; }
-        .container { max-width:98vw; margin: 24px auto; background:#fff; border-radius:14px; box-shadow:0 2px 10px #aaa; padding:20px;}
-        table { border-collapse: collapse; width: 100%; background:#fff; }
-        th, td { padding: 10px 15px; border-bottom: 1px solid #e2e8f0; }
-        th { cursor:pointer; background:#f3f4f6;}
-        tr:hover { background: #f1f5f9; }
-        .sort-asc::after { content: " ▲"; }
-        .sort-desc::after { content: " ▼"; }
-        </style>
-        </head><body>
-        <div class="container">
-        <h2>Detailed Data View</h2>
-        <div style="overflow-x:auto;">
-        <table id="fullview-table"><thead><tr>
-        ${fullViewData.headers.map((h,i)=>`<th data-col="${i}">${h}</th>`).join('')}
-        </tr></thead>
-        <tbody>
-        ${fullViewData.rows.map(row=>`<tr>${row.map(cell=>`<td>${cell}</td>`).join('')}</tr>`).join('')}
-        </tbody></table></div></div>
-        <script>
-        // Column sort logic
-        let sortCol = -1, sortDir = 1;
-        function sortTableBy(col) {
-          const table = document.getElementById('fullview-table');
-          let tbody = table.tBodies[0];
-          let rows = Array.from(tbody.rows);
-          rows.sort((a,b)=>{
-            let va = a.cells[col].textContent;
-            let vb = b.cells[col].textContent;
-            let numA = parseFloat(va.replace(/[^\\d.-]/g,'')), numB = parseFloat(vb.replace(/[^\\d.-]/g,''));
-            if (!isNaN(numA) && !isNaN(numB)) { va = numA; vb = numB;}
-            return (va>vb?1:va<vb?-1:0)*sortDir;
-          });
-          rows.forEach(row=>tbody.appendChild(row));
-          document.querySelectorAll('th').forEach((th,i)=>{th.classList.remove('sort-asc','sort-desc'); if(i===col)th.classList.add(sortDir>0?'sort-asc':'sort-desc');});
-          sortCol = col; sortDir = -sortDir;
+        function processExcelFile(file, callback) {
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
+                    callback(null, jsonData);
+                } catch (err) {
+                    callback(err);
+                }
+            };
+            
+            reader.onerror = function(err) {
+                callback(err);
+            };
+            
+            reader.readAsArrayBuffer(file);
         }
-        document.querySelectorAll('th').forEach((th,i)=> th.onclick = ()=>sortTableBy(i));
-        </script>
-        </body></html>
-      `);
-      win.document.close();
-    });
 
-    // --- EXPORT TO EXCEL ---
-    DOM.exportExcelBtn.addEventListener('click', () => {
-      if (!STATE.exportRows || STATE.exportRows.length === 0) {
-        showError("No results to export!");
-        return;
-      }
-      try {
-        const ws = XLSX.utils.aoa_to_sheet(STATE.exportRows);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Reconciliation Report");
-        XLSX.writeFile(wb, `Reconciliation_Report_${new Date().toISOString().slice(0,10)}.xlsx`);
-      } catch (error) {
-        showError("Error exporting to Excel: " + (error.message || "Unknown error"));
-      }
-    });
+        // --- COLUMN DETECTION ---
+        function detectColumns(headers) {
+            if (!headers) return {};
+            
+            const columns = {};
+            const patterns = {
+                appId: /app.*id|application.*id/i,
+                amount: /amount|total/i,
+                date: /date|timestamp/i,
+                status: /status|state/i
+            };
+            
+            headers.forEach((header, index) => {
+                for (let [key, pattern] of Object.entries(patterns)) {
+                    if (pattern.test(header)) {
+                        columns[key] = index;
+                    }
+                }
+            });
+            
+            return columns;
+        }
 
-    // --- PAGE INIT ---
-    function showError(msg, timeout = 0) {
-      DOM.errorContainer.innerHTML = `<div class="error-msg" role="alert">${sanitizeHtml(msg)}</div>`;
-      if (timeout > 0) setTimeout(() => DOM.errorContainer.innerHTML = '', timeout);
-    }
-    function showSuccess(msg, timeout = 2500) {
-      DOM.errorContainer.innerHTML = `<div class="success-msg" role="alert">${sanitizeHtml(msg)}</div>`;
-      if (timeout > 0) setTimeout(() => DOM.errorContainer.innerHTML = '', timeout);
-    }
-    function sanitizeHtml(text) {
-      if (text === undefined || text === null) return '';
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
-    }
-    function showLoading() {
-      STATE.isProcessing = true;
-      DOM.loadingOverlay.classList.remove('hidden');
-      updateValidation();
-    }
-    function hideLoading() {
-      STATE.isProcessing = false;
-      DOM.loadingOverlay.classList.add('hidden');
-      updateValidation();
-    }
-    function updateUserInfo() {
-      const now = new Date();
-      DOM.userInfo.textContent = `User: ksismad | UTC ${now.getUTCFullYear()}-${String(now.getUTCMonth()+1).padStart(2,'0')}-${String(now.getUTCDate()).padStart(2,'0')} ${String(now.getUTCHours()).padStart(2,'0')}:${String(now.getUTCMinutes()).padStart(2,'0')}:${String(now.getUTCSeconds()).padStart(2,'0')}`;
-    }
-    
-    // Initialize the page
-    document.addEventListener('DOMContentLoaded', function() {
-      updateUserInfo();
-      setInterval(updateUserInfo, 15000);
-      updateValidation();
-      hideLoading();
-    });
-    
-    // Initialize immediately
-    updateUserInfo();
-    updateValidation();
-    hideLoading();
-  </script>
+        // --- UI UPDATES ---
+        function updateFileInfo(source, files) {
+            const info = source === 1 ? DOM.fileInfo1 : DOM.fileInfo2;
+            info.textContent = Array.from(files).map(f => f.name).join(', ');
+            info.classList.add('show');
+        }
+
+        function updateAnalyzeButton() {
+            const canAnalyze = STATE.source1Files.length > 0 && STATE.source2File;
+            DOM.analyzeBtn.disabled = !canAnalyze;
+            DOM.analyzeBtn.textContent = canAnalyze ? 'Analyze Data' : 'Please select files';
+        }
+
+        function showLoading() {
+            DOM.loadingOverlay.classList.add('show');
+        }
+
+        function hideLoading() {
+            DOM.loadingOverlay.classList.remove('show');
+        }
+
+        // --- ANALYSIS ---
+        DOM.analyzeBtn.addEventListener('click', function() {
+            showLoading();
+            setTimeout(() => {
+                try {
+                    const results = analyzeData();
+                    displayResults(results);
+                } catch (err) {
+                    console.error('Analysis error:', err);
+                    alert('Error during analysis: ' + err.message);
+                }
+                hideLoading();
+            }, 100);
+        });
+
+        function analyzeData() {
+            // Implement your data analysis logic here
+            // This is where you'll compare the files and generate results
+            return {
+                matches: 0,
+                mismatches: 0,
+                missing: 0,
+                total: 0
+            };
+        }
+
+        function displayResults(results) {
+            DOM.results.innerHTML = `
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Matches</h3>
+                        <div class="stat-value">${results.matches}</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Mismatches</h3>
+                        <div class="stat-value">${results.mismatches}</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Missing</h3>
+                        <div class="stat-value">${results.missing}</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total</h3>
+                        <div class="stat-value">${results.total}</div>
+                    </div>
+                </div>
+            `;
+            DOM.results.classList.add('show');
+        }
+
+        // --- INITIALIZATION ---
+        function updateUserInfo() {
+            const now = new Date();
+            const utcString = now.toISOString().replace('T', ' ').slice(0, 19);
+            STATE.userInfo.currentUTC = utcString;
+            DOM.userInfo.textContent = `User: ${STATE.userInfo.login} | UTC ${utcString}`;
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateUserInfo();
+            setInterval(updateUserInfo, 15000);
+        });
+    </script>
 </body>
 </html>
