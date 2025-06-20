@@ -73,7 +73,7 @@
 <body>
   <div class="container">
     <div class="header">
-      <div class="user-info" id="user-info">User: ksismad | UTC 2025-06-20 20:43:55</div>
+      <div class="user-info" id="user-info">User: ksismad | UTC 2025-06-20 20:51:09</div>
       <h1>🔍 App ID Analyzer</h1>
       <p>Red Alert Scenario Analysis Tool</p>
     </div>
@@ -99,12 +99,6 @@
 
     <div class="options-section">
       <div class="option-group">
-        <label>Analysis Type:</label>
-        <select id="analysis-type">
-          <option value="all">All Records</option>
-          <option value="mismatches">Only Mismatches</option>
-          <option value="missing">Only Missing Records</option>
-        </select>
         <label><input type="checkbox" id="include-commission"> Include Commission Analysis</label>
       </div>
       
@@ -123,13 +117,11 @@
   <div id="loading-overlay" class="loading-overlay"><div class="spinner"></div></div>
 
   <script>
-    // HARDCODE EXPERIENCE CODER MODE: ACTIVATED
     const STATE = {
       source1Files: [], 
       source2Files: [],
       columnMappings: {},
       analysisOptions: { 
-        type: 'all', 
         includeCommission: false, 
         applyGST: false,
         gstRound: false
@@ -148,7 +140,6 @@
       fileList1: document.getElementById('file-list-1'),
       mergeBtn1: document.getElementById('merge-btn-1'),
       columnMappings: document.getElementById('column-mappings'),
-      analysisType: document.getElementById('analysis-type'),
       includeCommission: document.getElementById('include-commission'),
       applyGST: document.getElementById('apply-gst'),
       gstRound: document.getElementById('gst-round'),
@@ -184,7 +175,6 @@
       
       DOM.gstRound.onchange = () => { STATE.analysisOptions.gstRound = DOM.gstRound.checked; };
       DOM.includeCommission.onchange = () => { STATE.analysisOptions.includeCommission = DOM.includeCommission.checked; };
-      DOM.analysisType.onchange = () => { STATE.analysisOptions.type = DOM.analysisType.value; };
       
       DOM.uploadBtn1.onclick = e => { e.preventDefault(); DOM.fileInput1.value = ''; DOM.fileInput1.click(); };
       DOM.uploadBtn2.onclick = e => { e.preventDefault(); DOM.fileInput2.value = ''; DOM.fileInput2.click(); };
@@ -212,7 +202,7 @@
       
       const fileArray = Array.from(files);
       const targetState = src === 1 ? 'source1Files' : 'source2Files';
-      const fileListDOM = src === 1 ? DOM.fileList1 : null; // S2 doesn't have a list
+      const fileListDOM = src === 1 ? DOM.fileList1 : null;
       const fileInfoDOM = src === 1 ? DOM.fileInfo1 : DOM.fileInfo2;
       
       STATE[targetState] = [];
@@ -357,7 +347,11 @@
       const required = ['appId', 'amount', 'date'];
       const s1Valid = STATE.source1Files.length > 0;
       const s2Valid = STATE.source2Files.length > 0;
-      const mappingsValid = required.every(id => STATE.columnMappings[id]?.source1 && STATE.columnMappings[id]?.source2);
+      const mappingsValid = required.every(id => {
+        const mapping = STATE.columnMappings[id];
+        return mapping && mapping.source1 !== "" && mapping.source2 !== "";
+      });
+      
       const allValid = s1Valid && s2Valid && mappingsValid;
       DOM.analyzeBtn.disabled = !allValid;
       DOM.analyzeBtn.textContent = allValid ? 'Analyze Data' : 'Select Files & Required Mappings';
@@ -381,8 +375,8 @@
         const s2 = STATE.source2Files[0];
         if (!s1 || !s2) { showError("Missing source files"); return {}; }
         
-        const { records: s1Records, headers: s1Headers } = s1;
-        const { records: s2Records, headers: s2Headers } = s2;
+        const { records: s1Records } = s1;
+        const { records: s2Records } = s2;
         const { columnMappings: mappings, analysisOptions: options } = STATE;
         
         const idx = {
@@ -411,6 +405,7 @@
         };
         
         const s2Map = new Map(s2Records.map(r => [String(r[idx.s2.appId]), r]));
+        const s1AppIds = new Set(s1Records.map(r => String(r[idx.s1.appId])));
         const s1DupMap = _.countBy(s1Records, r => r[idx.s1.appId]);
         const s2DupMap = _.countBy(s2Records, r => r[idx.s2.appId]);
         
@@ -420,7 +415,6 @@
           
           const r2 = s2Map.get(String(appId));
           const s1Status = getS1Status(r1, idx.s1.commission);
-          const s2Status = "Paid";
           
           let amount1 = applyGSTToS1(parseFloat(r1[idx.s1.amount]) || 0);
           
@@ -428,10 +422,10 @@
             let amount2 = parseFloat(r2[idx.s2.amount]) || 0;
             let variance = amount2 - amount1;
             
-            if (s1Status === "Paid" && Math.abs(variance) > 0) {
+            if (s1Status === "Paid" && Math.abs(variance) > 0.001) {
               scenarios["S2 Paid, S1 Paid but amount different"].push({ AppID: appId, S1_Amount: amount1, S2_Amount: amount2, Variance: variance });
             } else if (s1Status === "Unpaid") {
-              scenarios[Math.abs(variance) > 0 ? "S2 Paid, S1 Unpaid and amount different" : "S2 Paid, S1 Unpaid"].push({ AppID: appId, S1_Amount: amount1, S2_Amount: amount2 });
+              scenarios[Math.abs(variance) > 0.001 ? "S2 Paid, S1 Unpaid and amount different" : "S2 Paid, S1 Unpaid"].push({ AppID: appId, S1_Amount: amount1, S2_Amount: amount2 });
             }
             
             if (options.includeCommission && s1Status === "Paid" && idx.s1.commission !== null) {
@@ -456,7 +450,7 @@
           const appId = r2[idx.s2.appId];
           if (!appId) return;
           
-          if (!s1Records.some(r1 => String(r1[idx.s1.appId]) === String(appId))) {
+          if (!s1AppIds.has(String(appId))) {
             scenarios["S2 Paid but missing in S1"].push({ AppID: appId, S2_Amount: parseFloat(r2[idx.s2.amount]) || 0 });
           }
           
@@ -465,7 +459,6 @@
           }
         });
         
-        // De-duplicate duplicate entries
         scenarios["Duplicates in S1"] = _.uniqBy(scenarios["Duplicates in S1"], 'AppID');
         scenarios["Duplicates in S2"] = _.uniqBy(scenarios["Duplicates in S2"], 'AppID');
 
