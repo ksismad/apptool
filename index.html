@@ -25,6 +25,7 @@
     .file-info.show { display:inline-block; }
     .file-list {margin-top:8px;font-size:.98em;padding-left:0;list-style-type:none;}
     .file-list li{margin-bottom:2px;}
+    .merge-btn {margin-top:8px;background:#38bdf8;color:#fff;border:none;padding:6px 16px;border-radius:6px;cursor:pointer;font-weight:600;}
     .column-mappings, .options-section, .results { padding: 0 32px; }
     .mapping-group, .option-group { margin-bottom: 24px; }
     select, input[type="number"] { padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; }
@@ -98,7 +99,7 @@
   </div>
   <div id="loading-overlay" class="loading-overlay"><div class="spinner"></div></div>
   <script>
-    // Complex Experience Coder Mode ON
+    // Hardcode Experience Yet Modern Smartass Coder Mode ON
 
     // STATE
     const STATE = {
@@ -294,7 +295,6 @@
 
     // COLUMN MAP: auto-detect per file (S1), disables S2 commission and status
     function setupColumnMappings() {
-      // Always auto-detect status column for S1 using header and data together!
       const s1 = STATE.source1Files[0];
       const s2 = STATE.source2Files[0];
       const h1 = s1 ? s1.headers : [];
@@ -307,7 +307,7 @@
         { id: 'amount', lbl: 'Amount', patt: [/amount/i, /total/i] },
         { id: 'commission', lbl: 'Commission', patt: [/commiss|tds|fee|charge/i] },
         { id: 'date', lbl: 'Date', patt: [/date/i, /timestamp/i, /txn.*date/i, /created/i] },
-        // status is NOT mapped, it is detected for each record (see getS1Status)
+        { id: 'status', lbl: 'Status', patt: [/status/i, /state/i, /paid|unpaid|not paid|fail/i] }
       ];
       let html = `<div class="mapping-group"><strong>Column Mappings</strong>`;
       cols.forEach(c => {
@@ -343,7 +343,7 @@
     }
     function updateColumnMappings() {
       STATE.columnMappings = {};
-      ['appId', 'amount', 'commission', 'date'].forEach(k => {
+      ['appId', 'amount', 'commission', 'date', 'status'].forEach(k => {
         let s1el = document.getElementById(`ms1-${k}`);
         let s2el = document.getElementById(`ms2-${k}`);
         STATE.columnMappings[k] = {
@@ -377,9 +377,7 @@
     // Unpaid if commission is blank/zero OR status data cell contains negative words or 'unpaid'
     function getS1Status(r, headers, commissionIdx, statusIdx) {
       let comm = commissionIdx !== undefined && commissionIdx !== "" && commissionIdx !== null ? r[headers[commissionIdx]] : undefined;
-      // 1. Commission check
       if (comm === undefined || comm === null || comm === "" || (typeof comm === "string" && comm.trim() === "") || Number(comm) === 0) return "Unpaid";
-      // 2. Status data check (NOT header)
       if (statusIdx !== undefined && statusIdx !== "" && statusIdx !== null) {
         let statusText = r[headers[statusIdx]];
         if (typeof statusText === "string") {
@@ -528,7 +526,7 @@
         try {
           const scenarios = analyzeData();
           displayResults(scenarios);
-        } catch (e) { showError(e.message); }
+        } catch (e) { showError(e.message || e); }
         hideLoading();
       }, 100);
     };
