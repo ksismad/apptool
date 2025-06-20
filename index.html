@@ -8,7 +8,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
   <style>
     html, body { background: #f2f2f7; color: #16181c; font-family: 'Inter', 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; }
-    .container { max-width: 840px; margin: 40px auto; background: #fff; border-radius: 18px; box-shadow: 0 4px 36px rgba(60,60,100,0.14); overflow: hidden; }
+    .container { max-width: 900px; margin: 40px auto; background: #fff; border-radius: 18px; box-shadow: 0 4px 36px rgba(60,60,100,0.14); overflow: hidden; }
     .header { background: linear-gradient(100deg, #7f53ac 0%, #647dee 100%); color: #fff; padding: 30px 36px 18px 36px; position: relative; }
     .header h1 { margin: 0 0 8px; font-size: 2.3rem; font-weight: 800; letter-spacing: -1px;}
     .header p { margin: 0 0 10px 2px; font-size: 1.08rem; opacity:.90; }
@@ -29,14 +29,14 @@
     .mapping-group, .option-group { margin-bottom: 18px; }
     .mapping-group strong { font-size: 1.08rem; }
     .mapping-group label { display:inline-block; min-width:80px; font-weight:500; }
-    .mapping-group select { margin: 0 10px 0 2px; }
+    .mapping-group select, .mapping-group input[type="number"] { margin: 0 10px 0 2px; }
     select, input[type="number"] { padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:1rem;}
     .analyze-btn { width: 100%; margin:28px 0 18px 0; padding:16px; background: linear-gradient(100deg, #10b981, #059669 70%); color:#fff; border:none; border-radius:10px; font-size:1.18rem; font-weight:700; cursor:pointer; transition: background .2s;}
     .analyze-btn:disabled { background:#9ca3af; cursor:not-allowed; }
 
     .results-header, .stats-grid, .table-section { margin-bottom:18px; }
     .stats-grid { display: grid; grid-template-columns: repeat(2,1fr); gap:18px; }
-    @media (min-width: 600px) { .stats-grid { grid-template-columns: repeat(4,1fr); } }
+    @media (min-width: 600px) { .stats-grid { grid-template-columns: repeat(5,1fr); } }
     .stat-card { background:#f7f8fa; padding:18px; border-radius:9px; box-shadow:0 1px 2px rgba(0,0,0,0.06); text-align:center;}
     .stat-card h3 { margin:0 0 6px 0; font-size:1.08rem; font-weight:700;}
     .stat-value { font-size:1.30rem; font-weight:800; letter-spacing:-1px;}
@@ -72,7 +72,7 @@
     <div class="header">
       <div class="user-info" id="user-info">User: ksismad | UTC 2025-06-20 14:53:32</div>
       <h1>🔍 App ID Analyzer</h1>
-      <p>Compare and analyze app transaction data with clear insights into mismatches, loss, and commission deviations.</p>
+      <p>Compare and analyze app transaction data, including commission/TDS and loss, with auto-detection and permanent paid status for Source 2.</p>
     </div>
 
     <div class="upload-section">
@@ -106,6 +106,8 @@
       <div class="option-group">
         <label>Variance Threshold:</label>
         <input type="number" id="variance-threshold" value="0.01" step="0.01" min="0">
+        <label style="margin-left:32px;">TDS % (for S1):</label>
+        <input type="number" id="tds-percent" value="2" step="0.01" min="0" max="100" style="width:60px;">
       </div>
     </div>
 
@@ -117,13 +119,12 @@
   <div id="loading-overlay" class="loading-overlay"><div class="spinner"></div></div>
 
   <script>
-    // Helper function for selector
     function $(sel) { return document.querySelectorAll(sel); }
 
     // STATE
     const STATE = {
       source1Files: [], source2File: null, columnMappings: {},
-      analysisOptions: { type:'all', includeCommission:false, applyGST:false, varianceThreshold:0.01 }
+      analysisOptions: { type:'all', includeCommission:false, applyGST:false, varianceThreshold:0.01, tdsPercent:2 }
     };
     // DOM
     const DOM = {
@@ -140,6 +141,7 @@
       includeCommission: $('#include-commission')[0],
       applyGST: $('#apply-gst')[0],
       varianceThreshold: $('#variance-threshold')[0],
+      tdsPercent: $('#tds-percent')[0],
       analyzeBtn: $('#analyze-btn')[0],
       results: $('#results')[0],
       loadingOverlay: $('#loading-overlay')[0],
@@ -147,7 +149,6 @@
       userInfo: $('#user-info')[0]
     };
 
-    // UTIL
     function showLoading() { DOM.loadingOverlay.classList.add('show'); }
     function hideLoading() { DOM.loadingOverlay.classList.remove('show'); }
     function showError(msg) {
@@ -162,10 +163,8 @@
 
     // FILE HANDLERS
     function initFileHandlers() {
-      // click → input
       DOM.uploadBtn1.onclick = e=>{e.preventDefault(); DOM.fileInput1.value=''; DOM.fileInput1.click();};
       DOM.uploadBtn2.onclick = e=>{e.preventDefault(); DOM.fileInput2.value=''; DOM.fileInput2.click();};
-      // drag & drop
       [ {drop:DOM.drop1,src:1}, {drop:DOM.drop2,src:2} ].forEach(o=>{
         o.drop.ondragover = e=>{e.preventDefault(); o.drop.classList.add('dragover');};
         o.drop.ondragleave= e=>{e.preventDefault(); o.drop.classList.remove('dragover');};
@@ -176,7 +175,6 @@
           if(files.length) handleFileSelection(o.src===1?files:[files[0]],o.src);
         };
       });
-      // change
       DOM.fileInput1.onchange = e=>{ if(e.target.files.length) handleFileSelection(e.target.files,1); };
       DOM.fileInput2.onchange = e=>{ if(e.target.files.length) handleFileSelection([e.target.files[0]],2); };
     }
@@ -186,20 +184,38 @@
       if(!files.length){ showError('No files'); return;}
       showLoading();
       if(src===1){
-        STATE.source1Files=[]; 
+        STATE.source1Files=[];
         let processed=0;
         Array.from(files).forEach((f,i)=>{
           processExcelFile(f,(err,data)=>{
             if(!err){
-              // Auto-detect headers: use first row (header) and infer keys
+              // Robust headers (trim, deduplicate)
+              let headers = data[0].map(x => x ? String(x).trim() : "");
+              let commissionIdx = headers.findIndex(h=>/commiss|tds|fee|charge/i.test(h));
+              // If no commission column, add one!
+              if(commissionIdx === -1) {
+                headers.push("Commission (Auto)");
+                commissionIdx = headers.length-1;
+              }
+              // Map rows with commission auto-calculated if missing
+              const recs = data.slice(1).map(row=>{
+                let rec={};
+                headers.forEach((h,idx)=>{
+                  rec[h]= row[idx] !== undefined ? row[idx] : "";
+                });
+                // If commission was missing, auto-calc (Amount * tds%)
+                if(row.length < headers.length) {
+                  let amt = parseFloat(row[headers.findIndex(h2=>/amount/i.test(h2))])||0;
+                  let tds = parseFloat(DOM.tdsPercent.value)||2;
+                  rec["Commission (Auto)"] = (amt*tds/100).toFixed(2);
+                }
+                return rec;
+              });
               STATE.source1Files.push({
                 file:f,
-                headers:data[0].map(x=>x?x.trim():""),
-                records:data.slice(1).map(row=>{
-                  let rec={};
-                  data[0].forEach((h,idx)=>{ rec[h?String(h).trim():""]=row[idx]; });
-                  return rec;
-                })
+                headers,
+                records:recs,
+                commissionIdx
               });
               DOM.fileInfo1.textContent=Array.from(files).map(x=>x.name).join(', ');
               DOM.fileInfo1.classList.add('show');
@@ -212,7 +228,7 @@
         const f=files[0];
         processExcelFile(f,(err,data)=>{
           if(!err){
-            // Auto-detect headers, always set payment status to "Paid" if possible
+            // Source 2 status is always "Paid"
             const headers = data[0].map(x=>x?x.trim():"");
             const statusIdx = headers.findIndex(h=>/status|payment/i.test(h));
             STATE.source2File = {
@@ -220,10 +236,9 @@
               headers,
               records: data.slice(1).map(row=>{
                 let rec={};
-                data[0].forEach((h,idx)=>{
-                  const val = row[idx];
-                  if(statusIdx===idx) rec[h?String(h).trim():""] = "Paid";
-                  else rec[h?String(h).trim():""] = val;
+                headers.forEach((h,idx)=>{
+                  if(statusIdx===idx) rec[h] = "Paid";
+                  else rec[h] = row[idx];
                 });
                 rec.isPaid = true;
                 return rec;
@@ -257,28 +272,55 @@
       const cols=[
         {id:'appId',lbl:'App ID',patt:[/app.*id/i,/appid/i,/id$/i]},
         {id:'amount',lbl:'Amount',patt:[/amount/i,/total/i,/value/i]},
+        {id:'commission',lbl:'Commission',patt:[/commiss|tds|fee|charge/i]},
         {id:'date',lbl:'Date',patt:[/date/i,/timestamp/i,/txn.?date/i,/created/i]},
-        {id:'status',lbl:'Status',patt:[/status/i,/state/i,/payment status/i]}
+        // No status for S2! Always Paid
+        {id:'status',lbl:'Status (S1 only)',patt:[/status/i,/state/i]}
       ];
       let html=`<div class="mapping-group"><strong>Column Mappings (Auto-detected where possible)</strong>`;
       cols.forEach(c=>{
         html+=`<div><label>${c.lbl}:</label>
                 <select id="ms1-${c.id}"><option value="">Select S1</option>${
                   h1.map((h,i)=>`<option value="${i}">${h}</option>`).join('')
-                }</select>
-                <select id="ms2-${c.id}"><option value="">Select S2</option>${
-                  h2.map((h,i)=>`<option value="${i}">${h}</option>`).join('')
-                }</select></div>`;
+                }</select>`;
+        if (c.id!=='commission' && c.id!=='status')
+          html+=`<select id="ms2-${c.id}"><option value="">Select S2</option>${
+                    h2.map((h,i)=>`<option value="${i}">${h}</option>`).join('')
+                }</select>`;
+        if (c.id==='commission')
+          html+=` <input type="number" id="tds-percent-map" min="0" max="100" step="0.01" value="${DOM.tdsPercent.value}" style="width:60px;display:inline-block;"> <span style="font-size:0.95em;">TDS %</span>`;
+        html+=`</div>`;
       });
       html+=`</div>`;
       DOM.columnMappings.innerHTML=html;
       cols.forEach(c=>{
-        const s1=document.getElementById(`ms1-${c.id}`),
-              s2=document.getElementById(`ms2-${c.id}`);
-        const auto1=findMatch(h1,c.patt), auto2=findMatch(h2,c.patt);
+        const s1=document.getElementById(`ms1-${c.id}`);
+        if (c.id!=='commission' && c.id!=='status') {
+          const s2=document.getElementById(`ms2-${c.id}`);
+          const auto2=findMatch(STATE.source2File.headers,c.patt);
+          if(auto2!=='') s2.value=auto2;
+          s2.onchange=updateColumnMappings;
+        }
+        const auto1=findMatch(STATE.source1Files[0].headers,c.patt);
         if(auto1!=='') s1.value=auto1;
-        if(auto2!=='') s2.value=auto2;
-        [s1,s2].forEach(el=>el.onchange=updateColumnMappings);
+        s1.onchange=updateColumnMappings;
+        // Commission % sync
+        if (c.id==='commission') {
+          let tdsInput = document.getElementById('tds-percent-map');
+          tdsInput.oninput = function() {
+            DOM.tdsPercent.value = tdsInput.value;
+            STATE.analysisOptions.tdsPercent = parseFloat(tdsInput.value)||2;
+            // update commission column in STATE.source1Files
+            STATE.source1Files.forEach(sf=>{
+              let amtIdx = s1.value;
+              let commIdx = tdsInput.value;
+              sf.records.forEach(r=>{
+                let amt = parseFloat(r[sf.headers[amtIdx]])||0;
+                r[sf.headers[s1.value]] = (amt*STATE.analysisOptions.tdsPercent/100).toFixed(2);
+              });
+            });
+          }
+        }
       });
       updateColumnMappings();
     }
@@ -291,91 +333,123 @@
     }
     function updateColumnMappings(){
       STATE.columnMappings={};
-      ['appId','amount','date','status'].forEach(k=>{
+      ['appId','amount','commission','date','status'].forEach(k=>{
+        let s1el=document.getElementById(`ms1-${k}`);
+        let s2el=document.getElementById(`ms2-${k}`);
         STATE.columnMappings[k]={
-          source1:document.getElementById(`ms1-${k}`).value,
-          source2:document.getElementById(`ms2-${k}`).value
+          source1:s1el?s1el.value:"",
+          source2:s2el?s2el.value:""
         };
       });
+      STATE.analysisOptions.tdsPercent = parseFloat(DOM.tdsPercent.value)||2;
       updateAnalyzeBtn();
     }
 
-    // ANALYZE BUTTON
     function updateAnalyzeBtn(){
+      // Only require S1 commission, not S2 status
       const ok=STATE.source1Files.length>0 && STATE.source2File &&
-               Object.values(STATE.columnMappings).every(m=>m.source1!=="" && m.source2!=="");
+        Object.values(STATE.columnMappings).every(m=>m.source1!=="" || (m.source2!=="" && m.source2!==undefined));
       DOM.analyzeBtn.disabled=!ok;
       DOM.analyzeBtn.textContent=ok?'Analyze Data':'Please select & map columns';
     }
 
     // ANALYSIS
     function analyzeData(){
-      const d1=STATE.source1Files.flatMap(f=>f.records),
-            d2=STATE.source2File.records,
-            m=STATE.columnMappings,
-            thr=parseFloat(DOM.varianceThreshold.value)||0.01,
-            includeCommission = DOM.includeCommission.checked,
-            applyGST = DOM.applyGST.checked,
-            analysisType = DOM.analysisType.value;
-      let res={matches:0,mismatches:[],missing:[],redAlerts:[],commissionDeviations:[]};
-      const map2=new Map();
-      d2.forEach(r=>{
-        const id = getField(r, m.appId.source2, STATE.source2File.headers);
+      const s1Files = STATE.source1Files;
+      const s2File = STATE.source2File;
+      const m = STATE.columnMappings;
+      const thr = parseFloat(DOM.varianceThreshold.value)||0.01;
+      const includeCommission = DOM.includeCommission.checked;
+      const applyGST = DOM.applyGST.checked;
+      const tdsPercent = parseFloat(DOM.tdsPercent.value)||2;
+      const analysisType = DOM.analysisType.value;
+
+      let res={matches:0,mismatches:[],missing:[],redAlerts:[],commissionDeviations:[], commissionTotals:[]};
+      // For each file in S1, calculate total commission
+      s1Files.forEach(sf=>{
+        let commIdx = m.commission.source1;
+        let amtIdx = m.amount.source1;
+        let totalCommission = 0;
+        sf.records.forEach(r=>{
+          let comm = parseFloat(r[sf.headers[commIdx]])||0;
+          totalCommission += comm;
+        });
+        res.commissionTotals.push({
+          file: sf.file.name,
+          totalCommission: totalCommission
+        });
+      });
+
+      // Map S2 by appId
+      const map2 = new Map();
+      s2File.records.forEach(r=>{
+        const id = getField(r, m.appId.source2, s2File.headers);
         if(id !== undefined && id !== null && id !== "") map2.set(id.toString(),r);
       });
-      d1.forEach(r1=>{
-        const id = getField(r1, m.appId.source1, STATE.source1Files[0].headers);
-        if(id === undefined || id === null || id === "") return;
-        const r2=map2.get(id.toString());
-        if(r2){
-          let a1=parseFloat(getField(r1, m.amount.source1, STATE.source1Files[0].headers))||0;
-          let a2=parseFloat(getField(r2, m.amount.source2, STATE.source2File.headers))||0;
-          if(applyGST){a1*=1.18;a2*=1.18;}
-          const varc=a2-a1, absVar=Math.abs(varc);
-          // Red alert: variance exceeds 10x threshold, or negative paid (loss) over threshold
-          const isRed = (absVar>thr*10) || (varc<0 && absVar>thr);
-          const isCommission = includeCommission && a1 > 0 && Math.abs(varc/a1)>0.05;
-          if(absVar<=thr){
-            if(analysisType==="all") res.matches++;
+
+      // Analyze records
+      s1Files.forEach(sf=>{
+        sf.records.forEach(r1=>{
+          const id = getField(r1, m.appId.source1, sf.headers);
+          if(id === undefined || id === null || id === "") return;
+          const r2 = map2.get(id.toString());
+          if(r2){
+            let a1 = parseFloat(getField(r1, m.amount.source1, sf.headers))||0;
+            let a2 = parseFloat(getField(r2, m.amount.source2, s2File.headers))||0;
+            let comm = parseFloat(getField(r1, m.commission.source1, sf.headers))||0;
+            if(applyGST){a1*=1.18;a2*=1.18;}
+            const varc=a2-a1, absVar=Math.abs(varc);
+            const isRed = (absVar>thr*10) || (varc<0 && absVar>thr);
+            const isCommission = includeCommission && a1>0 && Math.abs(varc/a1)>0.05;
+            if(absVar<=thr){
+              if(analysisType==="all") res.matches++;
+            } else {
+              const item={
+                appId:id,
+                amount1:a1,
+                amount2:a2,
+                commission:comm,
+                variance:varc,
+                absVariance:absVar,
+                status1:getField(r1, m.status.source1, sf.headers),
+                date1:getField(r1, m.date.source1, sf.headers),
+                date2:getField(r2, m.date.source2, s2File.headers),
+                isPaid:true,
+                isRed,
+                isCommission
+              };
+              if(analysisType==="all" || analysisType==="mismatches") res.mismatches.push(item);
+              if(isRed) res.redAlerts.push(item);
+              if(isCommission) res.commissionDeviations.push(item);
+            }
           } else {
-            const item={
-              appId:id,
-              amount1:a1,
-              amount2:a2,
-              variance:varc,
-              absVariance:absVar,
-              status1:getField(r1, m.status.source1, STATE.source1Files[0].headers),
-              status2:getField(r2, m.status.source2, STATE.source2File.headers),
-              date1:getField(r1, m.date.source1, STATE.source1Files[0].headers),
-              date2:getField(r2, m.date.source2, STATE.source2File.headers),
-              isPaid:true,
-              isRed,
-              isCommission
-            };
-            if(analysisType==="all" || analysisType==="mismatches") res.mismatches.push(item);
-            if(isRed) res.redAlerts.push(item);
-            if(isCommission) res.commissionDeviations.push(item);
+            if(analysisType==="all" || analysisType==="missing") {
+              res.missing.push({appId:id,amount:parseFloat(getField(r1, m.amount.source1, sf.headers))||0,
+                                commission:parseFloat(getField(r1, m.commission.source1, sf.headers))||0,
+                                status:getField(r1, m.status.source1, sf.headers),
+                                date:getField(r1, m.date.source1, sf.headers),
+                                source:'source1',isPaid:false});
+            }
           }
-        } else {
-          if(analysisType==="all" || analysisType==="missing") {
-            res.missing.push({appId:id,amount:parseFloat(getField(r1, m.amount.source1, STATE.source1Files[0].headers))||0,
-                              status:getField(r1, m.status.source1, STATE.source1Files[0].headers),
-                              date:getField(r1, m.date.source1, STATE.source1Files[0].headers),
-                              source:'source1',isPaid:false});
-          }
-        }
+        });
       });
-      d2.forEach(r2=>{
-        const id = getField(r2, m.appId.source2, STATE.source2File.headers);
+      s2File.records.forEach(r2=>{
+        const id = getField(r2, m.appId.source2, s2File.headers);
         if(id === undefined || id === null || id === "") return;
-        const exists=d1.some(x=>getField(x, m.appId.source1, STATE.source1Files[0].headers)==id);
+        // check in all s1 files
+        let exists = false;
+        for(let sf of s1Files){
+          if(sf.records.some(x=>getField(x, m.appId.source1, sf.headers)==id)){ exists=true; break;}
+        }
         if(!exists && (analysisType==="all" || analysisType==="missing")) {
-          res.missing.push({appId:id,amount:parseFloat(getField(r2, m.amount.source2, STATE.source2File.headers))||0,
-                            status:getField(r2, m.status.source2, STATE.source2File.headers),
-                            date:getField(r2, m.date.source2, STATE.source2File.headers),
+          res.missing.push({appId:id,amount:parseFloat(getField(r2, m.amount.source2, s2File.headers))||0,
+                            commission:0, // S2 has no commission
+                            status:"Paid",
+                            date:getField(r2, m.date.source2, s2File.headers),
                             source:'source2',isPaid:true});
         }
       });
+
       res.mismatches.sort((a,b)=>b.absVariance-a.absVariance);
       res.totalPotentialLoss=res.redAlerts.reduce((s,i)=>s+i.absVariance,0);
       res.redAlertsTotal=res.totalPotentialLoss;
@@ -390,7 +464,6 @@
       return record[key];
     }
 
-    // DISPLAY
     function displayResults(r){
       let html=`<div class="results-header"><h2>Analysis Summary</h2></div>
         <div class="stats-grid">
@@ -401,26 +474,34 @@
             <div class="stat-value">${r.matches + r.mismatches.length + r.missing.length}</div>
             <div class="stat-subtext">${r.matches} matches, ${r.mismatches.length} mismatches, ${r.missing.length} missing</div>
           </div>
+          <div class="stat-card"><h3>Commission Deducted (per file)</h3>
+            <div class="stat-value" style="font-size:.98em;">
+              ${r.commissionTotals.map(ct=>`${ct.file}: ₹${ct.totalCommission.toFixed(2)}`).join('<br>')}
+            </div>
+            <div class="stat-subtext">TDS at ${DOM.tdsPercent.value}%</div>
+          </div>
         </div>
         <div class="table-section"><h3>Top Mismatches</h3><div class="table-container">
-        <table><thead><tr><th>App ID</th><th>S1 Amt</th><th>S2 Amt (Paid)</th><th>Var</th><th>Status</th><th>Date</th></tr></thead><tbody>
+        <table><thead><tr><th>App ID</th><th>S1 Amt</th><th>S1 Comm</th><th>S2 Amt (Paid)</th><th>Var</th><th>Status</th><th>Date</th></tr></thead><tbody>
         ${r.mismatches.slice(0,12).map(i=>`
           <tr class="${i.isRed?'red-row':''} ${i.isCommission?'commission-row':''}">
             <td>${i.appId}</td>
             <td class="amount-cell">₹${i.amount1.toFixed(2)}</td>
+            <td class="amount-cell">${i.commission!==undefined?('₹'+parseFloat(i.commission).toFixed(2)):"-"}</td>
             <td class="amount-cell paid">₹${i.amount2.toFixed(2)}</td>
             <td class="variance-cell ${i.variance>0?'positive-variance':'negative-variance'}">${i.variance>0?'+':''}₹${i.variance.toFixed(2)}${i.isRed?' <span class="alert-badge">Red</span>':''}</td>
-            <td>${i.status1}→${i.status2}</td><td>${i.date1}</td>
+            <td>${i.status1||'-'}</td><td>${i.date1||'-'}</td>
           </tr>
         `).join('')}
         </tbody></table></div></div>`;
       if(r.missing.length){
         html+=`<div class="table-section"><h3>Missing Records</h3><div class="table-container">
-        <table><thead><tr><th>App ID</th><th>Amt</th><th>Status</th><th>Date</th><th>Missing From</th></tr></thead><tbody>
+        <table><thead><tr><th>App ID</th><th>Amt</th><th>Comm</th><th>Status</th><th>Date</th><th>Missing From</th></tr></thead><tbody>
           ${r.missing.map(i=>`
             <tr class="missing-row">
               <td>${i.appId}</td>
               <td class="amount-cell ${i.isPaid?'paid':''}">₹${i.amount.toFixed(2)}</td>
+              <td class="amount-cell">${i.commission!==undefined?('₹'+parseFloat(i.commission).toFixed(2)):"-"}</td>
               <td>${i.status||'N/A'}</td><td>${i.date||'N/A'}</td>
               <td>${i.source==='source1'?'Source 2':'Source 1'}</td>
             </tr>
@@ -431,7 +512,6 @@
       DOM.results.classList.add('show');
     }
 
-    // EVENTS
     DOM.analyzeBtn.onclick = ()=>{
       showLoading();
       setTimeout(()=>{
@@ -443,17 +523,17 @@
       },100);
     };
 
-    // INIT
     document.addEventListener('DOMContentLoaded',()=>{
       initFileHandlers();
       updateUserInfo();
       setInterval(updateUserInfo,15000);
       // Sync options state
-      DOM.analysisType.onchange = DOM.includeCommission.onchange = DOM.applyGST.onchange = DOM.varianceThreshold.oninput = function() {
+      DOM.analysisType.onchange = DOM.includeCommission.onchange = DOM.applyGST.onchange = DOM.varianceThreshold.oninput = DOM.tdsPercent.oninput = function() {
         STATE.analysisOptions.type = DOM.analysisType.value;
         STATE.analysisOptions.includeCommission = DOM.includeCommission.checked;
         STATE.analysisOptions.applyGST = DOM.applyGST.checked;
         STATE.analysisOptions.varianceThreshold = parseFloat(DOM.varianceThreshold.value)||0.01;
+        STATE.analysisOptions.tdsPercent = parseFloat(DOM.tdsPercent.value)||2;
       };
     });
   </script>
