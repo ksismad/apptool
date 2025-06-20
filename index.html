@@ -62,6 +62,8 @@
             border: 2px dashed #cbd5e1;
             border-radius: 12px;
             padding: 24px;
+            position: relative;
+            transition: all 0.3s ease;
         }
         .upload-box.source2 {
             border-color: #059669;
@@ -74,15 +76,38 @@
             margin-top: 8px;
             display: block;
         }
-        .file-input { display: none; }
+        .upload-box.dragover {
+            border-color: #6366f1;
+            background: #f0f7ff;
+        }
+        .file-input { 
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            border: 0;
+        }
         .upload-btn {
             background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 12px 24px;
             border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
+            transition: transform 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .upload-btn:hover {
+            transform: translateY(-1px);
+        }
+        .upload-btn:active {
+            transform: translateY(1px);
         }
         .upload-btn.source2 {
             background: linear-gradient(135deg, #059669 0%, #10b981 100%);
@@ -96,6 +121,7 @@
             color: #059669;
             border-radius: 6px;
             display: none;
+            animation: fadeIn 0.3s ease;
         }
         .file-info.show { display: inline-block; }
         
@@ -103,31 +129,86 @@
         .column-mappings {
             padding: 0 32px;
             margin-bottom: 24px;
+            animation: slideIn 0.3s ease;
         }
         .mapping-group {
             margin-bottom: 16px;
+            background: #f8fafc;
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
         }
         .mapping-label {
             font-weight: 600;
+            margin-bottom: 12px;
+            color: #4b5563;
+        }
+        .mapping-row {
+            display: flex;
+            gap: 16px;
             margin-bottom: 8px;
+            align-items: center;
         }
         select {
-            padding: 8px;
+            padding: 8px 12px;
             border-radius: 6px;
             border: 1px solid #cbd5e1;
-            margin-right: 16px;
+            background: white;
+            min-width: 200px;
+            font-size: 0.95rem;
+        }
+        select:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
         }
         
         /* Options section styles */
         .options-section {
             padding: 0 32px;
+            animation: slideIn 0.3s ease;
         }
         .option-group {
-            margin-bottom: 16px;
+            margin-bottom: 20px;
+            background: #f8fafc;
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
         }
         .option-label {
             font-weight: 600;
+            margin-bottom: 12px;
+            color: #4b5563;
+        }
+        .option-row {
+            display: flex;
+            gap: 24px;
+            align-items: center;
             margin-bottom: 8px;
+        }
+        
+        /* Checkbox and input styles */
+        .checkbox-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+        input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+        input[type="number"] {
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            width: 100px;
+        }
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
         }
         
         /* Analysis button styles */
@@ -142,6 +223,13 @@
             font-size: 1.2rem;
             font-weight: 700;
             cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        .analyze-btn:not(:disabled):hover {
+            transform: translateY(-1px);
+        }
+        .analyze-btn:not(:disabled):active {
+            transform: translateY(1px);
         }
         .analyze-btn:disabled {
             background: #9ca3af;
@@ -152,6 +240,7 @@
         .results {
             margin: 32px;
             display: none;
+            animation: fadeIn 0.5s ease;
         }
         .results.show { display: block; }
         .results-header {
@@ -172,6 +261,11 @@
             border-radius: 12px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             border: 1px solid #e2e8f0;
+            transition: transform 0.2s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
         .stat-card h3 {
             margin: 0 0 8px 0;
@@ -179,7 +273,7 @@
             font-size: 1rem;
         }
         .stat-value {
-            font-size: 1.5rem;
+            font-size: 1.75rem;
             font-weight: 700;
             color: #1e293b;
         }
@@ -192,6 +286,7 @@
         /* Table styles */
         .table-section {
             margin-top: 32px;
+            animation: slideIn 0.5s ease;
         }
         .table-section h3 {
             margin-bottom: 16px;
@@ -217,9 +312,15 @@
             background: #f8fafc;
             font-weight: 600;
             color: #4b5563;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
         td {
             color: #1e293b;
+        }
+        tbody tr:hover {
+            background: #f8fafc;
         }
         .amount-cell {
             font-family: monospace;
@@ -257,9 +358,14 @@
             align-items: center;
             justify-content: center;
             z-index: 1000;
-            display: none;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
         }
-        .loading-overlay.show { display: flex; }
+        .loading-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
         .spinner {
             width: 40px;
             height: 40px;
@@ -267,10 +373,6 @@
             border-top: 4px solid #3498db;
             border-radius: 50%;
             animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
         }
         
         /* Error message styles */
@@ -281,14 +383,37 @@
             color: #b91c1c;
             border-radius: 8px;
             display: none;
+            animation: slideIn 0.3s ease;
         }
-        .error-message.show { display: block; }
+        .error-message.show { 
+            display: block; 
+        }
+        
+        /* Animations */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideIn {
+            from { 
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <div class="user-info" id="user-info">User: ksismad | UTC 2025-06-20 14:29:08</div>
+            <div class="user-info" id="user-info">User: ksismad | UTC 2025-06-20 14:44:40</div>
             <h1>🔍 App ID Analyzer</h1>
             <p>Compare and analyze app transaction data</p>
         </div>
@@ -296,14 +421,14 @@
         <div class="upload-section">
             <div class="upload-box">
                 <h3>Source 1 Files</h3>
-                <input type="file" id="file-input-1" class="file-input" multiple accept=".xlsx,.xls">
+                <input type="file" id="file-input-1" class="file-input" multiple accept=".xlsx,.xls" aria-label="Choose Source 1 Files">
                 <button class="upload-btn" id="upload-btn-1">Choose Files</button>
                 <div id="file-info-1" class="file-info"></div>
             </div>
             
             <div class="upload-box source2">
                 <h3>Source 2 File (Paid Source)</h3>
-                <input type="file" id="file-input-2" class="file-input" accept=".xlsx,.xls">
+                <input type="file" id="file-input-2" class="file-input" accept=".xlsx,.xls" aria-label="Choose Source 2 File">
                 <button class="upload-btn source2" id="upload-btn-2">Choose File</button>
                 <div id="file-info-2" class="file-info"></div>
             </div>
@@ -316,40 +441,49 @@
         <div class="options-section">
             <div class="option-group">
                 <div class="option-label">Analysis Options</div>
-                <select id="analysis-type">
-                    <option value="all">All Records</option>
-                    <option value="mismatches">Only Mismatches</option>
-                    <option value="missing">Only Missing Records</option>
-                </select>
-                
-                <label>
-                    <input type="checkbox" id="include-commission">
-                    Include Commission Analysis
-                </label>
-                
-                <label>
-                    <input type="checkbox" id="apply-gst">
-                    Apply 18% GST
-                </label>
+                <div class="option-row">
+                    <select id="analysis-type" aria-label="Analysis Type">
+                        <option value="all">All Records</option>
+                        <option value="mismatches">Only Mismatches</option>
+                        <option value="missing">Only Missing Records</option>
+                    </select>
+                    
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="include-commission" aria-label="Include Commission Analysis">
+                        Include Commission Analysis
+                    </label>
+                    
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="apply-gst" aria-label="Apply GST">
+                        Apply 18% GST
+                    </label>
+                </div>
             </div>
             
             <div class="option-group">
                 <div class="option-label">Variance Threshold</div>
-                <input type="number" id="variance-threshold" value="0.01" step="0.01" min="0">
+                <input type="number" 
+                       id="variance-threshold" 
+                       value="0.01" 
+                       step="0.01" 
+                       min="0"
+                       aria-label="Variance Threshold">
             </div>
         </div>
         
-        <div id="error-message" class="error-message"></div>
+        <div id="error-message" class="error-message" role="alert" aria-live="polite"></div>
         
         <button id="analyze-btn" class="analyze-btn" disabled>Please select files</button>
         
-        <div id="results" class="results">
+        <div id="results" class="results" role="region" aria-live="polite">
             <!-- Results will be dynamically inserted here -->
         </div>
     </div>
     
     <div id="loading-overlay" class="loading-overlay">
-        <div class="spinner"></div>
+        <div class="spinner" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>
     </div>
     
     <script>
@@ -360,7 +494,7 @@
             columnMappings: {},
             userInfo: {
                 login: 'ksismad',
-                currentUTC: '2025-06-20 14:29:08'
+                currentUTC: '2025-06-20 14:44:40'
             },
             analysisOptions: {
                 type: 'all',
@@ -391,15 +525,97 @@
         };
 
         // --- FILE HANDLING ---
-        DOM.uploadBtn1.addEventListener('click', () => DOM.fileInput1.click());
-        DOM.uploadBtn2.addEventListener('click', () => DOM.fileInput2.click());
-        
-        DOM.fileInput1.addEventListener('change', e => handleFileSelection(e.target.files, 1));
-        DOM.fileInput2.addEventListener('change', e => handleFileSelection(e.target.files, 2));
+        function initializeFileHandlers() {
+            // File input setup
+            [DOM.fileInput1, DOM.fileInput2].forEach(input => {
+                input.style.display = 'none';
+            });
+
+            // Upload button click handlers with improved handling
+            DOM.uploadBtn1.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (DOM.fileInput1) {
+                    DOM.fileInput1.value = '';
+                    DOM.fileInput1.click();
+                }
+            });
+
+            DOM.uploadBtn2.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (DOM.fileInput2) {
+                    DOM.fileInput2.value = '';
+                    DOM.fileInput2.click();
+                }
+            });
+
+            // File input change handlers
+            DOM.fileInput1.addEventListener('change', function(e) {
+                if (e.target.files && e.target.files.length > 0) {
+                    handleFileSelection(e.target.files, 1);
+                }
+            });
+
+            DOM.fileInput2.addEventListener('change', function(e) {
+                if (e.target.files && e.target.files.length > 0) {
+                    handleFileSelection(e.target.files, 2);
+                }
+            });
+
+            // Drag and drop handlers
+            [DOM.uploadBtn1.parentElement, DOM.uploadBtn2.parentElement].forEach((dropZone, idx) => {
+                dropZone.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.classList.add('dragover');
+                });
+
+                dropZone.addEventListener('dragleave', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.classList.remove('dragover');
+                });
+
+                dropZone.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.classList.remove('dragover');
+                    
+                    const files = e.dataTransfer.files;
+                    if (files.length > 0) {
+                        if (idx === 0) {
+                            handleFileSelection(files, 1);
+                        } else {
+                            handleFileSelection([files[0]], 2);
+                        }
+                    }
+                });
+            });
+        }
 
         function handleFileSelection(files, source) {
-            if (!files.length) return;
+            if (!files || files.length === 0) {
+                showError('No files selected');
+                return;
+            }
+
+            // Validate file types
+            const validTypes = [
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/vnd.ms-excel'
+            ];
             
+            const invalidFiles = Array.from(files).filter(file => 
+                !validTypes.includes(file.type) && 
+                !file.name.match(/\.(xlsx|xls)$/i)
+            );
+
+            if (invalidFiles.length > 0) {
+                showError('Please select only Excel files (.xlsx or .xls)');
+                return;
+            }
+
             showLoading();
             
             if (source === 1) {
@@ -505,19 +721,19 @@
                 }
             ];
             
-            DOM.columnMappings.innerHTML = `
+            const mappingHTML = `
                 <div class="mapping-group">
                     <div class="mapping-label">Column Mappings</div>
                     ${requiredColumns.map(col => `
-                        <div style="margin-bottom: 8px;">
-                            <label>${col.label}:</label>
-                            <select id="mapping-source1-${col.id}">
+                        <div class="mapping-row">
+                            <label for="mapping-source1-${col.id}">${col.label}:</label>
+                            <select id="mapping-source1-${col.id}" aria-label="Source 1 ${col.label}">
                                 <option value="">-- Select Source 1 Column --</option>
                                 ${headers1.map((h, i) => `
                                     <option value="${i}">${h}</option>
                                 `).join('')}
                             </select>
-                            <select id="mapping-source2-${col.id}">
+                            <select id="mapping-source2-${col.id}" aria-label="Source 2 ${col.label}">
                                 <option value="">-- Select Source 2 Column --</option>
                                 ${headers2.map((h, i) => `
                                     <option value="${i}">${h}</option>
@@ -527,6 +743,8 @@
                     `).join('')}
                 </div>
             `;
+            
+            DOM.columnMappings.innerHTML = mappingHTML;
             
             // Auto-detect columns
             requiredColumns.forEach(col => {
@@ -657,182 +875,3 @@
                         date: record1[mappings.date.source1],
                         source: 'source1',
                         isPaid: false
-                    });
-                }
-            });
-            
-            // Check for records in source2 that are missing from source1
-            source2Data.forEach(record2 => {
-                const appId = record2[mappings.appId.source2];
-                if (!appId) return;
-                
-                const exists = source1Data.some(r => 
-                    r[mappings.appId.source1]?.toString() === appId.toString()
-                );
-                
-                if (!exists) {
-                    results.missing.push({
-                        appId,
-                        amount: parseFloat(record2[mappings.amount.source2]) || 0,
-                        status: record2[mappings.status.source2],
-                        date: record2[mappings.date.source2],
-                        source: 'source2',
-                        isPaid: true // Mark as paid since it's from source 2
-                    });
-                }
-            });
-            
-            // Sort mismatches by absolute variance
-            results.mismatches.sort((a, b) => b.absVariance - a.absVariance);
-            
-            // Calculate totals
-            results.totalPotentialLoss = results.redAlerts.reduce((sum, item) => 
-                sum + item.absVariance, 0
-            );
-            
-            results.redAlertsTotal = results.redAlerts.reduce((sum, item) => 
-                sum + item.absVariance, 0
-            );
-            
-            results.commissionDeviationsTotal = results.commissionDeviations.reduce((sum, item) => 
-                sum + item.absVariance, 0
-            );
-            
-            return results;
-        }
-
-        // --- UI UPDATES ---
-        function updateFileInfo(source, files) {
-            const info = source === 1 ? DOM.fileInfo1 : DOM.fileInfo2;
-            info.textContent = Array.from(files).map(f => f.name).join(', ');
-            info.classList.add('show');
-        }
-
-        function updateAnalyzeButton() {
-            const hasFiles = STATE.source1Files.length > 0 && STATE.source2File;
-            const hasMappings = Object.values(STATE.columnMappings).every(
-                mapping => mapping.source1 && mapping.source2
-            );
-            
-            const canAnalyze = hasFiles && hasMappings;
-            DOM.analyzeBtn.disabled = !canAnalyze;
-            DOM.analyzeBtn.textContent = canAnalyze 
-                ? 'Analyze Data' 
-                : hasFiles 
-                    ? 'Please map all columns' 
-                    : 'Please select files';
-        }
-
-        function showLoading() {
-            DOM.loadingOverlay.classList.add('show');
-        }
-
-        function hideLoading() {
-            DOM.loadingOverlay.classList.remove('show');
-        }
-
-        function showError(message) {
-            DOM.errorMessage.textContent = message;
-            DOM.errorMessage.classList.add('show');
-            setTimeout(() => {
-                DOM.errorMessage.classList.remove('show');
-            }, 5000);
-        }
-
-        // --- RESULTS DISPLAY ---
-        function displayResults(results) {
-            const formattedResults = `
-                <div class="results-header">
-                    <h2>Analysis Summary</h2>
-                </div>
-                
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <h3>Total Potential Loss</h3>
-                        <div class="stat-value">₹${results.totalPotentialLoss.toFixed(2)}</div>
-                        <div class="stat-subtext">(Red Alerts + Commission Deviations)</div>
-                    </div>
-                    
-                    <div class="stat-card">
-                        <h3>Red Alert Items</h3>
-                        <div class="stat-value">${results.redAlerts.length}</div>
-                        <div class="stat-subtext">Totaling ₹${results.redAlertsTotal.toFixed(2)}</div>
-                    </div>
-                    
-                    <div class="stat-card">
-                        <h3>Commission Deviations</h3>
-                        <div class="stat-value">${results.commissionDeviations.length}</div>
-                        <div class="stat-subtext">Totaling ₹${results.commissionDeviationsTotal.toFixed(2)}</div>
-                    </div>
-                    
-                    <div class="stat-card">
-                        <h3>Total Records Analyzed</h3>
-                        <div class="stat-value">${
-                            results.matches + 
-                            results.mismatches.length + 
-                            results.missing.length
-                        }</div>
-                        <div class="stat-subtext">
-                            ${results.matches} matches, 
-                            ${results.mismatches.length} mismatches, 
-                            ${results.missing.length} missing
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="table-section">
-                    <h3>Top Mismatches by Variance</h3>
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>App ID</th>
-                                    <th>Source 1 Amount</th>
-                                    <th>Source 2 Amount (Paid)</th>
-                                    <th>Variance</th>
-                                    <th>Status</th>
-                                    <th>Date</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${results.mismatches.slice(0, 10).map(item => `
-                                    <tr>
-                                        <td>${item.appId}</td>
-                                        <td class="amount-cell">₹${item.amount1.toFixed(2)}</td>
-                                        <td class="amount-cell paid">₹${item.amount2.toFixed(2)}</td>
-                                        <td class="variance-cell ${
-                                            item.variance > 0 ? 'positive-variance' : 'negative-variance'
-                                        }">₹${item.variance.toFixed(2)}</td>
-                                        <td>${item.status1} → ${item.status2}</td>
-                                        <td>${item.date1}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                
-                ${results.missing.length > 0 ? `
-                    <div class="table-section">
-                        <h3>Missing Records</h3>
-                        <div class="table-container">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>App ID</th>
-                                        <th>Amount</th>
-                                        <th>Status</th>
-                                        <th>Date</th>
-                                        <th>Missing From</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${results.missing.map(item => `
-                                        <tr>
-                                            <td>${item.appId}</td>
-                                            <td class="amount-cell ${item.isPaid ? 'paid' : ''}">
-                                                ₹${item.amount.toFixed(2)}
-                                            </td>
-                                            <td>${item.status || 'N/A'}</td>
-                                            <td>${item.date || 'N/A'}</td>
-                                            <td>${item.source === 'source1' ? 'Source 2'
