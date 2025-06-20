@@ -25,7 +25,6 @@
     .file-info.show { display:inline-block; }
     .file-list {margin-top:8px;font-size:.98em;padding-left:0;list-style-type:none;}
     .file-list li{margin-bottom:2px;}
-    .merge-btn {margin-top:8px;background:#38bdf8;color:#fff;border:none;padding:6px 16px;border-radius:6px;cursor:pointer;font-weight:600;}
     .column-mappings, .options-section, .results { padding: 0 32px; }
     .mapping-group, .option-group { margin-bottom: 24px; }
     select, input[type="number"] { padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; }
@@ -99,13 +98,12 @@
   </div>
   <div id="loading-overlay" class="loading-overlay"><div class="spinner"></div></div>
   <script>
-    // Complex Pro Coder Mode ON
+    // Complex Experience Coder Mode ON
 
     // STATE
     const STATE = {
       source1Files: [],
       source2Files: [],
-      mergedS1: null,
       columnMappings: {},
       analysisOptions: { type: 'all', includeCommission: false, applyGST: false, gstRound: false }
     };
@@ -239,7 +237,6 @@
         fileArr.forEach((f, idx) => {
           processAnyFile(f, (err, data) => {
             if (!err) {
-              // Always set isPaid to true for S2
               STATE.source2Files.push({ file: f, headers: data[0], records: data.slice(1).map(row => { let obj = {...row}; obj.isPaid = true; return obj; }) });
               let li = document.createElement('li');
               li.textContent = f.name + ` (${data.length-1} rows)`;
@@ -275,14 +272,12 @@
       }
       let srcFile = STATE.source1Files[srcIdx];
       let tgtFile = STATE.source1Files[tgtIdx];
-      // Basic header check (must match for merge)
       if (JSON.stringify(srcFile.headers) !== JSON.stringify(tgtFile.headers)) {
         showError("Can't merge: Headers do not match between files.");
         return;
       }
       tgtFile.records = tgtFile.records.concat(srcFile.records);
       STATE.source1Files.splice(srcIdx,1);
-      // Update UI
       DOM.fileList1.innerHTML = '';
       STATE.source1Files.forEach((f) => {
         let li = document.createElement('li');
@@ -299,6 +294,7 @@
 
     // COLUMN MAP: auto-detect per file (S1), disables S2 commission and status
     function setupColumnMappings() {
+      // Always auto-detect status column for S1 using header and data together!
       const s1 = STATE.source1Files[0];
       const s2 = STATE.source2Files[0];
       const h1 = s1 ? s1.headers : [];
@@ -311,7 +307,7 @@
         { id: 'amount', lbl: 'Amount', patt: [/amount/i, /total/i] },
         { id: 'commission', lbl: 'Commission', patt: [/commiss|tds|fee|charge/i] },
         { id: 'date', lbl: 'Date', patt: [/date/i, /timestamp/i, /txn.*date/i, /created/i] },
-        { id: 'status', lbl: 'Status', patt: [/status/i, /state/i, /paid|unpaid|not paid|fail/i] }
+        // status is NOT mapped, it is detected for each record (see getS1Status)
       ];
       let html = `<div class="mapping-group"><strong>Column Mappings</strong>`;
       cols.forEach(c => {
@@ -319,7 +315,7 @@
                   <select id="ms1-${c.id}"><option value="">Select S1</option>${
                     h1.map((h, i) => `<option value="${i}">${h}</option>`).join('')
                   }</select>`;
-        if (c.id !== 'commission' && c.id !== 'status') {
+        if (c.id !== 'commission') {
           html += `<select id="ms2-${c.id}"><option value="">Select S2</option>${
                     h2.map((h, i) => `<option value="${i}">${h}</option>`).join('')
                   }</select>`;
@@ -331,18 +327,9 @@
       cols.forEach(c => {
         const s1sel = document.getElementById(`ms1-${c.id}`);
         const s2sel = document.getElementById(`ms2-${c.id}`);
-        // Status auto-detect: select best status-like column, NOT just column called "status"
-        if (c.id === 'status') {
-          // Find a column that contains any negative/paid keywords or matches the commission logic
-          const negativeWords = /(unpaid|fail|cancel|not[\s_-]*paid|pending|await|reject|bounce|decline|invalid|hold|error|reversed|dispute|withheld|void)/i;
-          let idx = h1.findIndex(h => h && negativeWords.test(h));
-          if (idx === -1) idx = findMatch(h1, c.patt);
-          if (idx !== '') s1sel.value = idx;
-        } else {
-          const auto1 = findMatch(h1, c.patt), auto2 = findMatch(h2, c.patt);
-          if (auto1 !== '') s1sel.value = auto1;
-          if (s2sel && auto2 !== '') s2sel.value = auto2;
-        }
+        const auto1 = findMatch(h1, c.patt), auto2 = findMatch(h2, c.patt);
+        if (auto1 !== '') s1sel.value = auto1;
+        if (s2sel && auto2 !== '') s2sel.value = auto2;
         [s1sel, s2sel].forEach(el => { if (el) el.onchange = updateColumnMappings; });
       });
       updateColumnMappings();
@@ -356,7 +343,7 @@
     }
     function updateColumnMappings() {
       STATE.columnMappings = {};
-      ['appId', 'amount', 'commission', 'date', 'status'].forEach(k => {
+      ['appId', 'amount', 'commission', 'date'].forEach(k => {
         let s1el = document.getElementById(`ms1-${k}`);
         let s2el = document.getElementById(`ms2-${k}`);
         STATE.columnMappings[k] = {
@@ -385,15 +372,21 @@
       return amt;
     }
 
-    // Robust paid/unpaid detection (commission + negative status)
-    function getS1Status(r, statusIdx, headers, commissionIdx) {
+    // Robust paid/unpaid detection for S1:
+    // Paid if commission is not blank/zero AND status data cell does NOT contain negative words (and not 'unpaid')
+    // Unpaid if commission is blank/zero OR status data cell contains negative words or 'unpaid'
+    function getS1Status(r, headers, commissionIdx, statusIdx) {
       let comm = commissionIdx !== undefined && commissionIdx !== "" && commissionIdx !== null ? r[headers[commissionIdx]] : undefined;
+      // 1. Commission check
       if (comm === undefined || comm === null || comm === "" || (typeof comm === "string" && comm.trim() === "") || Number(comm) === 0) return "Unpaid";
-      let statusText = (statusIdx !== undefined && statusIdx !== "" && statusIdx !== null) ? r[headers[statusIdx]] : undefined;
-      if (typeof statusText === "string") {
-        let s = statusText.trim().toLowerCase();
-        if (/^(unpaid|fail|cancelled|not[\s_-]*paid|pending|await|reject|bounce|decline|invalid|hold|error|reversed|dispute|withheld|void)/.test(s)) return "Unpaid";
-        if (/^(paid|success|completed|done|approved)/.test(s)) return "Paid";
+      // 2. Status data check (NOT header)
+      if (statusIdx !== undefined && statusIdx !== "" && statusIdx !== null) {
+        let statusText = r[headers[statusIdx]];
+        if (typeof statusText === "string") {
+          let s = statusText.trim().toLowerCase();
+          if (/unpaid|fail|cancel|not[\s_-]*paid|pending|await|reject|bounce|decline|invalid|hold|error|reversed|dispute|withheld|void/.test(s)) return "Unpaid";
+          if (/paid|success|completed|done|approved/.test(s)) return "Paid";
+        }
       }
       return "Paid";
     }
@@ -408,6 +401,7 @@
       const d2 = s2.records;
       const m = STATE.columnMappings;
       const commIdx1 = m.commission.source1;
+      const statusIdx1 = m.status ? m.status.source1 : null;
       // Index S2 by AppId
       const map2 = new Map();
       d2.forEach(r => {
@@ -435,7 +429,7 @@
         const id = r1[s1.headers[m.appId.source1]];
         if (!id) return;
         const r2 = map2.get(id.toString());
-        const s1status = getS1Status(r1, m.status.source1, s1.headers, m.commission.source1);
+        const s1status = getS1Status(r1, s1.headers, m.commission.source1, m.status ? m.status.source1 : null);
         const s2status = r2 ? getS2Status() : null;
         let a1 = applyGSTAmount(r1[s1.headers[m.amount.source1]]);
         let a2 = r2 ? applyGSTAmount(r2[s2.headers[m.amount.source2]]) : 0;
