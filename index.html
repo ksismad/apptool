@@ -7,41 +7,57 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
   <style>
-    html, body { background: #f3f4f6; color: #1e293b; font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; }
-    .container { max-width: 1200px; margin: 36px auto; background: #fff; border-radius: 18px; box-shadow: 0 8px 32px rgba(60,60,100,0.11); overflow: hidden; }
-    .header { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; padding: 32px; position: relative; }
-    .header h1 { margin: 0 0 8px; font-size: 2.25rem; }
-    .user-info { position: absolute; top: 16px; right: 32px; background: rgba(255,255,255,0.15); padding: 7px 16px; border-radius: 20px; font-size: 0.93rem; }
+    html, body { background: #f2f2f7; color: #16181c; font-family: 'Inter', 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; }
+    .container { max-width: 840px; margin: 40px auto; background: #fff; border-radius: 18px; box-shadow: 0 4px 36px rgba(60,60,100,0.14); overflow: hidden; }
+    .header { background: linear-gradient(100deg, #7f53ac 0%, #647dee 100%); color: #fff; padding: 30px 36px 18px 36px; position: relative; }
+    .header h1 { margin: 0 0 8px; font-size: 2.3rem; font-weight: 800; letter-spacing: -1px;}
+    .header p { margin: 0 0 10px 2px; font-size: 1.08rem; opacity:.90; }
+    .user-info { position: absolute; top: 18px; right: 36px; background: rgba(255,255,255,0.22); padding: 8px 18px; border-radius: 18px; font-size: .96rem; }
 
-    .upload-section { display: flex; gap: 24px; padding: 32px; flex-wrap: wrap; }
-    .upload-box { flex: 1; min-width: 300px; background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 12px; padding: 24px; position: relative; transition: border-color .2s, background .2s; }
-    .upload-box.source2 { border-color: #059669; background: #f0fdf4; }
-    .upload-box.source2::after { content: "(Paid Source)"; color: #059669; font-size: .875rem; display: block; margin-top:8px; }
+    .upload-section { display: flex; gap: 18px; padding: 24px 32px 8px 32px; flex-wrap: wrap; }
+    .upload-box { flex: 1; min-width: 260px; background: #f8fafc; border: 2.5px dashed #cbd5e1; border-radius: 10px; padding: 24px 18px 18px 18px; position: relative; transition: border-color .2s, background .2s; }
+    .upload-box.source2 { border-color: #11a672; background: #f0fdf4; }
+    .upload-box.source2::after { content: "(Paid Source)"; color: #059669; font-size: .92rem; display: block; margin-top:8px; }
     .upload-box.dragover { border-color: #6366f1; background: #eef4ff; }
     .file-input { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0; }
-    .upload-btn { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 600; }
-    .upload-btn.source2 { background: linear-gradient(135deg, #059669, #10b981); }
-    .file-info { margin-top: 12px; padding:8px 16px; background: #d1fae5; color: #059669; border-radius:6px; display:none; }
+    .upload-btn { background: linear-gradient(90deg, #6366f1 60%, #8b5cf6 100%); color: #fff; border: none; padding: 10px 22px; border-radius: 6px; cursor: pointer; font-weight: 700; }
+    .upload-btn.source2 { background: linear-gradient(90deg, #059669 60%, #10b981 100%); }
+    .file-info { margin-top: 10px; padding:8px 10px; background: #d1fae5; color: #059669; border-radius:5px; display:none; font-size:.98rem;}
     .file-info.show { display:inline-block; }
 
     .column-mappings, .options-section, .results { padding: 0 32px; }
-    .mapping-group, .option-group { margin-bottom: 24px; }
-    select, input[type="number"] { padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; }
-    .analyze-btn { width: calc(100% - 64px); margin:32px; padding:16px; background: linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; border-radius:12px; font-size:1.2rem; font-weight:600; cursor:pointer; }
+    .mapping-group, .option-group { margin-bottom: 18px; }
+    .mapping-group strong { font-size: 1.08rem; }
+    .mapping-group label { display:inline-block; min-width:80px; font-weight:500; }
+    .mapping-group select { margin: 0 10px 0 2px; }
+    select, input[type="number"] { padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:1rem;}
+    .analyze-btn { width: 100%; margin:28px 0 18px 0; padding:16px; background: linear-gradient(100deg, #10b981, #059669 70%); color:#fff; border:none; border-radius:10px; font-size:1.18rem; font-weight:700; cursor:pointer; transition: background .2s;}
     .analyze-btn:disabled { background:#9ca3af; cursor:not-allowed; }
 
-    .results-header, .stats-grid, .table-section { margin-bottom:24px; }
-    .stat-card { background:#fff; padding:20px; border-radius:12px; box-shadow:0 2px 4px rgba(0,0,0,0.1); }
-    table { width:100%; border-collapse:collapse; }
-    th, td { padding:12px 16px; border-bottom:1px solid #e2e8f0; }
-    th { background:#f8fafc; }
+    .results-header, .stats-grid, .table-section { margin-bottom:18px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(2,1fr); gap:18px; }
+    @media (min-width: 600px) { .stats-grid { grid-template-columns: repeat(4,1fr); } }
+    .stat-card { background:#f7f8fa; padding:18px; border-radius:9px; box-shadow:0 1px 2px rgba(0,0,0,0.06); text-align:center;}
+    .stat-card h3 { margin:0 0 6px 0; font-size:1.08rem; font-weight:700;}
+    .stat-value { font-size:1.30rem; font-weight:800; letter-spacing:-1px;}
+    .stat-subtext { font-size:.98rem; color:#4b5563; opacity:.82; margin-top:3px;}
+    .alert-badge { display:inline-block; background:#fee2e2; color:#dc2626; border-radius:6px; padding:2px 8px; font-size:.95rem; font-weight:600; margin-left:7px;}
+
+    .table-section { margin-bottom:22px; }
+    .table-container { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; background:#fff; }
+    th, td { padding:10px 14px; border-bottom:1px solid #e2e8f0; }
+    th { background:#f8fafc; font-size:1.01rem; }
     .amount-cell { text-align:right; font-family:monospace; }
     .amount-cell.paid::after { content:" ✓"; color:#059669; }
-    .variance-cell { text-align:right; font-family:monospace; font-weight:600; }
+    .variance-cell { text-align:right; font-family:monospace; font-weight:700; }
     .positive-variance { color:#dc2626; }
     .negative-variance { color:#059669; }
+    .red-row { background: #fee2e2 !important; }
+    .commission-row { background:#fef9c3 !important; }
+    .missing-row { background: #fff7ed; }
 
-    .loading-overlay { position:fixed; inset:0; background:rgba(255,255,255,0.9); display:flex; align-items:center; justify-content:center; z-index:1000; visibility:hidden; opacity:0; transition:opacity .2s; }
+    .loading-overlay { position:fixed; inset:0; background:rgba(255,255,255,0.87); display:flex; align-items:center; justify-content:center; z-index:1000; visibility:hidden; opacity:0; transition:opacity .2s;}
     .loading-overlay.show { visibility:visible; opacity:1; }
     .spinner { width:40px; height:40px; border:4px solid #f3f3f3; border-top:4px solid #3498db; border-radius:50%; animation:spin 1s linear infinite; }
 
@@ -56,7 +72,7 @@
     <div class="header">
       <div class="user-info" id="user-info">User: ksismad | UTC 2025-06-20 14:53:32</div>
       <h1>🔍 App ID Analyzer</h1>
-      <p>Compare and analyze app transaction data</p>
+      <p>Compare and analyze app transaction data with clear insights into mismatches, loss, and commission deviations.</p>
     </div>
 
     <div class="upload-section">
@@ -101,7 +117,7 @@
   <div id="loading-overlay" class="loading-overlay"><div class="spinner"></div></div>
 
   <script>
-    // Helper for selector
+    // Helper function for selector
     function $(sel) { return document.querySelectorAll(sel); }
 
     // STATE
@@ -140,8 +156,8 @@
       setTimeout(()=>DOM.errorMessage.classList.remove('show'),5000);
     }
     function updateUserInfo() {
-      const now=new Date().toISOString().replace('T',' ').slice(0,19);
-      DOM.userInfo.textContent=`User: ksismad | UTC ${now}`;
+      const now = new Date().toISOString().replace('T',' ').slice(0,19);
+      DOM.userInfo.textContent = `User: ksismad | UTC ${now}`;
     }
 
     // FILE HANDLERS
@@ -156,7 +172,7 @@
         o.drop.ondrop     = e=>{
           e.preventDefault();
           o.drop.classList.remove('dragover');
-          const files=e.dataTransfer.files;
+          const files = e.dataTransfer.files;
           if(files.length) handleFileSelection(o.src===1?files:[files[0]],o.src);
         };
       });
@@ -171,23 +187,48 @@
       showLoading();
       if(src===1){
         STATE.source1Files=[]; 
-        let processed = 0;
+        let processed=0;
         Array.from(files).forEach((f,i)=>{
           processExcelFile(f,(err,data)=>{
             if(!err){
-              STATE.source1Files.push({file:f,headers:data[0],records:data.slice(1)});
+              // Auto-detect headers: use first row (header) and infer keys
+              STATE.source1Files.push({
+                file:f,
+                headers:data[0].map(x=>x?x.trim():""),
+                records:data.slice(1).map(row=>{
+                  let rec={};
+                  data[0].forEach((h,idx)=>{ rec[h?String(h).trim():""]=row[idx]; });
+                  return rec;
+                })
+              });
               DOM.fileInfo1.textContent=Array.from(files).map(x=>x.name).join(', ');
               DOM.fileInfo1.classList.add('show');
             } else { showError(err.message); }
             processed++;
-            if(processed===files.length){ hideLoading(); setupColumnMappings(); updateAnalyzeBtn();}
+            if(processed===files.length){ hideLoading(); setupColumnMappings(); updateAnalyzeBtn(); }
           });
         });
       } else {
         const f=files[0];
         processExcelFile(f,(err,data)=>{
           if(!err){
-            STATE.source2File={file:f,headers:data[0],records:data.slice(1).map(r=>({...r,isPaid:true}))};
+            // Auto-detect headers, always set payment status to "Paid" if possible
+            const headers = data[0].map(x=>x?x.trim():"");
+            const statusIdx = headers.findIndex(h=>/status|payment/i.test(h));
+            STATE.source2File = {
+              file:f,
+              headers,
+              records: data.slice(1).map(row=>{
+                let rec={};
+                data[0].forEach((h,idx)=>{
+                  const val = row[idx];
+                  if(statusIdx===idx) rec[h?String(h).trim():""] = "Paid";
+                  else rec[h?String(h).trim():""] = val;
+                });
+                rec.isPaid = true;
+                return rec;
+              })
+            };
             DOM.fileInfo2.textContent=f.name; DOM.fileInfo2.classList.add('show');
             setupColumnMappings(); updateAnalyzeBtn();
           } else showError(err.message);
@@ -200,7 +241,7 @@
       rd.onload=e=>{
         try{
           const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
-          const js=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1});
+          const js=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1, defval:""});
           if(js.length<2) return cb(new Error('No data rows'));
           cb(null,js);
         }catch(er){cb(er);}
@@ -211,13 +252,15 @@
 
     // COLUMN MAP
     function setupColumnMappings(){
-      const h1=STATE.source1Files[0]?.headers||[],h2=STATE.source2File?.headers||[];
+      const h1=STATE.source1Files[0]?.headers||[], h2=STATE.source2File?.headers||[];
       if(!h1.length||!h2.length) return;
-      const cols=[{id:'appId',lbl:'App ID',patt:[/app.*id/i,/id/i]},
-                  {id:'amount',lbl:'Amount',patt:[/amount/i,/total/i]},
-                  {id:'date',lbl:'Date',patt:[/date/i,/timestamp/i]},
-                  {id:'status',lbl:'Status',patt:[/status/i,/state/i]}];
-      let html=`<div class="mapping-group"><strong>Column Mappings</strong>`;
+      const cols=[
+        {id:'appId',lbl:'App ID',patt:[/app.*id/i,/appid/i,/id$/i]},
+        {id:'amount',lbl:'Amount',patt:[/amount/i,/total/i,/value/i]},
+        {id:'date',lbl:'Date',patt:[/date/i,/timestamp/i,/txn.?date/i,/created/i]},
+        {id:'status',lbl:'Status',patt:[/status/i,/state/i,/payment status/i]}
+      ];
+      let html=`<div class="mapping-group"><strong>Column Mappings (Auto-detected where possible)</strong>`;
       cols.forEach(c=>{
         html+=`<div><label>${c.lbl}:</label>
                 <select id="ms1-${c.id}"><option value="">Select S1</option>${
@@ -233,7 +276,8 @@
         const s1=document.getElementById(`ms1-${c.id}`),
               s2=document.getElementById(`ms2-${c.id}`);
         const auto1=findMatch(h1,c.patt), auto2=findMatch(h2,c.patt);
-        if(auto1!=='') s1.value=auto1; if(auto2!=='') s2.value=auto2;
+        if(auto1!=='') s1.value=auto1;
+        if(auto2!=='') s2.value=auto2;
         [s1,s2].forEach(el=>el.onchange=updateColumnMappings);
       });
       updateColumnMappings();
@@ -275,45 +319,60 @@
             analysisType = DOM.analysisType.value;
       let res={matches:0,mismatches:[],missing:[],redAlerts:[],commissionDeviations:[]};
       const map2=new Map();
-      d2.forEach(r=>{ 
-        const id=r[m.appId.source2]; 
-        if(id !== undefined && id !== null && id !== "") map2.set(id.toString(),r); 
+      d2.forEach(r=>{
+        const id = getField(r, m.appId.source2, STATE.source2File.headers);
+        if(id !== undefined && id !== null && id !== "") map2.set(id.toString(),r);
       });
       d1.forEach(r1=>{
-        const id=r1[m.appId.source1];
+        const id = getField(r1, m.appId.source1, STATE.source1Files[0].headers);
         if(id === undefined || id === null || id === "") return;
         const r2=map2.get(id.toString());
         if(r2){
-          let a1=parseFloat(r1[m.amount.source1])||0, a2=parseFloat(r2[m.amount.source2])||0;
+          let a1=parseFloat(getField(r1, m.amount.source1, STATE.source1Files[0].headers))||0;
+          let a2=parseFloat(getField(r2, m.amount.source2, STATE.source2File.headers))||0;
           if(applyGST){a1*=1.18;a2*=1.18;}
           const varc=a2-a1, absVar=Math.abs(varc);
+          // Red alert: variance exceeds 10x threshold, or negative paid (loss) over threshold
+          const isRed = (absVar>thr*10) || (varc<0 && absVar>thr);
+          const isCommission = includeCommission && a1 > 0 && Math.abs(varc/a1)>0.05;
           if(absVar<=thr){
             if(analysisType==="all") res.matches++;
-          }
-          else {
-            const item={appId:id,amount1:a1,amount2:a2,variance:varc,absVariance:absVar,
-                        status1:r1[m.status.source1],status2:r2[m.status.source2],
-                        date1:r1[m.date.source1],date2:r2[m.date.source2],isPaid:true};
+          } else {
+            const item={
+              appId:id,
+              amount1:a1,
+              amount2:a2,
+              variance:varc,
+              absVariance:absVar,
+              status1:getField(r1, m.status.source1, STATE.source1Files[0].headers),
+              status2:getField(r2, m.status.source2, STATE.source2File.headers),
+              date1:getField(r1, m.date.source1, STATE.source1Files[0].headers),
+              date2:getField(r2, m.date.source2, STATE.source2File.headers),
+              isPaid:true,
+              isRed,
+              isCommission
+            };
             if(analysisType==="all" || analysisType==="mismatches") res.mismatches.push(item);
-            if(absVar>thr*10) res.redAlerts.push(item);
-            if(includeCommission && Math.abs(varc/a1)>0.05)
-              res.commissionDeviations.push(item);
+            if(isRed) res.redAlerts.push(item);
+            if(isCommission) res.commissionDeviations.push(item);
           }
         } else {
           if(analysisType==="all" || analysisType==="missing") {
-            res.missing.push({appId:id,amount:parseFloat(r1[m.amount.source1])||0,
-                            status:r1[m.status.source1],date:r1[m.date.source1],
-                            source:'source1',isPaid:false});
+            res.missing.push({appId:id,amount:parseFloat(getField(r1, m.amount.source1, STATE.source1Files[0].headers))||0,
+                              status:getField(r1, m.status.source1, STATE.source1Files[0].headers),
+                              date:getField(r1, m.date.source1, STATE.source1Files[0].headers),
+                              source:'source1',isPaid:false});
           }
         }
       });
       d2.forEach(r2=>{
-        const id=r2[m.appId.source2];
+        const id = getField(r2, m.appId.source2, STATE.source2File.headers);
         if(id === undefined || id === null || id === "") return;
-        const exists=d1.some(x=>x[m.appId.source1]==id);
+        const exists=d1.some(x=>getField(x, m.appId.source1, STATE.source1Files[0].headers)==id);
         if(!exists && (analysisType==="all" || analysisType==="missing")) {
-          res.missing.push({appId:id,amount:parseFloat(r2[m.amount.source2])||0,
-                            status:r2[m.status.source2],date:r2[m.date.source2],
+          res.missing.push({appId:id,amount:parseFloat(getField(r2, m.amount.source2, STATE.source2File.headers))||0,
+                            status:getField(r2, m.status.source2, STATE.source2File.headers),
+                            date:getField(r2, m.date.source2, STATE.source2File.headers),
                             source:'source2',isPaid:true});
         }
       });
@@ -323,13 +382,20 @@
       res.commissionDeviationsTotal=res.commissionDeviations.reduce((s,i)=>s+i.absVariance,0);
       return res;
     }
+    function getField(record, colIdx, headers) {
+      if (colIdx === undefined || colIdx === null || colIdx === "") return "";
+      const idx = parseInt(colIdx);
+      if (!Array.isArray(headers) || idx >= headers.length) return "";
+      const key = headers[idx];
+      return record[key];
+    }
 
     // DISPLAY
     function displayResults(r){
       let html=`<div class="results-header"><h2>Analysis Summary</h2></div>
         <div class="stats-grid">
           <div class="stat-card"><h3>Total Potential Loss</h3><div class="stat-value">₹${r.totalPotentialLoss.toFixed(2)}</div><div class="stat-subtext">(Red Alerts + Commission Deviations)</div></div>
-          <div class="stat-card"><h3>Red Alerts</h3><div class="stat-value">${r.redAlerts.length}</div><div class="stat-subtext">₹${r.redAlertsTotal.toFixed(2)}</div></div>
+          <div class="stat-card"><h3>Red Alerts <span class="alert-badge">${r.redAlerts.length}</span></h3><div class="stat-value">₹${r.redAlertsTotal.toFixed(2)}</div></div>
           <div class="stat-card"><h3>Commission Deviations</h3><div class="stat-value">${r.commissionDeviations.length}</div><div class="stat-subtext">₹${r.commissionDeviationsTotal.toFixed(2)}</div></div>
           <div class="stat-card"><h3>Total Records</h3>
             <div class="stat-value">${r.matches + r.mismatches.length + r.missing.length}</div>
@@ -338,12 +404,12 @@
         </div>
         <div class="table-section"><h3>Top Mismatches</h3><div class="table-container">
         <table><thead><tr><th>App ID</th><th>S1 Amt</th><th>S2 Amt (Paid)</th><th>Var</th><th>Status</th><th>Date</th></tr></thead><tbody>
-        ${r.mismatches.slice(0,10).map(i=>`
-          <tr>
+        ${r.mismatches.slice(0,12).map(i=>`
+          <tr class="${i.isRed?'red-row':''} ${i.isCommission?'commission-row':''}">
             <td>${i.appId}</td>
             <td class="amount-cell">₹${i.amount1.toFixed(2)}</td>
             <td class="amount-cell paid">₹${i.amount2.toFixed(2)}</td>
-            <td class="variance-cell ${i.variance>0?'positive-variance':'negative-variance'}">₹${i.variance.toFixed(2)}</td>
+            <td class="variance-cell ${i.variance>0?'positive-variance':'negative-variance'}">${i.variance>0?'+':''}₹${i.variance.toFixed(2)}${i.isRed?' <span class="alert-badge">Red</span>':''}</td>
             <td>${i.status1}→${i.status2}</td><td>${i.date1}</td>
           </tr>
         `).join('')}
@@ -352,7 +418,7 @@
         html+=`<div class="table-section"><h3>Missing Records</h3><div class="table-container">
         <table><thead><tr><th>App ID</th><th>Amt</th><th>Status</th><th>Date</th><th>Missing From</th></tr></thead><tbody>
           ${r.missing.map(i=>`
-            <tr>
+            <tr class="missing-row">
               <td>${i.appId}</td>
               <td class="amount-cell ${i.isPaid?'paid':''}">₹${i.amount.toFixed(2)}</td>
               <td>${i.status||'N/A'}</td><td>${i.date||'N/A'}</td>
