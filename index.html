@@ -13,7 +13,7 @@
     .header h1 { margin: 0 0 8px; font-size: 2.25rem; }
     .user-info { position: absolute; top: 16px; right: 32px; background: rgba(255,255,255,0.15); padding: 7px 16px; border-radius: 20px; font-size: 0.93rem; }
     .upload-section { display: flex; gap: 24px; padding: 32px; flex-wrap: wrap; }
-    .upload-box { flex: 1; min-width: 300px; background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 12px; padding: 24px; position: relative; }
+    .upload-box { flex: 1; min-width: 300px; background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 12px; padding: 24px; position: relative; transition: border-color .2s, background .2s; }
     .upload-box.source2 { border-color: #059669; background: #f0fdf4; }
     .upload-box.source2::after { content: "(Paid Source)"; color: #059669; font-size: .875rem; display: block; margin-top:8px; }
     .upload-box.dragover { border-color: #6366f1; background: #eef4ff; }
@@ -30,6 +30,8 @@
     select, input[type="number"] { padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; }
     .analyze-btn { width: calc(100% - 64px); margin:32px; padding:16px; background: linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; border-radius:12px; font-size:1.2rem; font-weight:600; cursor:pointer;}
     .analyze-btn:disabled { background:#9ca3af; cursor:not-allowed; }
+    .gst-section {margin-bottom:12px;}
+    .gst-section label {margin-right:10px;}
     .alert-container { display: flex; flex-wrap: wrap; gap: 24px; margin-bottom: 32px; }
     .alert-box { background: #fff7ed; border-left: 5px solid #f59e42; border-radius: 10px; box-shadow: 0 2px 10px rgba(60,60,100,0.06); padding: 18px 18px 10px 20px; flex: 1 1 330px; min-width:320px; max-width:420px; margin-bottom:12px;}
     .alert-title { font-size:1.12rem; font-weight:700; margin-bottom:2px; color: #d97706;}
@@ -49,8 +51,6 @@
     .error-message { margin:16px 32px; padding:12px 16px; background:#fee2e2; color:#b91c1c; border-radius:8px; display:none; }
     .error-message.show { display:block; }
     @keyframes spin { 0%{transform:rotate(0);}100%{transform:rotate(360deg);} }
-    .gst-section {margin-bottom:12px;}
-    .gst-section label {margin-right:10px;}
   </style>
 </head>
 <body>
@@ -97,9 +97,12 @@
   </div>
   <div id="loading-overlay" class="loading-overlay"><div class="spinner"></div></div>
   <script>
+    // Complex Pro Coder Mode ON
+
     // STATE
     const STATE = {
-      source1Files: [], source2Files: [],
+      source1Files: [],
+      source2Files: [],
       columnMappings: {},
       analysisOptions: { type: 'all', includeCommission: false, applyGST: false, gstRound: false }
     };
@@ -330,19 +333,16 @@
       return amt;
     }
 
-    // STATUS DETECTION: Paid/Unpaid for S1 (robust)
+    // Robust paid/unpaid detection (commission + negative status)
     function getS1Status(r, statusIdx, headers, commissionIdx) {
-      // 1. If commission is blank, null, 0, undefined, treat as Unpaid
       let comm = commissionIdx !== undefined && commissionIdx !== "" && commissionIdx !== null ? r[headers[commissionIdx]] : undefined;
       if (comm === undefined || comm === null || comm === "" || (typeof comm === "string" && comm.trim() === "") || Number(comm) === 0) return "Unpaid";
-      // 2. If status field negative word, treat as Unpaid
       let statusText = (statusIdx !== undefined && statusIdx !== "" && statusIdx !== null) ? r[headers[statusIdx]] : undefined;
       if (typeof statusText === "string") {
         let s = statusText.trim().toLowerCase();
         if (/^(unpaid|fail|cancelled|not[\s_-]*paid|pending|await|reject|bounce|decline|invalid|hold|error|reversed|dispute|withheld|void)/.test(s)) return "Unpaid";
         if (/^(paid|success|completed|done|approved)/.test(s)) return "Paid";
       }
-      // 3. Otherwise, treat as Paid
       return "Paid";
     }
     function getS2Status() { return "Paid"; }
@@ -382,11 +382,11 @@
         const id = r1[s1.headers[m.appId.source1]];
         if (!id) return;
         const r2 = map2.get(id.toString());
-        const s1status = getS1Status(r1, m.status.source1, s1.headers, commIdx1);
+        const s1status = getS1Status(r1, m.status.source1, s1.headers, m.commission.source1);
         const s2status = r2 ? getS2Status() : null;
         let a1 = applyGSTAmount(r1[s1.headers[m.amount.source1]]);
         let a2 = r2 ? applyGSTAmount(r2[s2.headers[m.amount.source2]]) : 0;
-        let comm1 = commIdx1 !== "" && commIdx1 !== undefined ? r1[s1.headers[commIdx1]] : undefined;
+        let comm1 = m.commission.source1 !== "" && m.commission.source1 !== undefined ? r1[s1.headers[m.commission.source1]] : undefined;
         // S1 Paid but missing in S2
         if (s1status === "Paid" && !r2)
           scenarios["S1 Paid but missing in S2"].push({ appId: id, s1Amount: a1, s1Status: s1status, date: r1[s1.headers[m.date.source1]] });
