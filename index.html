@@ -63,6 +63,17 @@
             border-radius: 12px;
             padding: 24px;
         }
+        .upload-box.source2 {
+            border-color: #059669;
+            background: #f0fdf4;
+        }
+        .upload-box.source2::after {
+            content: "(Paid Source)";
+            color: #059669;
+            font-size: 0.875rem;
+            margin-top: 8px;
+            display: block;
+        }
         .file-input { display: none; }
         .upload-btn {
             background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
@@ -72,6 +83,9 @@
             border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
+        }
+        .upload-btn.source2 {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
         }
         
         /* File info and validation styles */
@@ -211,6 +225,14 @@
             font-family: monospace;
             text-align: right;
         }
+        .amount-cell.paid {
+            color: #059669;
+        }
+        .amount-cell.paid::after {
+            content: " ✓";
+            color: #059669;
+            font-weight: bold;
+        }
         .variance-cell {
             font-family: monospace;
             text-align: right;
@@ -266,7 +288,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <div class="user-info" id="user-info">User: ksismad | UTC 2025-06-19 22:08:36</div>
+            <div class="user-info" id="user-info">User: ksismad | UTC 2025-06-20 14:29:08</div>
             <h1>🔍 App ID Analyzer</h1>
             <p>Compare and analyze app transaction data</p>
         </div>
@@ -279,10 +301,10 @@
                 <div id="file-info-1" class="file-info"></div>
             </div>
             
-            <div class="upload-box">
-                <h3>Source 2 File</h3>
+            <div class="upload-box source2">
+                <h3>Source 2 File (Paid Source)</h3>
                 <input type="file" id="file-input-2" class="file-input" accept=".xlsx,.xls">
-                <button class="upload-btn" id="upload-btn-2">Choose File</button>
+                <button class="upload-btn source2" id="upload-btn-2">Choose File</button>
                 <div id="file-info-2" class="file-info"></div>
             </div>
         </div>
@@ -338,7 +360,7 @@
             columnMappings: {},
             userInfo: {
                 login: 'ksismad',
-                currentUTC: '2025-06-19 22:08:36'
+                currentUTC: '2025-06-20 14:29:08'
             },
             analysisOptions: {
                 type: 'all',
@@ -412,7 +434,7 @@
                             file: file,
                             data: data,
                             headers: data[0],
-                            records: data.slice(1)
+                            records: data.slice(1).map(record => ({ ...record, isPaid: true }))
                         };
                         updateFileInfo(2, [file]);
                         setupColumnMappings();
@@ -461,10 +483,26 @@
             if (!headers1.length || !headers2.length) return;
             
             const requiredColumns = [
-                { id: 'appId', label: 'App ID' },
-                { id: 'amount', label: 'Amount' },
-                { id: 'date', label: 'Date' },
-                { id: 'status', label: 'Status' }
+                { 
+                    id: 'appId', 
+                    label: 'App ID',
+                    patterns: [/app.*id/i, /application.*id/i, /id/i]
+                },
+                { 
+                    id: 'amount', 
+                    label: 'Amount',
+                    patterns: [/amount/i, /total/i, /value/i, /payment/i]
+                },
+                { 
+                    id: 'date', 
+                    label: 'Date',
+                    patterns: [/date/i, /timestamp/i, /time/i]
+                },
+                { 
+                    id: 'status', 
+                    label: 'Status',
+                    patterns: [/status/i, /state/i, /condition/i]
+                }
             ];
             
             DOM.columnMappings.innerHTML = `
@@ -492,28 +530,35 @@
             
             // Auto-detect columns
             requiredColumns.forEach(col => {
-                const pattern = new RegExp(col.id, 'i');
                 const source1Select = document.getElementById(`mapping-source1-${col.id}`);
                 const source2Select = document.getElementById(`mapping-source2-${col.id}`);
                 
-                headers1.forEach((header, index) => {
-                    if (pattern.test(header)) {
-                        source1Select.value = index;
-                    }
-                });
+                // Try to find matches using patterns
+                let source1Match = findBestMatch(headers1, col.patterns);
+                let source2Match = findBestMatch(headers2, col.patterns);
                 
-                headers2.forEach((header, index) => {
-                    if (pattern.test(header)) {
-                        source2Select.value = index;
-                    }
-                });
+                if (source1Match !== '') {
+                    source1Select.value = source1Match;
+                }
+                if (source2Match !== '') {
+                    source2Select.value = source2Match;
+                }
                 
-                // Update state when mapping changes
                 source1Select.addEventListener('change', updateColumnMappings);
                 source2Select.addEventListener('change', updateColumnMappings);
             });
             
             updateColumnMappings();
+        }
+
+        function findBestMatch(headers, patterns) {
+            for (const pattern of patterns) {
+                const index = headers.findIndex(header => 
+                    header && pattern.test(header.toString())
+                );
+                if (index !== -1) return index;
+            }
+            return '';
         }
 
         function updateColumnMappings() {
@@ -551,6 +596,7 @@
             source2Data.forEach(record => {
                 const appId = record[mappings.appId.source2];
                 if (appId) {
+                    record.isPaid = true; // Mark source 2 as paid
                     source2Map.set(appId.toString(), record);
                 }
             });
@@ -586,7 +632,8 @@
                             status1: record1[mappings.status.source1],
                             status2: record2[mappings.status.source2],
                             date1: record1[mappings.date.source1],
-                            date2: record2[mappings.date.source2]
+                            date2: record2[mappings.date.source2],
+                            isPaid: true // Mark as paid since it's from source 2
                         };
                         
                         results.mismatches.push(mismatch);
@@ -608,7 +655,8 @@
                         amount: parseFloat(record1[mappings.amount.source1]) || 0,
                         status: record1[mappings.status.source1],
                         date: record1[mappings.date.source1],
-                        source: 'source1'
+                        source: 'source1',
+                        isPaid: false
                     });
                 }
             });
@@ -628,7 +676,8 @@
                         amount: parseFloat(record2[mappings.amount.source2]) || 0,
                         status: record2[mappings.status.source2],
                         date: record2[mappings.date.source2],
-                        source: 'source2'
+                        source: 'source2',
+                        isPaid: true // Mark as paid since it's from source 2
                     });
                 }
             });
@@ -739,7 +788,7 @@
                                 <tr>
                                     <th>App ID</th>
                                     <th>Source 1 Amount</th>
-                                    <th>Source 2 Amount</th>
+                                    <th>Source 2 Amount (Paid)</th>
                                     <th>Variance</th>
                                     <th>Status</th>
                                     <th>Date</th>
@@ -750,7 +799,7 @@
                                     <tr>
                                         <td>${item.appId}</td>
                                         <td class="amount-cell">₹${item.amount1.toFixed(2)}</td>
-                                        <td class="amount-cell">₹${item.amount2.toFixed(2)}</td>
+                                        <td class="amount-cell paid">₹${item.amount2.toFixed(2)}</td>
                                         <td class="variance-cell ${
                                             item.variance > 0 ? 'positive-variance' : 'negative-variance'
                                         }">₹${item.variance.toFixed(2)}</td>
@@ -781,66 +830,9 @@
                                     ${results.missing.map(item => `
                                         <tr>
                                             <td>${item.appId}</td>
-                                            <td class="amount-cell">₹${item.amount.toFixed(2)}</td>
+                                            <td class="amount-cell ${item.isPaid ? 'paid' : ''}">
+                                                ₹${item.amount.toFixed(2)}
+                                            </td>
                                             <td>${item.status || 'N/A'}</td>
                                             <td>${item.date || 'N/A'}</td>
-                                            <td>${item.source === 'source1' ? 'Source 2' : 'Source 1'}</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                ` : ''}
-            `;
-            
-            DOM.results.innerHTML = formattedResults;
-            DOM.results.classList.add('show');
-        }
-
-        // --- EVENT HANDLERS ---
-        DOM.analyzeBtn.addEventListener('click', function() {
-            showLoading();
-            setTimeout(() => {
-                try {
-                    const results = analyzeData();
-                    displayResults(results);
-                } catch (err) {
-                    showError('Analysis error: ' + err.message);
-                }
-                hideLoading();
-            }, 100);
-        });
-
-        DOM.analysisType.addEventListener('change', function() {
-            STATE.analysisOptions.type = this.value;
-        });
-
-        DOM.includeCommission.addEventListener('change', function() {
-            STATE.analysisOptions.includeCommission = this.checked;
-        });
-
-        DOM.applyGST.addEventListener('change', function() {
-            STATE.analysisOptions.applyGST = this.checked;
-        });
-
-        DOM.varianceThreshold.addEventListener('change', function() {
-            STATE.analysisOptions.varianceThreshold = parseFloat(this.value) || 0.01;
-        });
-
-        // --- INITIALIZATION ---
-        function updateUserInfo() {
-            const now = new Date();
-            const utcString = now.toISOString().replace('T', ' ').slice(0, 19);
-            STATE.userInfo.currentUTC = utcString;
-            DOM.userInfo.textContent = `User: ${STATE.userInfo.login} | UTC ${utcString}`;
-        }
-
-        // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
-            updateUserInfo();
-            setInterval(updateUserInfo, 15000);
-        });
-    </script>
-</body>
-</html>
+                                            <td>${item.source === 'source1' ? 'Source 2'
