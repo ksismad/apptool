@@ -67,7 +67,7 @@
 <body>
   <div class="container">
     <div class="header">
-      <div class="user-info" id="user-info">User: ksismad | UTC 2025-06-20 19:19:38</div>
+      <div class="user-info" id="user-info">User: ksismad | UTC 2025-06-20 19:24:25</div>
       <h1>🔍 App ID Analyzer</h1>
       <p>Advanced red alert analysis for app transaction data, with Excel export of all records and scenario highlights.</p>
     </div>
@@ -101,6 +101,11 @@
       <div class="option-group">
         <label>TDS % (for S1):</label>
         <input type="number" id="tds-percent" value="2" step="0.01" min="0" max="100" style="width:60px;">
+        <label style="margin-left:32px;">Apply 18% GST (S1 Amount):</label>
+        <input type="checkbox" id="apply-gst" checked>
+        <label style="margin-left:12px;">
+          <input type="checkbox" id="gst-roundoff"> Round off GST Amount
+        </label>
       </div>
     </div>
 
@@ -118,7 +123,7 @@
     // STATE
     const STATE = {
       source1Files: [], source2File: null, columnMappings: {},
-      analysisOptions: { type:'all', includeCommission:false, tdsPercent:2 },
+      analysisOptions: { type:'all', includeCommission:false, tdsPercent:2, applyGST:true, gstRoundoff:false },
       allRecordsForExport: []
     };
     // DOM
@@ -135,6 +140,8 @@
       analysisType: $('#analysis-type')[0],
       includeCommission: $('#include-commission')[0],
       tdsPercent: $('#tds-percent')[0],
+      applyGST: $('#apply-gst')[0],
+      gstRoundoff: $('#gst-roundoff')[0],
       analyzeBtn: $('#analyze-btn')[0],
       downloadBtn: $('#download-btn')[0],
       results: $('#results')[0],
@@ -326,6 +333,8 @@
         };
       });
       STATE.analysisOptions.tdsPercent = parseFloat(DOM.tdsPercent.value)||2;
+      STATE.analysisOptions.applyGST = DOM.applyGST.checked;
+      STATE.analysisOptions.gstRoundoff = DOM.gstRoundoff.checked;
       updateAnalyzeBtn();
     }
 
@@ -337,7 +346,6 @@
       DOM.analyzeBtn.textContent=ok?'Analyze Data':'Please select & map columns';
     }
 
-    // --- RED ALERT LOGIC + ALL RECORDS ---
     function getField(record, colIdx, headers) {
       if (colIdx === undefined || colIdx === null || colIdx === "") return "";
       const idx = parseInt(colIdx);
@@ -351,13 +359,24 @@
       return /paid/.test(v) ? "Paid" : /unpaid/.test(v) ? "Unpaid" : (parseFloat(val)>0 ? "Paid":"Unpaid");
     }
 
-    // Returns { redAlertsByScenario, allRecordsFlat }
+    function applyGSTToAmount(amount, applyGST, roundoff) {
+      let amt = parseFloat(amount)||0;
+      if(applyGST){
+        amt = amt * 1.18;
+        if(roundoff) amt = Math.round(amt);
+        else amt = Number(amt.toFixed(2));
+      }
+      return amt;
+    }
+
     function analyzeDataAndAllRecords(){
       const s1Files = STATE.source1Files;
       const s2File = STATE.source2File;
       const m = STATE.columnMappings;
       const includeCommission = DOM.includeCommission.checked;
       const tdsPercent = parseFloat(DOM.tdsPercent.value)||2;
+      const applyGST = DOM.applyGST.checked;
+      const gstRoundoff = DOM.gstRoundoff.checked;
 
       let redAlertsByScenario = {
         "S1 Paid but missing in S2": [],
@@ -371,7 +390,6 @@
         "S1 Paid, S2 Paid but amount different": []
       };
 
-      // Index S1 and S2 records by appId for easy lookup, and detect duplicates
       let s1AppIdMap = new Map(), s2AppIdMap = new Map(), s1Duplicates = [], s2Duplicates = [];
       let allS1Ids = [], allS2Ids = [];
 
@@ -393,12 +411,11 @@
         else s2AppIdMap.set(id,{rec:r,stat:"Paid",headers:s2File.headers});
       });
 
-      // Red alert logic as before...
       s1AppIdMap.forEach((val,id)=>{
         if(val.stat==="Paid" && !s2AppIdMap.has(id)){
           redAlertsByScenario["S1 Paid but missing in S2"].push({
             appId: id,
-            s1Amount: getField(val.rec,m.amount.source1,val.headers),
+            s1Amount: applyGSTToAmount(getField(val.rec,m.amount.source1,val.headers), applyGST, gstRoundoff),
             s1Status: val.stat
           });
         }
@@ -425,7 +442,7 @@
       s2AppIdMap.forEach((val,id)=>{
         let s1 = s1AppIdMap.get(id);
         if(val.stat==="Paid" && s1 && s1.stat==="Paid"){
-          let s1Amount = parseFloat(getField(s1.rec,m.amount.source1,s1.headers))||0;
+          let s1Amount = applyGSTToAmount(getField(s1.rec,m.amount.source1,s1.headers), applyGST, gstRoundoff);
           let s2Amount = parseFloat(getField(val.rec,m.amount.source2,val.headers))||0;
           if(Math.abs(s1Amount-s2Amount) > 0.01){
             redAlertsByScenario["S2 Paid, S1 Paid but amount different"].push({
@@ -444,7 +461,7 @@
       s2AppIdMap.forEach((val,id)=>{
         let s1 = s1AppIdMap.get(id);
         if(val.stat==="Paid" && s1 && s1.stat==="Unpaid"){
-          let s1Amount = parseFloat(getField(s1.rec,m.amount.source1,s1.headers))||0;
+          let s1Amount = applyGSTToAmount(getField(s1.rec,m.amount.source1,s1.headers), applyGST, gstRoundoff);
           let s2Amount = parseFloat(getField(val.rec,m.amount.source2,val.headers))||0;
           if(Math.abs(s1Amount-s2Amount) > 0.01){
             redAlertsByScenario["S2 Paid, S1 Unpaid and amount different"].push({
@@ -459,7 +476,7 @@
         s1AppIdMap.forEach((val,id)=>{
           if(val.stat==="Paid"){
             let comm = parseFloat(getField(val.rec,m.commission.source1,val.headers))||0;
-            let amt = parseFloat(getField(val.rec,m.amount.source1,val.headers))||0;
+            let amt = applyGSTToAmount(getField(val.rec,m.amount.source1,val.headers), applyGST, gstRoundoff);
             let expectedComm = amt*tdsPercent/100;
             if(Math.abs(comm-expectedComm) > 0.01){
               redAlertsByScenario["Commission deviation (for S1 Paid)"].push({
@@ -478,11 +495,10 @@
         rec1: d.r1, rec2: d.r2
       }));
 
-      // ALL RECORDS FLAT: create a flat, scenario-annotated export
+      // ALL RECORDS FLAT: create a flat, scenario-annotated export (with GST handling)
       let allRecordsFlat = [];
       let s1Exported = new Set(), s2Exported = new Set();
 
-      // Export from S1
       s1Files.forEach(sf=>{
         sf.records.forEach(r=>{
           const id=getField(r,m.appId.source1,sf.headers);
@@ -490,27 +506,27 @@
           const stat = normalizeStatus(getField(r,m.status.source1,sf.headers));
           let s2 = s2AppIdMap.get(id);
           let scenario = [];
+          let s1Amount = applyGSTToAmount(getField(r,m.amount.source1,sf.headers), applyGST, gstRoundoff);
+          let s2Amount = s2 ? parseFloat(getField(s2.rec,m.amount.source2,s2.headers))||0 : "";
           if(stat==="Paid" && !s2) scenario.push("S1 Paid but missing in S2");
           if(s2 && s2.stat==="Paid" && stat==="Unpaid") scenario.push("S2 Paid, S1 Unpaid");
-          if(s2 && stat==="Paid" && s2.stat==="Paid" && Math.abs((parseFloat(getField(r,m.amount.source1,sf.headers))||0)-(parseFloat(getField(s2.rec,m.amount.source2,s2.headers))||0))>0.01)
+          if(s2 && stat==="Paid" && s2.stat==="Paid" && Math.abs(s1Amount-s2Amount)>0.01)
             scenario.push("S2 Paid, S1 Paid but amount different");
-          if(s2 && s2.stat==="Paid" && stat==="Unpaid" &&
-            Math.abs((parseFloat(getField(r,m.amount.source1,sf.headers))||0)-(parseFloat(getField(s2.rec,m.amount.source2,s2.headers))||0))>0.01)
+          if(s2 && s2.stat==="Paid" && stat==="Unpaid" && Math.abs(s1Amount-s2Amount)>0.01)
             scenario.push("S2 Paid, S1 Unpaid and amount different");
           if(includeCommission && stat==="Paid"){
             let comm = parseFloat(getField(r,m.commission.source1,sf.headers))||0;
-            let amt = parseFloat(getField(r,m.amount.source1,sf.headers))||0;
-            let expectedComm = amt*tdsPercent/100;
+            let expectedComm = s1Amount*tdsPercent/100;
             if(Math.abs(comm-expectedComm) > 0.01) scenario.push("Commission deviation (for S1 Paid)");
           }
           if(allS1Ids.filter(x=>x===id).length>1) scenario.push("Duplicates in S1");
-          if(s2 && stat==="Paid" && s2.stat==="Paid" && Math.abs((parseFloat(getField(r,m.amount.source1,sf.headers))||0)-(parseFloat(getField(s2.rec,m.amount.source2,s2.headers))||0))>0.01)
+          if(s2 && stat==="Paid" && s2.stat==="Paid" && Math.abs(s1Amount-s2Amount)>0.01)
             scenario.push("S1 Paid, S2 Paid but amount different");
           allRecordsFlat.push({
             "Record Source": "S1",
             "File": sf.file.name,
             "App ID": id,
-            "S1 Amount": getField(r,m.amount.source1,sf.headers),
+            "S1 Amount (GST Applied)": s1Amount,
             "S1 Commission": getField(r,m.commission.source1,sf.headers),
             "S1 Status": stat,
             "S1 Date": getField(r,m.date.source1,sf.headers),
@@ -522,7 +538,6 @@
           s1Exported.add(id);
         });
       });
-      // Export from S2 not in S1
       s2File.records.forEach(r=>{
         const id=getField(r,m.appId.source2,s2File.headers);
         if(!id || s1Exported.has(id)) return;
@@ -534,7 +549,7 @@
           "Record Source": "S2",
           "File": s2File.file.name,
           "App ID": id,
-          "S1 Amount": "",
+          "S1 Amount (GST Applied)": "",
           "S1 Commission": "",
           "S1 Status": "",
           "S1 Date": "",
@@ -574,7 +589,6 @@
     }
 
     function exportAllRecordsToExcel(allRecords){
-      // Compose worksheet
       if(!allRecords.length) return showError("Nothing to export");
       const ws = XLSX.utils.json_to_sheet(allRecords);
       const wb = XLSX.utils.book_new();
@@ -582,7 +596,6 @@
       XLSX.writeFile(wb, "all_app_records_with_red_alerts.xlsx");
     }
 
-    // EVENT: analyze & show results (and enable download)
     DOM.analyzeBtn.onclick = ()=>{
       showLoading();
       setTimeout(()=>{
@@ -595,7 +608,6 @@
         hideLoading();
       },100);
     };
-
     DOM.downloadBtn.onclick = ()=>{
       exportAllRecordsToExcel(STATE.allRecordsForExport);
     };
@@ -604,10 +616,12 @@
       initFileHandlers();
       updateUserInfo();
       setInterval(updateUserInfo,15000);
-      DOM.analysisType.onchange = DOM.includeCommission.onchange = DOM.tdsPercent.oninput = function() {
+      DOM.analysisType.onchange = DOM.includeCommission.onchange = DOM.tdsPercent.oninput = DOM.applyGST.onchange = DOM.gstRoundoff.onchange = function() {
         STATE.analysisOptions.type = DOM.analysisType.value;
         STATE.analysisOptions.includeCommission = DOM.includeCommission.checked;
         STATE.analysisOptions.tdsPercent = parseFloat(DOM.tdsPercent.value)||2;
+        STATE.analysisOptions.applyGST = DOM.applyGST.checked;
+        STATE.analysisOptions.gstRoundoff = DOM.gstRoundoff.checked;
       };
     });
   </script>
