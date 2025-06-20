@@ -99,16 +99,15 @@
   </div>
   <div id="loading-overlay" class="loading-overlay"><div class="spinner"></div></div>
   <script>
-    // Hardcode Experience Yet Modern Smartass Coder Mode ON
+    // Modern Smartass Coder Mode ON
 
-    // STATE
     const STATE = {
       source1Files: [],
       source2Files: [],
       columnMappings: {},
       analysisOptions: { type: 'all', includeCommission: false, applyGST: false, gstRound: false }
     };
-    // DOM
+
     const DOM = {
       fileInput1: document.getElementById('file-input-1'),
       fileInput2: document.getElementById('file-input-2'),
@@ -146,7 +145,6 @@
       DOM.utcDt.textContent = now;
     }
 
-    // FILE HANDLERS AND UI (multi upload, file-to-file merge)
     function initFileHandlers() {
       DOM.uploadBtn1.onclick = e => { e.preventDefault(); DOM.fileInput1.value = ''; DOM.fileInput1.click(); };
       DOM.fileInput1.onchange = e => { if (e.target.files.length) handleMultiFileSelection(e.target.files, 1); };
@@ -165,7 +163,6 @@
       });
     }
 
-    // Accepts .xlsx, .xls, .csv, auto-detects
     function processAnyFile(file, cb) {
       const ext = file.name.split('.').pop().toLowerCase();
       if (["xlsx", "xls"].includes(ext)) {
@@ -238,7 +235,7 @@
         fileArr.forEach((f, idx) => {
           processAnyFile(f, (err, data) => {
             if (!err) {
-              STATE.source2Files.push({ file: f, headers: data[0], records: data.slice(1).map(row => { let obj = {...row}; obj.isPaid = true; return obj; }) });
+              STATE.source2Files.push({ file: f, headers: data[0], records: data.slice(1) });
               let li = document.createElement('li');
               li.textContent = f.name + ` (${data.length-1} rows)`;
               DOM.fileList2.appendChild(li);
@@ -258,7 +255,6 @@
       }
     }
 
-    // S1 file-to-file merge dialog
     function showS1FileMergeDialog() {
       if (STATE.source1Files.length < 2) return;
       let names = STATE.source1Files.map((f,i)=>`${i+1}. ${f.file.name}`);
@@ -293,7 +289,7 @@
       updateAnalyzeBtn();
     }
 
-    // COLUMN MAP: auto-detect per file (S1), disables S2 commission and status
+    // COLUMN MAP: status mapping not required for S2!
     function setupColumnMappings() {
       const s1 = STATE.source1Files[0];
       const s2 = STATE.source2Files[0];
@@ -301,13 +297,12 @@
       const h2 = s2 ? s2.headers : [];
       if (!h1.length || !h2.length) return;
       // S1: appId, amount, commission, date, status
-      // S2: appId, amount, date
+      // S2: appId, amount, date (NO COMMISSION/STATUS!)
       const cols = [
         { id: 'appId', lbl: 'App ID', patt: [/app.?id/i, /id/i] },
         { id: 'amount', lbl: 'Amount', patt: [/amount/i, /total/i] },
         { id: 'commission', lbl: 'Commission', patt: [/commiss|tds|fee|charge/i] },
-        { id: 'date', lbl: 'Date', patt: [/date/i, /timestamp/i, /txn.*date/i, /created/i] },
-        { id: 'status', lbl: 'Status', patt: [/status/i, /state/i, /paid|unpaid|not paid|fail/i] }
+        { id: 'date', lbl: 'Date', patt: [/date/i, /timestamp/i, /txn.*date/i, /created/i] }
       ];
       let html = `<div class="mapping-group"><strong>Column Mappings</strong>`;
       cols.forEach(c => {
@@ -315,11 +310,9 @@
                   <select id="ms1-${c.id}"><option value="">Select S1</option>${
                     h1.map((h, i) => `<option value="${i}">${h}</option>`).join('')
                   }</select>`;
-        if (c.id !== 'commission') {
-          html += `<select id="ms2-${c.id}"><option value="">Select S2</option>${
-                    h2.map((h, i) => `<option value="${i}">${h}</option>`).join('')
-                  }</select>`;
-        }
+        html += `<select id="ms2-${c.id}"><option value="">Select S2</option>${
+                  h2.map((h, i) => `<option value="${i}">${h}</option>`).join('')
+                }</select>`;
         html += `</div>`;
       });
       html += `</div>`;
@@ -329,8 +322,9 @@
         const s2sel = document.getElementById(`ms2-${c.id}`);
         const auto1 = findMatch(h1, c.patt), auto2 = findMatch(h2, c.patt);
         if (auto1 !== '') s1sel.value = auto1;
-        if (s2sel && auto2 !== '') s2sel.value = auto2;
-        [s1sel, s2sel].forEach(el => { if (el) el.onchange = updateColumnMappings; });
+        if (auto2 !== '') s2sel.value = auto2;
+        s1sel.onchange = updateColumnMappings;
+        s2sel.onchange = updateColumnMappings;
       });
       updateColumnMappings();
     }
@@ -343,7 +337,7 @@
     }
     function updateColumnMappings() {
       STATE.columnMappings = {};
-      ['appId', 'amount', 'commission', 'date', 'status'].forEach(k => {
+      ['appId', 'amount', 'commission', 'date'].forEach(k => {
         let s1el = document.getElementById(`ms1-${k}`);
         let s2el = document.getElementById(`ms2-${k}`);
         STATE.columnMappings[k] = {
@@ -361,7 +355,6 @@
       DOM.analyzeBtn.textContent = ok ? 'Analyze Data' : 'Please select & map columns';
     }
 
-    // GST logic
     function applyGSTAmount(amount) {
       let amt = parseFloat(amount) || 0;
       if (DOM.applyGST.checked) {
@@ -372,25 +365,35 @@
       return amt;
     }
 
-    // Robust paid/unpaid detection for S1:
-    // Paid if commission is not blank/zero AND status data cell does NOT contain negative words (and not 'unpaid')
-    // Unpaid if commission is blank/zero OR status data cell contains negative words or 'unpaid'
+    // S1 Paid/Unpaid detection: commission blank/zero or status cell negative/unpaid
     function getS1Status(r, headers, commissionIdx, statusIdx) {
       let comm = commissionIdx !== undefined && commissionIdx !== "" && commissionIdx !== null ? r[headers[commissionIdx]] : undefined;
       if (comm === undefined || comm === null || comm === "" || (typeof comm === "string" && comm.trim() === "") || Number(comm) === 0) return "Unpaid";
-      if (statusIdx !== undefined && statusIdx !== "" && statusIdx !== null) {
-        let statusText = r[headers[statusIdx]];
-        if (typeof statusText === "string") {
-          let s = statusText.trim().toLowerCase();
-          if (/unpaid|fail|cancel|not[\s_-]*paid|pending|await|reject|bounce|decline|invalid|hold|error|reversed|dispute|withheld|void/.test(s)) return "Unpaid";
-          if (/paid|success|completed|done|approved/.test(s)) return "Paid";
+      // Try to auto-detect a status column from S1 headers/data if it exists
+      let statusText = null;
+      if (statusIdx !== undefined && statusIdx !== "" && statusIdx !== null) statusText = r[headers[statusIdx]];
+      else {
+        // Try to find status column by data: check each string cell for negative/paid word
+        for (let i = 0; i < headers.length; ++i) {
+          let val = r[headers[i]];
+          if (typeof val === "string") {
+            let v = val.trim().toLowerCase();
+            if (/unpaid|fail|cancel|not[\s_-]*paid|pending|await|reject|bounce|decline|invalid|hold|error|reversed|dispute|withheld|void|paid|success|completed|done|approved/.test(v)) {
+              statusText = val; break;
+            }
+          }
         }
+      }
+      if (typeof statusText === "string") {
+        let s = statusText.trim().toLowerCase();
+        if (/unpaid|fail|cancel|not[\s_-]*paid|pending|await|reject|bounce|decline|invalid|hold|error|reversed|dispute|withheld|void/.test(s)) return "Unpaid";
+        if (/paid|success|completed|done|approved/.test(s)) return "Paid";
       }
       return "Paid";
     }
+
     function getS2Status() { return "Paid"; }
 
-    // ANALYSIS
     function analyzeData() {
       const s1 = STATE.source1Files[0];
       const s2 = STATE.source2Files[0];
@@ -400,17 +403,14 @@
       const m = STATE.columnMappings;
       const commIdx1 = m.commission.source1;
       const statusIdx1 = m.status ? m.status.source1 : null;
-      // Index S2 by AppId
       const map2 = new Map();
       d2.forEach(r => {
         const id = r[s2.headers[m.appId.source2]];
         if (id) map2.set(id.toString(), r);
       });
-      // Duplicate maps
       const s1DupMap = {}, s2DupMap = {};
       d1.forEach(r => { let id = r[s1.headers[m.appId.source1]]; if (!id) return; s1DupMap[id] = (s1DupMap[id]||0)+1; });
       d2.forEach(r => { let id = r[s2.headers[m.appId.source2]]; if (!id) return; s2DupMap[id] = (s2DupMap[id]||0)+1; });
-      // Buckets
       const scenarios = {
         "S1 Paid but missing in S2": [],
         "S2 Paid but missing in S1": [],
@@ -422,56 +422,44 @@
         "Duplicates in S2": [],
         "S1 Paid, S2 Paid but amount different": []
       };
-      // S1 driven
       d1.forEach(r1 => {
         const id = r1[s1.headers[m.appId.source1]];
         if (!id) return;
         const r2 = map2.get(id.toString());
         const s1status = getS1Status(r1, s1.headers, m.commission.source1, m.status ? m.status.source1 : null);
-        const s2status = r2 ? getS2Status() : null;
+        const s2status = "Paid";
         let a1 = applyGSTAmount(r1[s1.headers[m.amount.source1]]);
         let a2 = r2 ? applyGSTAmount(r2[s2.headers[m.amount.source2]]) : 0;
         let comm1 = m.commission.source1 !== "" && m.commission.source1 !== undefined ? r1[s1.headers[m.commission.source1]] : undefined;
-        // S1 Paid but missing in S2
         if (s1status === "Paid" && !r2)
           scenarios["S1 Paid but missing in S2"].push({ appId: id, s1Amount: a1, s1Status: s1status, date: r1[s1.headers[m.date.source1]] });
-        // S2 Paid, S1 Unpaid
         if (r2 && s2status === "Paid" && s1status === "Unpaid")
           scenarios["S2 Paid, S1 Unpaid"].push({ appId: id, s1Amount: a1, s2Amount: a2, s1Status, s2Status: s2status, date: r1[s1.headers[m.date.source1]] });
-        // S2 Paid, S1 Paid but amount different
         if (r2 && s2status === "Paid" && s1status === "Paid" && Math.abs(a1 - a2) > 0.01)
           scenarios["S2 Paid, S1 Paid but amount different"].push({ appId: id, s1Amount: a1, s2Amount: a2, s1Status, s2Status: s2status, date: r1[s1.headers[m.date.source1]] });
-        // S2 Paid, S1 Unpaid and amount different
         if (r2 && s2status === "Paid" && s1status === "Unpaid" && Math.abs(a1 - a2) > 0.01)
           scenarios["S2 Paid, S1 Unpaid and amount different"].push({ appId: id, s1Amount: a1, s2Amount: a2, s1Status, s2Status: s2status, date: r1[s1.headers[m.date.source1]] });
-        // S1 Paid, S2 Paid but amount different
         if (r2 && s1status === "Paid" && s2status === "Paid" && Math.abs(a1 - a2) > 0.01)
           scenarios["S1 Paid, S2 Paid but amount different"].push({ appId: id, s1Amount: a1, s2Amount: a2, s1Status, s2Status: s2status, date: r1[s1.headers[m.date.source1]] });
-        // Commission deviation (for S1 Paid)
         if (STATE.analysisOptions.includeCommission && s1status === "Paid") {
           let expected = a1 * 0.02;
           let commVal = parseFloat(comm1) || 0;
           if (Math.abs(commVal - expected) > 0.01)
             scenarios["Commission deviation (for S1 Paid)"].push({ appId: id, s1Amount: a1, commission: commVal, expectedCommission: expected.toFixed(2), date: r1[s1.headers[m.date.source1]] });
         }
-        // Duplicates in S1
         if (s1DupMap[id] && s1DupMap[id] > 1) {
           scenarios["Duplicates in S1"].push({ appId: id, s1Amount: a1, s1Status: s1status, date: r1[s1.headers[m.date.source1]] });
         }
       });
-      // S2 driven
       d2.forEach(r2 => {
         const id = r2[s2.headers[m.appId.source2]];
         if (!id) return;
-        const s2status = getS2Status();
         const r1 = d1.find(x => x[s1.headers[m.appId.source1]] == id);
         let a2 = applyGSTAmount(r2[s2.headers[m.amount.source2]]);
-        // S2 Paid but missing in S1
-        if (!r1 && s2status === "Paid")
-          scenarios["S2 Paid but missing in S1"].push({ appId: id, s2Amount: a2, s2Status: s2status, date: r2[s2.headers[m.date.source2]] });
-        // Duplicates in S2
+        if (!r1)
+          scenarios["S2 Paid but missing in S1"].push({ appId: id, s2Amount: a2, s2Status: "Paid", date: r2[s2.headers[m.date.source2]] });
         if (s2DupMap[id] && s2DupMap[id] > 1) {
-          scenarios["Duplicates in S2"].push({ appId: id, s2Amount: a2, s2Status: s2status, date: r2[s2.headers[m.date.source2]] });
+          scenarios["Duplicates in S2"].push({ appId: id, s2Amount: a2, s2Status: "Paid", date: r2[s2.headers[m.date.source2]] });
         }
       });
       return scenarios;
