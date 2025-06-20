@@ -32,17 +32,22 @@
     select, input[type="number"] { padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; }
     .analyze-btn { width: calc(100% - 64px); margin:32px; padding:16px; background: linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; border-radius:12px; font-size:1.2rem; font-weight:600; cursor:pointer;}
     .analyze-btn:disabled { background:#9ca3af; cursor:not-allowed; }
-
+    .gst-options { margin-top: 12px; background: #f0f9ff; border-left: 4px solid #0ea5e9; padding: 12px; border-radius: 6px; }
+    .gst-options label { display: inline-block; margin-right: 16px; font-size: 0.9rem; }
+    
     .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin: 24px 0; }
     .stat-card { background:#fff; padding:20px; border-radius:12px; box-shadow:0 2px 4px rgba(0,0,0,0.1); }
     .stat-card h3 { margin-top: 0; margin-bottom: 8px; color: #4b5563; }
     .stat-value { font-size: 1.5rem; font-weight: bold; color: #111827; margin-bottom: 4px; }
     .stat-subtext { font-size: 0.875rem; color: #6b7280; }
 
-    .alert-container { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 24px; }
-    .alert-box { background: #fff7ed; border-left: 5px solid #f59e42; border-radius: 8px; box-shadow: 0 2px 8px rgba(60,60,100,0.06); padding: 16px; flex: 1 1 300px; }
+    .alert-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .alert-box { background: #fff7ed; border-left: 5px solid #f59e42; border-radius: 8px; box-shadow: 0 2px 8px rgba(60,60,100,0.06); padding: 16px; height: 100%; }
+    .alert-box.empty { background: #f8fafc; border-left-color: #94a3b8; }
     .alert-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 4px; color: #d97706; }
+    .alert-box.empty .alert-title { color: #64748b; }
     .alert-count { font-size: 1.2rem; font-weight: 800; color: #b45309; margin-bottom: 8px; }
+    .alert-box.empty .alert-count { color: #94a3b8; }
     .alert-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
     .alert-table th, .alert-table td { border-bottom: 1px solid #f3e8ff; padding: 6px 4px; text-align: left; }
     .alert-table th { background: #f8fafc; color: #4b5563; }
@@ -68,7 +73,7 @@
 <body>
   <div class="container">
     <div class="header">
-      <div class="user-info" id="user-info">User: ksismad | UTC 2025-06-20 20:24:21</div>
+      <div class="user-info" id="user-info">User: ksismad | UTC 2025-06-20 20:32:53</div>
       <h1>🔍 App ID Analyzer</h1>
       <p>Compare and analyze app transaction data - red alert detection</p>
     </div>
@@ -101,11 +106,12 @@
           <option value="missing">Only Missing Records</option>
         </select>
         <label><input type="checkbox" id="include-commission"> Include Commission Analysis</label>
-        <label><input type="checkbox" id="apply-gst"> Apply 18% GST</label>
       </div>
-      <div class="option-group">
-        <label>Variance Threshold:</label>
-        <input type="number" id="variance-threshold" value="0.01" step="0.01" min="0">
+      
+      <div class="gst-options">
+        <h4 style="margin-top:0;margin-bottom:8px;">GST Options</h4>
+        <label><input type="checkbox" id="apply-gst"> Apply 18% GST to S1 source</label>
+        <label><input type="checkbox" id="gst-round" disabled> Round GST amounts</label>
       </div>
     </div>
 
@@ -120,9 +126,14 @@
     // STATE
     const STATE = {
       source1Files: [], 
-      source2File: null, 
+      source2Files: [],
       columnMappings: {},
-      analysisOptions: { type:'all', includeCommission:false, applyGST:false, varianceThreshold:0.01 }
+      analysisOptions: { 
+        type: 'all', 
+        includeCommission: false, 
+        applyGST: false,
+        gstRound: false
+      }
     };
     
     // DOM ELEMENTS
@@ -145,7 +156,7 @@
       analysisType: document.getElementById('analysis-type'),
       includeCommission: document.getElementById('include-commission'),
       applyGST: document.getElementById('apply-gst'),
-      varianceThreshold: document.getElementById('variance-threshold'),
+      gstRound: document.getElementById('gst-round'),
       analyzeBtn: document.getElementById('analyze-btn'),
       results: document.getElementById('results'),
       loadingOverlay: document.getElementById('loading-overlay'),
@@ -176,6 +187,26 @@
 
     // FILE HANDLERS
     function initFileHandlers() {
+      // GST toggle handler
+      DOM.applyGST.onchange = function() {
+        DOM.gstRound.disabled = !this.checked;
+        if (!this.checked) DOM.gstRound.checked = false;
+        STATE.analysisOptions.applyGST = this.checked;
+        STATE.analysisOptions.gstRound = DOM.gstRound.checked;
+      };
+      
+      DOM.gstRound.onchange = function() {
+        STATE.analysisOptions.gstRound = this.checked;
+      };
+      
+      DOM.includeCommission.onchange = function() {
+        STATE.analysisOptions.includeCommission = this.checked;
+      };
+      
+      DOM.analysisType.onchange = function() {
+        STATE.analysisOptions.type = this.value;
+      };
+      
       // Click handlers for upload buttons
       DOM.uploadBtn1.onclick = e => {
         e.preventDefault(); 
@@ -271,23 +302,25 @@
         });
       } else {
         // Source 2 - single file 
-        const file = files[0];
-        processExcelFile(file, (err, data) => {
-          if(!err) {
-            STATE.source2File = {
-              file: file,
-              headers: data[0],
-              records: data.slice(1).map(r => ({...r, isPaid: true})) // Always mark S2 as paid
-            };
-            DOM.fileInfo2.textContent = file.name; 
-            DOM.fileInfo2.classList.add('show');
-            
-            setupColumnMappings(); 
-            updateAnalyzeBtn();
-          } else {
-            showError(err.message);
-          }
-          hideLoading();
+        STATE.source2Files = [];
+        Array.from(files).forEach((file, i) => {
+          processExcelFile(file, (err, data) => {
+            if(!err) {
+              STATE.source2Files.push({
+                file: file,
+                headers: data[0],
+                records: data.slice(1).map(r => ({...r, isPaid: true})) // Always mark S2 as paid
+              });
+              DOM.fileInfo2.textContent = file.name; 
+              DOM.fileInfo2.classList.add('show');
+              
+              setupColumnMappings(); 
+              updateAnalyzeBtn();
+            } else {
+              showError(err.message);
+            }
+            hideLoading();
+          });
         });
       }
     }
@@ -372,7 +405,7 @@
     // COLUMN MAPPING
     function setupColumnMappings() {
       const s1Headers = STATE.source1Files[0]?.headers || [];
-      const s2Headers = STATE.source2File?.headers || [];
+      const s2Headers = STATE.source2Files[0]?.headers || [];
       
       if(!s1Headers.length || !s2Headers.length) return;
       
@@ -458,7 +491,7 @@
       const requiredMappings = ['appId', 'amount', 'date'];
       
       const s1Valid = STATE.source1Files.length > 0;
-      const s2Valid = STATE.source2File !== null;
+      const s2Valid = STATE.source2Files.length > 0;
       
       const mappingsValid = requiredMappings.every(id => {
         const mapping = STATE.columnMappings[id];
@@ -472,11 +505,18 @@
     }
 
     // GST calculation
-    function applyGST(amount) {
+    function applyGSTToS1Amount(amount) {
       if (!DOM.applyGST.checked) return amount;
       
       // Apply 18% GST
-      return amount * 1.18;
+      let result = amount * 1.18;
+      
+      // Round if option checked
+      if (DOM.gstRound.checked) {
+        result = Math.round(result);
+      }
+      
+      return result;
     }
 
     // STATUS DETECTION
@@ -504,19 +544,17 @@
     // ANALYSIS
     function analyzeData() {
       try {
-        const s1 = STATE.source1Files[0];
-        const s2 = STATE.source2File;
-        
-        // Safety check
-        if (!s1 || !s2) {
+        if (STATE.source1Files.length === 0 || STATE.source2Files.length === 0) {
           showError("Missing source files");
           return {};
         }
         
+        const s1 = STATE.source1Files[0];
+        const s2 = STATE.source2Files[0];
+        
         const s1Records = s1.records;
         const s2Records = s2.records;
         const mappings = STATE.columnMappings;
-        const varianceThreshold = parseFloat(DOM.varianceThreshold.value) || 0.01;
         
         // Get column indices
         const s1AppIdIdx = parseInt(mappings.appId.source1);
@@ -528,13 +566,16 @@
         const s2AmountIdx = parseInt(mappings.amount.source2);
         const s2DateIdx = parseInt(mappings.date.source2);
         
-        // Create result object
-        const results = {
-          matches: 0,
-          mismatches: [],
-          missing: [],
-          redAlerts: [],
-          commissionDeviations: []
+        // Define all red alert scenarios
+        const scenarios = {
+          "S1 Paid but missing in S2": [],
+          "S2 Paid but missing in S1": [],
+          "S2 Paid, S1 Unpaid": [],
+          "S2 Paid, S1 Paid but amount different": [],
+          "S2 Paid, S1 Unpaid and amount different": [],
+          "Commission deviation (for S1 Paid)": [],
+          "Duplicates in S1": [],
+          "Duplicates in S2": [],
         };
         
         // Index S2 by App ID for quick lookup
@@ -567,28 +608,20 @@
           const s1Status = getS1Status(r1, s1CommissionIdx);
           const s2Status = "Paid"; // Always "Paid" for S2
           
-          // Get amounts 
+          // Get amounts (apply GST only to S1)
           let amount1 = parseFloat(r1[s1AmountIdx]) || 0;
+          amount1 = applyGSTToS1Amount(amount1);
+          
           let amount2 = r2 ? parseFloat(r2[s2AmountIdx]) || 0 : 0;
           
-          // Apply GST if needed
-          if (DOM.applyGST.checked) {
-            amount1 = applyGST(amount1);
-            amount2 = applyGST(amount2);
-          }
-          
-          // COMPARISON LOGIC
           if (r2) {
             // Both S1 and S2 have this record
             const variance = amount2 - amount1;
             const absVariance = Math.abs(variance);
             
-            if (absVariance <= varianceThreshold) {
-              // Amounts match within threshold
-              results.matches++;
-            } else {
-              // Amounts differ beyond threshold
-              const item = {
+            if (s1Status === "Paid" && s2Status === "Paid" && absVariance > 0) {
+              // Both paid but amounts differ
+              scenarios["S2 Paid, S1 Paid but amount different"].push({
                 appId: appId,
                 s1Amount: amount1,
                 s2Amount: amount2,
@@ -596,72 +629,67 @@
                 s1Status: s1Status,
                 s2Status: s2Status,
                 date: r1[s1DateIdx] || 'N/A'
-              };
-              
-              results.mismatches.push(item);
-              
-              // Different scenarios based on status
-              if (s1Status === "Paid" && s2Status === "Paid") {
-                // Both paid but amounts differ
-                results.redAlerts.push({
-                  ...item,
-                  scenario: "S1 Paid, S2 Paid but amount different"
+              });
+            } else if (s1Status === "Unpaid" && s2Status === "Paid") {
+              if (absVariance > 0) {
+                // S2 paid but S1 unpaid and amounts differ
+                scenarios["S2 Paid, S1 Unpaid and amount different"].push({
+                  appId: appId,
+                  s1Amount: amount1,
+                  s2Amount: amount2,
+                  variance: variance,
+                  s1Status: s1Status,
+                  s2Status: s2Status,
+                  date: r1[s1DateIdx] || 'N/A'
                 });
-              } else if (s1Status === "Unpaid" && s2Status === "Paid") {
-                // S2 paid but S1 unpaid
-                results.redAlerts.push({
-                  ...item,
-                  scenario: "S2 Paid, S1 Unpaid and amount different"
+              } else {
+                // S2 paid but S1 unpaid (amounts match)
+                scenarios["S2 Paid, S1 Unpaid"].push({
+                  appId: appId,
+                  s1Amount: amount1,
+                  s2Amount: amount2,
+                  s1Status: s1Status,
+                  s2Status: s2Status,
+                  date: r1[s1DateIdx] || 'N/A'
                 });
-              }
-              
-              // Check commission deviation
-              if (DOM.includeCommission.checked && s1Status === "Paid" && s1CommissionIdx !== null) {
-                const commValue = parseFloat(r1[s1CommissionIdx]) || 0;
-                const expectedCommission = amount1 * 0.02; // 2% commission
-                
-                if (Math.abs(commValue - expectedCommission) > 0.01) {
-                  results.commissionDeviations.push({
-                    appId: appId,
-                    s1Amount: amount1,
-                    commission: commValue,
-                    expectedCommission: expectedCommission,
-                    date: r1[s1DateIdx] || 'N/A'
-                  });
-                }
               }
             }
             
+            // Commission analysis
+            if (DOM.includeCommission.checked && s1Status === "Paid" && s1CommissionIdx !== null) {
+              const commValue = parseFloat(r1[s1CommissionIdx]) || 0;
+              const expectedCommission = amount1 * 0.02; // 2% commission
+              
+              if (Math.abs(commValue - expectedCommission) > 0.01) {
+                scenarios["Commission deviation (for S1 Paid)"].push({
+                  appId: appId,
+                  s1Amount: amount1,
+                  commission: commValue,
+                  expectedCommission: expectedCommission,
+                  date: r1[s1DateIdx] || 'N/A'
+                });
+              }
+            }
           } else {
             // In S1 but missing from S2
-            results.missing.push({
-              appId: appId,
-              amount: amount1,
-              status: s1Status,
-              date: r1[s1DateIdx] || 'N/A',
-              source: 'source1'
-            });
-            
             // If S1 is paid, it's a red alert when missing from S2
             if (s1Status === "Paid") {
-              results.redAlerts.push({
+              scenarios["S1 Paid but missing in S2"].push({
                 appId: appId,
                 s1Amount: amount1,
                 s1Status: s1Status,
-                date: r1[s1DateIdx] || 'N/A',
-                scenario: "S1 Paid but missing in S2"
+                date: r1[s1DateIdx] || 'N/A'
               });
             }
           }
           
           // Check for duplicates in S1
           if (s1DupMap[appId] > 1) {
-            results.redAlerts.push({
+            scenarios["Duplicates in S1"].push({
               appId: appId,
               s1Amount: amount1,
               s1Status: s1Status,
-              date: r1[s1DateIdx] || 'N/A',
-              scenario: "Duplicates in S1"
+              date: r1[s1DateIdx] || 'N/A'
             });
           }
         });
@@ -672,150 +700,124 @@
           if (!appId) return;
           
           // Check if exists in S1
-          const s1HasApp = s1Records.some(r1 => r1[s1AppIdIdx] == appId);
+          const s1HasApp = s1Records.some(r1 => String(r1[s1AppIdIdx]) === String(appId));
           
           if (!s1HasApp) {
             // In S2 but missing from S1
             const amount2 = parseFloat(r2[s2AmountIdx]) || 0;
             
-            results.missing.push({
+            scenarios["S2 Paid but missing in S1"].push({
               appId: appId,
-              amount: DOM.applyGST.checked ? applyGST(amount2) : amount2,
-              status: "Paid", // S2 is always Paid
-              date: r2[s2DateIdx] || 'N/A',
-              source: 'source2'
-            });
-            
-            // S2 is always Paid, so missing from S1 is a red alert
-            results.redAlerts.push({
-              appId: appId,
-              s2Amount: DOM.applyGST.checked ? applyGST(amount2) : amount2,
+              s2Amount: amount2,
               s2Status: "Paid",
-              date: r2[s2DateIdx] || 'N/A',
-              scenario: "S2 Paid but missing in S1"
+              date: r2[s2DateIdx] || 'N/A'
             });
           }
           
           // Check for duplicates in S2
           if (s2DupMap[appId] > 1) {
-            results.redAlerts.push({
+            scenarios["Duplicates in S2"].push({
               appId: appId,
-              s2Amount: DOM.applyGST.checked ? applyGST(parseFloat(r2[s2AmountIdx]) || 0) : (parseFloat(r2[s2AmountIdx]) || 0),
+              s2Amount: parseFloat(r2[s2AmountIdx]) || 0,
               s2Status: "Paid",
-              date: r2[s2DateIdx] || 'N/A',
-              scenario: "Duplicates in S2"
+              date: r2[s2DateIdx] || 'N/A'
             });
           }
         });
         
-        // Calculate totals
-        results.redAlertsTotal = results.redAlerts.reduce((sum, item) => 
-          sum + (item.variance || item.s2Amount || item.s1Amount || 0), 0);
-          
-        results.commissionDeviationsTotal = results.commissionDeviations.reduce((sum, item) => 
-          sum + Math.abs((item.commission || 0) - (item.expectedCommission || 0)), 0);
-          
-        results.totalPotentialLoss = results.redAlertsTotal + results.commissionDeviationsTotal;
-        
-        console.log("Analysis complete", results);
-        return results;
+        console.log("Analysis complete", scenarios);
+        return scenarios;
       } catch (error) {
         console.error("Analysis error:", error);
         showError(`Analysis error: ${error.message || error}`);
-        return {};
+        return {
+          "S1 Paid but missing in S2": [],
+          "S2 Paid but missing in S1": [],
+          "S2 Paid, S1 Unpaid": [],
+          "S2 Paid, S1 Paid but amount different": [],
+          "S2 Paid, S1 Unpaid and amount different": [],
+          "Commission deviation (for S1 Paid)": [],
+          "Duplicates in S1": [],
+          "Duplicates in S2": []
+        };
       }
     }
 
     // DISPLAY RESULTS
-    function displayResults(results) {
-      if (!results) {
-        showError("No analysis results available");
-        return;
-      }
-      
+    function displayResults(scenarios) {
       try {
-        // Display summary statistics
+        // Count total issues
+        let totalIssues = 0;
+        Object.values(scenarios).forEach(arr => totalIssues += arr.length);
+        
+        // Create stats section
         let html = `
           <div class="results-header">
             <h2>Analysis Results</h2>
+            <p>${totalIssues} total issues found across ${Object.keys(scenarios).length} scenarios</p>
           </div>
+        `;
+        
+        // Create red alert scenario boxes
+        html += `<h3 style="margin-top:32px;">Red Alert Scenarios</h3>`;
+        html += `<div class="alert-container">`;
+        
+        // Fixed list of scenarios in specific order
+        const orderedScenarios = [
+          "S1 Paid but missing in S2",
+          "S2 Paid but missing in S1",
+          "S2 Paid, S1 Unpaid",
+          "S2 Paid, S1 Paid but amount different",
+          "S2 Paid, S1 Unpaid and amount different",
+          "Commission deviation (for S1 Paid)",
+          "Duplicates in S1",
+          "Duplicates in S2"
+        ];
+        
+        // Always show all scenario boxes
+        orderedScenarios.forEach(scenarioName => {
+          const records = scenarios[scenarioName] || [];
+          const isEmpty = records.length === 0;
           
-          <div class="stats-grid">
-            <div class="stat-card">
-              <h3>Total Potential Loss</h3>
-              <div class="stat-value">₹${(results.totalPotentialLoss || 0).toFixed(2)}</div>
-              <div class="stat-subtext">(Red Alerts + Commission Deviations)</div>
-            </div>
-            
-            <div class="stat-card">
-              <h3>Red Alerts</h3>
-              <div class="stat-value">${results.redAlerts ? results.redAlerts.length : 0}</div>
-              <div class="stat-subtext">₹${(results.redAlertsTotal || 0).toFixed(2)}</div>
-            </div>
-            
-            <div class="stat-card">
-              <h3>Commission Deviations</h3>
-              <div class="stat-value">${results.commissionDeviations ? results.commissionDeviations.length : 0}</div>
-              <div class="stat-subtext">₹${(results.commissionDeviationsTotal || 0).toFixed(2)}</div>
-            </div>
-            
-            <div class="stat-card">
-              <h3>Total Records</h3>
-              <div class="stat-value">${(results.matches || 0) + 
-                                      (results.mismatches ? results.mismatches.length : 0) + 
-                                      (results.missing ? results.missing.length : 0)}</div>
-              <div class="stat-subtext">${results.matches || 0} matches, ${results.mismatches ? results.mismatches.length : 0} mismatches, ${results.missing ? results.missing.length : 0} missing</div>
-            </div>
-          </div>`;
+          html += `
+            <div class="alert-box ${isEmpty ? 'empty' : ''}">
+              <div class="alert-title">${scenarioName}</div>
+              <div class="alert-count">${records.length} records</div>
+          `;
           
-        // Group red alerts by scenario
-        if (results.redAlerts && results.redAlerts.length > 0) {
-          // Group alerts by scenario
-          const scenarioMap = {};
-          results.redAlerts.forEach(alert => {
-            const scenario = alert.scenario || "Other Alerts";
-            if (!scenarioMap[scenario]) scenarioMap[scenario] = [];
-            scenarioMap[scenario].push(alert);
-          });
-          
-          html += `<h2>Red Alert Scenarios</h2><div class="alert-container">`;
-          
-          // Display each scenario group
-          Object.entries(scenarioMap).forEach(([scenario, alerts]) => {
-            html += `
-              <div class="alert-box">
-                <div class="alert-title">${scenario}</div>
-                <div class="alert-count">${alerts.length}</div>
-                <table class="alert-table">
-                  <thead><tr>`;
-                  
-            // Determine columns based on first item
-            const firstAlert = alerts[0];
-            const columns = Object.keys(firstAlert).filter(k => k !== 'scenario');
+          if (!isEmpty) {
+            html += `<table class="alert-table"><thead><tr>`;
             
-            html += columns.map(col => `<th>${col.replace(/([A-Z])/g, ' $1')}</th>`).join('');
+            // Get column headers from first record
+            const firstRecord = records[0];
+            const columns = Object.keys(firstRecord);
+            
+            // Display headers
+            columns.forEach(column => {
+              html += `<th>${column.replace(/([A-Z])/g, ' $1')}</th>`;
+            });
+            
             html += `</tr></thead><tbody>`;
             
-            // Show at most 8 records per scenario
-            alerts.slice(0, 8).forEach(alert => {
+            // Display up to 5 records per scenario
+            records.slice(0, 5).forEach(record => {
               html += `<tr>`;
               
-              columns.forEach(col => {
-                let value = alert[col];
+              columns.forEach(column => {
+                let value = record[column];
                 let cellClass = '';
                 
-                // Style based on column
-                if (col.includes('Status')) {
+                // Format and style cells based on content
+                if (column.includes('Status')) {
                   cellClass = value === 'Paid' ? 'paid-cell' : 'unpaid-cell';
-                } else if (col.includes('Amount')) {
+                } else if (column.includes('Amount')) {
                   cellClass = 'amount-cell';
-                } else if (col.includes('variance')) {
+                  value = typeof value === 'number' ? value.toFixed(2) : value;
+                } else if (column.includes('variance')) {
                   cellClass = 'variance-cell ' + (value > 0 ? 'positive-variance' : 'negative-variance');
-                }
-                
-                // Format numeric values
-                if (typeof value === 'number') {
-                  value = value.toFixed(2);
+                  value = typeof value === 'number' ? value.toFixed(2) : value;
+                } else if (column.includes('commission')) {
+                  value = typeof value === 'number' ? value.toFixed(2) : value;
                 }
                 
                 html += `<td class="${cellClass}">${value || 'N/A'}</td>`;
@@ -826,20 +828,17 @@
             
             html += `</tbody></table>`;
             
-            // Show count if more items exist
-            if (alerts.length > 8) {
-              html += `<div style="margin-top:8px;font-size:0.85rem;color:#666;">+ ${alerts.length - 8} more records</div>`;
+            if (records.length > 5) {
+              html += `<div style="margin-top:8px;font-size:0.85rem;color:#666;">+ ${records.length - 5} more records</div>`;
             }
-            
-            html += `</div>`;
-          });
+          } else {
+            html += `<div style="color:#94a3b8;font-style:italic;margin-top:8px;">No records found</div>`;
+          }
           
           html += `</div>`;
-        } else {
-          html += `<div style="margin:24px 0;padding:16px;background:#f0fdf4;border-radius:8px;text-align:center;">
-            <h3 style="color:#059669;margin:0;">No Red Alerts Found</h3>
-          </div>`;
-        }
+        });
+        
+        html += `</div>`;
         
         // Set the HTML and show results
         DOM.results.innerHTML = html;
@@ -879,23 +878,6 @@
       
       // Update time periodically
       setInterval(updateUserInfo, 15000);
-      
-      // Setup analysis option handlers
-      DOM.analysisType.onchange = () => {
-        STATE.analysisOptions.type = DOM.analysisType.value;
-      };
-      
-      DOM.includeCommission.onchange = () => {
-        STATE.analysisOptions.includeCommission = DOM.includeCommission.checked;
-      };
-      
-      DOM.applyGST.onchange = () => {
-        STATE.analysisOptions.applyGST = DOM.applyGST.checked;
-      };
-      
-      DOM.varianceThreshold.onchange = () => {
-        STATE.analysisOptions.varianceThreshold = parseFloat(DOM.varianceThreshold.value) || 0.01;
-      };
       
       console.log("App ID Analyzer initialized");
     });
