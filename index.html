@@ -12,6 +12,7 @@
     .header { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; padding: 32px; position: relative; }
     .header h1 { margin: 0 0 8px; font-size: 2.25rem; }
     .user-info { position: absolute; top: 16px; right: 32px; background: rgba(255,255,255,0.15); padding: 7px 16px; border-radius: 20px; font-size: 0.93rem; }
+
     .upload-section { display: flex; gap: 24px; padding: 32px; flex-wrap: wrap; }
     .upload-box { flex: 1; min-width: 300px; background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 12px; padding: 24px; position: relative; transition: border-color .2s, background .2s; }
     .upload-box.source2 { border-color: #059669; background: #f0fdf4; }
@@ -67,6 +68,7 @@
         <button class="upload-btn" id="upload-btn-1">Choose Files</button>
         <div id="file-info-1" class="file-info"></div>
         <ul id="file-list-1" class="file-list"></ul>
+        <button id="merge-btn-1" class="merge-btn" style="display:none;">Merge File to File (S1)</button>
       </div>
       <div class="upload-box source2" id="drop2">
         <h3>Source 2 Files (Paid)</h3>
@@ -103,6 +105,7 @@
     const STATE = {
       source1Files: [],
       source2Files: [],
+      mergedS1: null,
       columnMappings: {},
       analysisOptions: { type: 'all', includeCommission: false, applyGST: false, gstRound: false }
     };
@@ -118,6 +121,7 @@
       fileInfo2: document.getElementById('file-info-2'),
       fileList1: document.getElementById('file-list-1'),
       fileList2: document.getElementById('file-list-2'),
+      mergeBtn1: document.getElementById('merge-btn-1'),
       columnMappings: document.getElementById('column-mappings'),
       analysisType: document.getElementById('analysis-type'),
       includeCommission: document.getElementById('include-commission'),
@@ -149,6 +153,7 @@
       DOM.fileInput1.onchange = e => { if (e.target.files.length) handleMultiFileSelection(e.target.files, 1); };
       DOM.uploadBtn2.onclick = e => { e.preventDefault(); DOM.fileInput2.value = ''; DOM.fileInput2.click(); };
       DOM.fileInput2.onchange = e => { if (e.target.files.length) handleMultiFileSelection(e.target.files, 2); };
+      DOM.mergeBtn1.onclick = () => { showS1FileMergeDialog(); };
       [ {drop:DOM.drop1,src:1}, {drop:DOM.drop2,src:2} ].forEach(o => {
         o.drop.ondragover = e => { e.preventDefault(); o.drop.classList.add('dragover'); };
         o.drop.ondragleave = e => { e.preventDefault(); o.drop.classList.remove('dragover'); };
@@ -220,6 +225,7 @@
             if (loaded === fileArr.length) {
               DOM.fileInfo1.textContent = fileArr.map(x => x.name).join(', ');
               DOM.fileInfo1.classList.add('show');
+              DOM.mergeBtn1.style.display = fileArr.length > 1 ? 'inline-block' : 'none';
               hideLoading();
               setupColumnMappings();
               updateAnalyzeBtn();
@@ -254,6 +260,43 @@
       }
     }
 
+    // S1 file-to-file merge dialog
+    function showS1FileMergeDialog() {
+      if (STATE.source1Files.length < 2) return;
+      let names = STATE.source1Files.map((f,i)=>`${i+1}. ${f.file.name}`);
+      let srcIdx = prompt("S1 file merge: Enter the source file number to merge FROM:\n" + names.join("\n"));
+      let tgtIdx = prompt("S1 file merge: Enter the target file number to merge INTO:\n" + names.join("\n"));
+      if (!srcIdx || !tgtIdx) return;
+      srcIdx = parseInt(srcIdx.trim(),10)-1;
+      tgtIdx = parseInt(tgtIdx.trim(),10)-1;
+      if (srcIdx === tgtIdx || srcIdx < 0 || tgtIdx < 0 || srcIdx >= STATE.source1Files.length || tgtIdx >= STATE.source1Files.length) {
+        showError("Invalid merge selection.");
+        return;
+      }
+      let srcFile = STATE.source1Files[srcIdx];
+      let tgtFile = STATE.source1Files[tgtIdx];
+      // Basic header check (must match for merge)
+      if (JSON.stringify(srcFile.headers) !== JSON.stringify(tgtFile.headers)) {
+        showError("Can't merge: Headers do not match between files.");
+        return;
+      }
+      tgtFile.records = tgtFile.records.concat(srcFile.records);
+      STATE.source1Files.splice(srcIdx,1);
+      // Update UI
+      DOM.fileList1.innerHTML = '';
+      STATE.source1Files.forEach((f) => {
+        let li = document.createElement('li');
+        li.textContent = f.file.name + ` (${f.records.length} rows)`;
+        DOM.fileList1.appendChild(li);
+      });
+      DOM.fileInfo1.textContent = STATE.source1Files.map(x => x.file.name).join(', ');
+      DOM.fileInfo1.classList.add('show');
+      if (STATE.source1Files.length > 1) DOM.mergeBtn1.style.display = 'inline-block';
+      else DOM.mergeBtn1.style.display = 'none';
+      setupColumnMappings();
+      updateAnalyzeBtn();
+    }
+
     // COLUMN MAP: auto-detect per file (S1), disables S2 commission and status
     function setupColumnMappings() {
       const s1 = STATE.source1Files[0];
@@ -264,11 +307,11 @@
       // S1: appId, amount, commission, date, status
       // S2: appId, amount, date
       const cols = [
-        { id: 'appId', lbl: 'App ID', patt: [/app.*id/i, /id/i] },
+        { id: 'appId', lbl: 'App ID', patt: [/app.?id/i, /id/i] },
         { id: 'amount', lbl: 'Amount', patt: [/amount/i, /total/i] },
         { id: 'commission', lbl: 'Commission', patt: [/commiss|tds|fee|charge/i] },
         { id: 'date', lbl: 'Date', patt: [/date/i, /timestamp/i, /txn.*date/i, /created/i] },
-        { id: 'status', lbl: 'Status', patt: [/status/i, /state/i, /paid/i, /unpaid/i, /payment/i] }
+        { id: 'status', lbl: 'Status', patt: [/status/i, /state/i, /paid|unpaid|not paid|fail/i] }
       ];
       let html = `<div class="mapping-group"><strong>Column Mappings</strong>`;
       cols.forEach(c => {
@@ -288,9 +331,18 @@
       cols.forEach(c => {
         const s1sel = document.getElementById(`ms1-${c.id}`);
         const s2sel = document.getElementById(`ms2-${c.id}`);
-        const auto1 = findMatch(h1, c.patt), auto2 = findMatch(h2, c.patt);
-        if (auto1 !== '') s1sel.value = auto1;
-        if (s2sel && auto2 !== '') s2sel.value = auto2;
+        // Status auto-detect: select best status-like column, NOT just column called "status"
+        if (c.id === 'status') {
+          // Find a column that contains any negative/paid keywords or matches the commission logic
+          const negativeWords = /(unpaid|fail|cancel|not[\s_-]*paid|pending|await|reject|bounce|decline|invalid|hold|error|reversed|dispute|withheld|void)/i;
+          let idx = h1.findIndex(h => h && negativeWords.test(h));
+          if (idx === -1) idx = findMatch(h1, c.patt);
+          if (idx !== '') s1sel.value = idx;
+        } else {
+          const auto1 = findMatch(h1, c.patt), auto2 = findMatch(h2, c.patt);
+          if (auto1 !== '') s1sel.value = auto1;
+          if (s2sel && auto2 !== '') s2sel.value = auto2;
+        }
         [s1sel, s2sel].forEach(el => { if (el) el.onchange = updateColumnMappings; });
       });
       updateColumnMappings();
@@ -351,6 +403,7 @@
     function analyzeData() {
       const s1 = STATE.source1Files[0];
       const s2 = STATE.source2Files[0];
+      if (!s1 || !s2) { showError("Please select and map at least one file from each source."); return {}; }
       const d1 = s1.records;
       const d2 = s2.records;
       const m = STATE.columnMappings;
