@@ -12,6 +12,7 @@
     .header { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; padding: 32px; position: relative; }
     .header h1 { margin: 0 0 8px; font-size: 2.25rem; }
     .user-info { position: absolute; top: 16px; right: 32px; background: rgba(255,255,255,0.15); padding: 7px 16px; border-radius: 20px; font-size: 0.93rem; }
+
     .upload-section { display: flex; gap: 24px; padding: 32px; flex-wrap: wrap; }
     .upload-box { flex: 1; min-width: 300px; background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 12px; padding: 24px; position: relative; transition: border-color .2s, background .2s; }
     .upload-box.source2 { border-color: #059669; background: #f0fdf4; }
@@ -25,56 +26,51 @@
     .file-list {margin-top:8px;font-size:.98em;padding-left:0;list-style-type:none;}
     .file-list li{margin-bottom:2px;}
     .merge-btn {margin-top:8px;background:#38bdf8;color:#fff;border:none;padding:6px 16px;border-radius:6px;cursor:pointer;font-weight:600;}
+
     .column-mappings, .options-section, .results { padding: 0 32px; }
     .mapping-group, .option-group { margin-bottom: 24px; }
     select, input[type="number"] { padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; }
     .analyze-btn { width: calc(100% - 64px); margin:32px; padding:16px; background: linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; border-radius:12px; font-size:1.2rem; font-weight:600; cursor:pointer;}
     .analyze-btn:disabled { background:#9ca3af; cursor:not-allowed; }
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 24px 0; }
-    .stat-card { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-    .stat-card h3 { margin-top: 0; color: #4b5563; }
-    .stat-value { font-size: 1.5rem; font-weight: bold; color: #111827; margin: 8px 0; }
+
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin: 24px 0; }
+    .stat-card { background:#fff; padding:20px; border-radius:12px; box-shadow:0 2px 4px rgba(0,0,0,0.1); }
+    .stat-card h3 { margin-top: 0; margin-bottom: 8px; color: #4b5563; }
+    .stat-value { font-size: 1.5rem; font-weight: bold; color: #111827; margin-bottom: 4px; }
     .stat-subtext { font-size: 0.875rem; color: #6b7280; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
-    th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #e2e8f0; }
-    th { background: #f8fafc; font-weight: 600; color: #4b5563; }
+
+    .alert-container { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 24px; }
+    .alert-box { background: #fff7ed; border-left: 5px solid #f59e42; border-radius: 8px; box-shadow: 0 2px 8px rgba(60,60,100,0.06); padding: 16px; flex: 1 1 300px; }
+    .alert-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 4px; color: #d97706; }
+    .alert-count { font-size: 1.2rem; font-weight: 800; color: #b45309; margin-bottom: 8px; }
+    .alert-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    .alert-table th, .alert-table td { border-bottom: 1px solid #f3e8ff; padding: 6px 4px; text-align: left; }
+    .alert-table th { background: #f8fafc; color: #4b5563; }
+    .alert-table tr:last-child td { border-bottom: none; }
     .amount-cell { text-align: right; font-family: monospace; }
     .amount-cell.paid::after { content: " ✓"; color: #059669; }
+    .paid-cell { color: #059669; font-weight: bold; }
+    .unpaid-cell { color: #dc2626; font-weight: bold; }
     .variance-cell { text-align: right; font-family: monospace; font-weight: 600; }
     .positive-variance { color: #dc2626; }
     .negative-variance { color: #059669; }
-    
-    .alert-container { display: flex; flex-wrap: wrap; gap: 24px; margin-bottom: 32px; }
-    .alert-box { background: #fff7ed; border-left: 5px solid #f59e42; border-radius: 10px; box-shadow: 0 2px 10px rgba(60,60,100,0.06); padding: 18px 18px 10px 20px; flex: 1 1 330px; min-width:320px; max-width:420px; margin-bottom:12px;}
-    .alert-title { font-size:1.12rem; font-weight:700; margin-bottom:2px; color: #d97706;}
-    .alert-count { font-size:1.2rem; font-weight:800; color: #b45309; margin-bottom:6px;}
-    .alert-table { width:100%; border-collapse:collapse; font-size:0.99em;}
-    .alert-table th, .alert-table td { border-bottom:1px solid #f3e8ff; padding:6px 6px;}
-    .alert-table th { background:#f3f4f6;}
-    .alert-table tr:last-child td { border-bottom: none;}
-    .alert-table .amount-cell{ text-align:right;font-family:monospace;}
-    .alert-table .paid-cell { color: #059669; font-weight:bold;}
-    .alert-table .unpaid-cell { color:#dc2626; font-weight:bold;}
-    .alert-table .comm-cell { text-align:right; font-family:monospace;}
-    .alert-table small {color:#7c7c7c;}
-    .gst-section {margin-bottom:12px;}
-    .gst-section label {margin-right:10px;}
-    .loading-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.9); display: flex; align-items: center; justify-content: center; z-index: 1000; visibility: hidden; opacity: 0; transition: opacity .2s; }
-    .loading-overlay.show { visibility: visible; opacity: 1; }
-    .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite; }
-    .error-message { margin: 16px 32px; padding: 12px 16px; background: #fee2e2; color: #b91c1c; border-radius: 8px; display: none; }
-    .error-message.show { display: block; }
-    .debug-panel { margin: 16px 32px; padding: 12px 16px; background: #e0f2fe; color: #0369a1; border-radius: 8px; font-family: monospace; white-space: pre-wrap; display: none; }
-    .debug-panel.show { display: block; }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    .loading-overlay { position:fixed; inset:0; background:rgba(255,255,255,0.9); display:flex; align-items:center; justify-content:center; z-index:1000; visibility:hidden; opacity:0; transition:opacity .2s; }
+    .loading-overlay.show { visibility:visible; opacity:1; }
+    .spinner { width:40px; height:40px; border:4px solid #f3f3f3; border-top:4px solid #3498db; border-radius:50%; animation:spin 1s linear infinite; }
+
+    .error-message { margin:16px 32px; padding:12px 16px; background:#fee2e2; color:#b91c1c; border-radius:8px; display:none; }
+    .error-message.show { display:block; }
+
+    @keyframes spin { 0%{transform:rotate(0);}100%{transform:rotate(360deg);} }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <div class="user-info" id="user-info">User: ksismad | UTC <span id="utc-time">2025-06-20 20:16:58</span></div>
+      <div class="user-info" id="user-info">User: ksismad | UTC 2025-06-20 20:24:21</div>
       <h1>🔍 App ID Analyzer</h1>
-      <p>Advanced file-to-file merge, auto-detect paid/unpaid from commission</p>
+      <p>Compare and analyze app transaction data - red alert detection</p>
     </div>
 
     <div class="upload-section">
@@ -84,343 +80,327 @@
         <button class="upload-btn" id="upload-btn-1">Choose Files</button>
         <div id="file-info-1" class="file-info"></div>
         <ul id="file-list-1" class="file-list"></ul>
-        <button id="merge-btn-1" class="merge-btn" style="display:none;">Merge Files (S1)</button>
+        <button id="merge-btn-1" class="merge-btn" style="display:none;">Merge Files</button>
       </div>
       <div class="upload-box source2" id="drop2">
-        <h3>Source 2 Files (Always Paid)</h3>
-        <input type="file" id="file-input-2" class="file-input" multiple accept=".xlsx,.xls,.csv">
-        <button class="upload-btn source2" id="upload-btn-2">Choose Files</button>
+        <h3>Source 2 File (Always Paid)</h3>
+        <input type="file" id="file-input-2" class="file-input" accept=".xlsx,.xls,.csv">
+        <button class="upload-btn source2" id="upload-btn-2">Choose File</button>
         <div id="file-info-2" class="file-info"></div>
-        <ul id="file-list-2" class="file-list"></ul>
       </div>
     </div>
+
     <div id="column-mappings" class="column-mappings"></div>
+
     <div class="options-section">
-      <div class="gst-section">
-        <label><input type="checkbox" id="apply-gst"> Apply 18% GST to S1</label>
-        <label><input type="checkbox" id="gst-round"> Round GST Amount</label>
-      </div>
       <div class="option-group">
         <label>Analysis Type:</label>
         <select id="analysis-type">
           <option value="all">All Records</option>
-          <option value="redalerts">Red Alerts Only</option>
+          <option value="mismatches">Only Mismatches</option>
+          <option value="missing">Only Missing Records</option>
         </select>
         <label><input type="checkbox" id="include-commission"> Include Commission Analysis</label>
+        <label><input type="checkbox" id="apply-gst"> Apply 18% GST</label>
+      </div>
+      <div class="option-group">
+        <label>Variance Threshold:</label>
+        <input type="number" id="variance-threshold" value="0.01" step="0.01" min="0">
       </div>
     </div>
+
     <div id="error-message" class="error-message"></div>
-    <div id="debug-panel" class="debug-panel"></div>
     <button id="analyze-btn" class="analyze-btn" disabled>Analyze Data</button>
     <div id="results" class="results"></div>
   </div>
+
   <div id="loading-overlay" class="loading-overlay"><div class="spinner"></div></div>
+
   <script>
-    // HARDCODE EXPERIENCE CODER MODE ON
-
-    /******* STATE & DOM REFERENCES *******/
+    // STATE
     const STATE = {
-      source1Files: [],
-      source2Files: [],
+      source1Files: [], 
+      source2File: null, 
       columnMappings: {},
-      analysisOptions: { type: 'all', includeCommission: false, applyGST: false, gstRound: false }
+      analysisOptions: { type:'all', includeCommission:false, applyGST:false, varianceThreshold:0.01 }
     };
-
-    function $(id) { return document.getElementById(id.replace('#', '')); }
+    
+    // DOM ELEMENTS
+    function $(selector) {
+      return document.querySelector(selector);
+    }
     
     const DOM = {
-      fileInput1: $('#file-input-1'),
-      fileInput2: $('#file-input-2'),
-      uploadBtn1: $('#upload-btn-1'),
-      uploadBtn2: $('#upload-btn-2'),
-      drop1: $('#drop1'),
-      drop2: $('#drop2'),
-      fileInfo1: $('#file-info-1'),
-      fileInfo2: $('#file-info-2'),
-      fileList1: $('#file-list-1'),
-      fileList2: $('#file-list-2'),
-      mergeBtn1: $('#merge-btn-1'),
-      columnMappings: $('#column-mappings'),
-      analysisType: $('#analysis-type'),
-      includeCommission: $('#include-commission'),
-      applyGST: $('#apply-gst'),
-      gstRound: $('#gst-round'),
-      analyzeBtn: $('#analyze-btn'),
-      results: $('#results'),
-      loadingOverlay: $('#loading-overlay'),
-      errorMessage: $('#error-message'),
-      debugPanel: $('#debug-panel'),
-      userInfo: $('#user-info'),
-      utcTime: $('#utc-time')
+      fileInput1: document.getElementById('file-input-1'),
+      fileInput2: document.getElementById('file-input-2'),
+      uploadBtn1: document.getElementById('upload-btn-1'),
+      uploadBtn2: document.getElementById('upload-btn-2'),
+      drop1: document.getElementById('drop1'),
+      drop2: document.getElementById('drop2'),
+      fileInfo1: document.getElementById('file-info-1'),
+      fileInfo2: document.getElementById('file-info-2'),
+      fileList1: document.getElementById('file-list-1'),
+      mergeBtn1: document.getElementById('merge-btn-1'),
+      columnMappings: document.getElementById('column-mappings'),
+      analysisType: document.getElementById('analysis-type'),
+      includeCommission: document.getElementById('include-commission'),
+      applyGST: document.getElementById('apply-gst'),
+      varianceThreshold: document.getElementById('variance-threshold'),
+      analyzeBtn: document.getElementById('analyze-btn'),
+      results: document.getElementById('results'),
+      loadingOverlay: document.getElementById('loading-overlay'),
+      errorMessage: document.getElementById('error-message'),
+      userInfo: document.getElementById('user-info')
     };
 
-    /******* UTILITY FUNCTIONS *******/
-    function showLoading() { DOM.loadingOverlay.classList.add('show'); }
-    function hideLoading() { DOM.loadingOverlay.classList.remove('show'); }
+    // UTILITIES
+    function showLoading() { 
+      DOM.loadingOverlay.classList.add('show'); 
+    }
+    
+    function hideLoading() { 
+      DOM.loadingOverlay.classList.remove('show'); 
+    }
     
     function showError(msg) {
-      console.error("ERROR:", msg);
+      console.error("Error:", msg);
       DOM.errorMessage.textContent = msg;
       DOM.errorMessage.classList.add('show');
       setTimeout(() => DOM.errorMessage.classList.remove('show'), 5000);
     }
     
-    function debug(msg, data) {
-      console.log("DEBUG:", msg, data);
-      // Uncomment to see debug messages in UI
-      // DOM.debugPanel.textContent = typeof data === 'object' ? msg + ": " + JSON.stringify(data, null, 2) : msg;
-      // DOM.debugPanel.classList.add('show');
-    }
-    
     function updateUserInfo() {
-      const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
-      DOM.utcTime.textContent = now;
+      const now = new Date().toISOString().replace('T',' ').slice(0,19);
+      DOM.userInfo.textContent = `User: ksismad | UTC ${now}`;
     }
 
-    /******* FILE HANDLING *******/
+    // FILE HANDLERS
     function initFileHandlers() {
-      // Click handlers
-      DOM.uploadBtn1.onclick = e => { e.preventDefault(); DOM.fileInput1.value = ''; DOM.fileInput1.click(); };
-      DOM.fileInput1.onchange = e => { if (e.target.files.length) handleMultiFileSelection(e.target.files, 1); };
-      DOM.uploadBtn2.onclick = e => { e.preventDefault(); DOM.fileInput2.value = ''; DOM.fileInput2.click(); };
-      DOM.fileInput2.onchange = e => { if (e.target.files.length) handleMultiFileSelection(e.target.files, 2); };
-      DOM.mergeBtn1.onclick = showS1FileMergeDialog;
+      // Click handlers for upload buttons
+      DOM.uploadBtn1.onclick = e => {
+        e.preventDefault(); 
+        DOM.fileInput1.value = ''; 
+        DOM.fileInput1.click();
+      };
       
-      // Drag & drop
+      DOM.uploadBtn2.onclick = e => {
+        e.preventDefault(); 
+        DOM.fileInput2.value = ''; 
+        DOM.fileInput2.click();
+      };
+      
+      // File selection handlers
+      DOM.fileInput1.onchange = e => { 
+        if(e.target.files.length) handleFileSelection(e.target.files, 1); 
+      };
+      
+      DOM.fileInput2.onchange = e => { 
+        if(e.target.files.length) handleFileSelection([e.target.files[0]], 2); 
+      };
+      
+      // Drag & drop handlers
       [
         {drop: DOM.drop1, src: 1}, 
         {drop: DOM.drop2, src: 2}
       ].forEach(o => {
-        o.drop.ondragover = e => { e.preventDefault(); e.stopPropagation(); o.drop.classList.add('dragover'); };
-        o.drop.ondragleave = e => { e.preventDefault(); e.stopPropagation(); o.drop.classList.remove('dragover'); };
-        o.drop.ondrop = e => { 
-          e.preventDefault(); 
+        o.drop.ondragover = e => {
+          e.preventDefault();
+          e.stopPropagation();
+          o.drop.classList.add('dragover');
+        };
+        
+        o.drop.ondragleave = e => {
+          e.preventDefault();
+          e.stopPropagation();
+          o.drop.classList.remove('dragover');
+        };
+        
+        o.drop.ondrop = e => {
+          e.preventDefault();
           e.stopPropagation();
           o.drop.classList.remove('dragover');
           const files = e.dataTransfer.files;
-          if (files.length) handleMultiFileSelection(files, o.src);
+          if(files.length) handleFileSelection(o.src === 1 ? files : [files[0]], o.src);
         };
       });
       
-      // Options change handlers
-      DOM.analysisType.onchange = updateOptions;
-      DOM.includeCommission.onchange = updateOptions;
-      DOM.applyGST.onchange = updateOptions;
-      DOM.gstRound.onchange = updateOptions;
+      // Merge button handler
+      DOM.mergeBtn1.onclick = showMergeDialog;
     }
 
-    function updateOptions() {
-      STATE.analysisOptions = {
-        type: DOM.analysisType.value,
-        includeCommission: DOM.includeCommission.checked,
-        applyGST: DOM.applyGST.checked,
-        gstRound: DOM.gstRound.checked
-      };
-    }
-
-    function processAnyFile(file, cb) {
-      const ext = file.name.split('.').pop().toLowerCase();
-      if (["xlsx", "xls"].includes(ext)) {
-        processExcelFile(file, cb);
-      } else if (ext === "csv") {
-        processCSVFile(file, cb);
+    // File Processing
+    function handleFileSelection(files, src) {
+      if(!files.length) { 
+        showError('No files selected'); 
+        return;
+      }
+      
+      showLoading();
+      
+      if(src === 1) {
+        // Source 1 - can have multiple files
+        STATE.source1Files = [];
+        DOM.fileList1.innerHTML = '';
+        
+        Array.from(files).forEach((file, i) => {
+          processExcelFile(file, (err, data) => {
+            if(!err) {
+              STATE.source1Files.push({
+                file: file,
+                headers: data[0],
+                records: data.slice(1)
+              });
+              
+              // Add to file list UI
+              let li = document.createElement('li');
+              li.textContent = file.name + ` (${data.length - 1} rows)`;
+              DOM.fileList1.appendChild(li);
+            } else { 
+              showError(err.message); 
+            }
+            
+            if(i === files.length - 1) { 
+              DOM.fileInfo1.textContent = Array.from(files).map(x => x.name).join(', ');
+              DOM.fileInfo1.classList.add('show');
+              DOM.mergeBtn1.style.display = files.length > 1 ? 'inline-block' : 'none';
+              hideLoading(); 
+              setupColumnMappings(); 
+              updateAnalyzeBtn();
+            }
+          });
+        });
       } else {
-        cb(new Error("Unsupported file type. Use .xlsx, .xls, or .csv"));
+        // Source 2 - single file 
+        const file = files[0];
+        processExcelFile(file, (err, data) => {
+          if(!err) {
+            STATE.source2File = {
+              file: file,
+              headers: data[0],
+              records: data.slice(1).map(r => ({...r, isPaid: true})) // Always mark S2 as paid
+            };
+            DOM.fileInfo2.textContent = file.name; 
+            DOM.fileInfo2.classList.add('show');
+            
+            setupColumnMappings(); 
+            updateAnalyzeBtn();
+          } else {
+            showError(err.message);
+          }
+          hideLoading();
+        });
       }
     }
 
     function processExcelFile(file, cb) {
-      const rd = new FileReader();
-      rd.onload = e => {
-        try {
-          const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
-          const js = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
-          if (js.length < 2) return cb(new Error('No data rows in file'));
-          cb(null, js);
-        } catch (er) { cb(er); }
-      };
-      rd.onerror = () => cb(new Error('Error reading file'));
-      rd.readAsArrayBuffer(file);
-    }
-
-    function processCSVFile(file, cb) {
-      const rd = new FileReader();
-      rd.onload = e => {
-        try {
-          const wb = XLSX.read(e.target.result, { type: 'string' });
-          const js = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
-          if (js.length < 2) return cb(new Error('No data rows in file'));
-          cb(null, js);
-        } catch (er) { cb(er); }
-      };
-      rd.onerror = () => cb(new Error('Error reading file'));
-      rd.readAsText(file);
-    }
-
-    function handleMultiFileSelection(files, src) {
-      showLoading();
-      let fileArr = Array.from(files);
+      const reader = new FileReader();
       
-      if (src === 1) { // Source 1
-        STATE.source1Files = [];
-        DOM.fileList1.innerHTML = '';
-        
-        let loaded = 0;
-        fileArr.forEach((f, idx) => {
-          processAnyFile(f, (err, data) => {
-            if (!err) {
-              STATE.source1Files.push({ 
-                file: f, 
-                headers: data[0], 
-                records: data.slice(1)
-              });
-              
-              let li = document.createElement('li');
-              li.textContent = f.name + ` (${data.length-1} rows)`;
-              DOM.fileList1.appendChild(li);
-            } else {
-              showError(`S1: ${f.name} - ${err.message}`);
-            }
-            
-            loaded++;
-            if (loaded === fileArr.length) {
-              DOM.fileInfo1.textContent = fileArr.length + " file(s) loaded";
-              DOM.fileInfo1.classList.add('show');
-              DOM.mergeBtn1.style.display = fileArr.length > 1 ? 'inline-block' : 'none';
-              hideLoading();
-              setupColumnMappings();
-              updateAnalyzeBtn();
-            }
-          });
-        });
-      } else { // Source 2
-        STATE.source2Files = [];
-        DOM.fileList2.innerHTML = '';
-        
-        let loaded = 0;
-        fileArr.forEach((f, idx) => {
-          processAnyFile(f, (err, data) => {
-            if (!err) {
-              // S2 IS ALWAYS CONSIDERED PAID - No need for status field
-              STATE.source2Files.push({ 
-                file: f, 
-                headers: data[0], 
-                records: data.slice(1).map(r => ({...r, isPaid: true})) 
-              });
-              
-              let li = document.createElement('li');
-              li.textContent = f.name + ` (${data.length-1} rows)`;
-              DOM.fileList2.appendChild(li);
-            } else {
-              showError(`S2: ${f.name} - ${err.message}`);
-            }
-            
-            loaded++;
-            if (loaded === fileArr.length) {
-              DOM.fileInfo2.textContent = fileArr.length + " file(s) loaded";
-              DOM.fileInfo2.classList.add('show');
-              hideLoading();
-              setupColumnMappings();
-              updateAnalyzeBtn();
-            }
-          });
-        });
-      }
+      reader.onload = e => {
+        try {
+          const workbook = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+          
+          if(jsonData.length < 2) return cb(new Error('File has no data rows'));
+          cb(null, jsonData);
+        } catch(err) {
+          cb(err);
+        }
+      };
+      
+      reader.onerror = () => cb(new Error('Error reading file'));
+      reader.readAsArrayBuffer(file);
     }
 
-    function showS1FileMergeDialog() {
+    function showMergeDialog() {
       if (STATE.source1Files.length < 2) return;
       
-      let names = STATE.source1Files.map((f, i) => `${i+1}. ${f.file.name}`);
-      let srcIdx = prompt("S1 file merge: Enter the source file number to merge FROM:\n" + names.join("\n"));
-      if (!srcIdx) return;
+      const fileNames = STATE.source1Files.map((f, i) => `${i + 1}. ${f.file.name}`);
+      const sourceIndex = prompt(`Select source file to merge FROM:\n\n${fileNames.join('\n')}`);
       
-      let tgtIdx = prompt("S1 file merge: Enter the target file number to merge INTO:\n" + names.join("\n"));
-      if (!tgtIdx) return;
+      if (!sourceIndex) return;
       
-      srcIdx = parseInt(srcIdx.trim(), 10) - 1;
-      tgtIdx = parseInt(tgtIdx.trim(), 10) - 1;
+      const targetIndex = prompt(`Select target file to merge INTO:\n\n${fileNames.join('\n')}`);
       
-      if (srcIdx === tgtIdx || srcIdx < 0 || tgtIdx < 0 || 
-          srcIdx >= STATE.source1Files.length || tgtIdx >= STATE.source1Files.length) {
-        showError("Invalid merge selection.");
+      if (!targetIndex) return;
+      
+      // Convert string inputs to numbers and adjust to 0-based index
+      const srcIdx = parseInt(sourceIndex) - 1;
+      const tgtIdx = parseInt(targetIndex) - 1;
+      
+      // Validate indices
+      if (isNaN(srcIdx) || isNaN(tgtIdx) || 
+          srcIdx < 0 || tgtIdx < 0 || 
+          srcIdx >= STATE.source1Files.length || 
+          tgtIdx >= STATE.source1Files.length ||
+          srcIdx === tgtIdx) {
+        showError("Invalid file selection");
         return;
       }
       
-      let srcFile = STATE.source1Files[srcIdx];
-      let tgtFile = STATE.source1Files[tgtIdx];
+      // Get files
+      const sourceFile = STATE.source1Files[srcIdx];
+      const targetFile = STATE.source1Files[tgtIdx];
       
-      // Check if headers match
-      if (JSON.stringify(srcFile.headers) !== JSON.stringify(tgtFile.headers)) {
-        showError("Cannot merge: Headers do not match between files.");
+      // Check header compatibility
+      if (sourceFile.headers.length !== targetFile.headers.length) {
+        showError("Files have different column counts");
         return;
       }
       
-      // Merge records
-      tgtFile.records = tgtFile.records.concat(srcFile.records);
+      // Merge records from source to target
+      targetFile.records = targetFile.records.concat(sourceFile.records);
+      
+      // Remove source file from array
       STATE.source1Files.splice(srcIdx, 1);
       
       // Update UI
       DOM.fileList1.innerHTML = '';
-      STATE.source1Files.forEach((f) => {
-        let li = document.createElement('li');
+      STATE.source1Files.forEach((f, i) => {
+        const li = document.createElement('li');
         li.textContent = f.file.name + ` (${f.records.length} rows)`;
         DOM.fileList1.appendChild(li);
       });
       
-      DOM.fileInfo1.textContent = STATE.source1Files.length + " file(s) loaded";
-      DOM.fileInfo1.classList.add('show');
+      DOM.mergeBtn1.style.display = STATE.source1Files.length > 1 ? 'inline-block' : 'none';
       
-      if (STATE.source1Files.length > 1) {
-        DOM.mergeBtn1.style.display = 'inline-block';
-      } else {
-        DOM.mergeBtn1.style.display = 'none';
-      }
-      
+      // Update mappings
       setupColumnMappings();
-      updateAnalyzeBtn();
     }
 
-    /******* COLUMN MAPPING *******/
+    // COLUMN MAPPING
     function setupColumnMappings() {
-      // Get headers from first files
-      const s1 = STATE.source1Files[0];
-      const s2 = STATE.source2Files[0];
+      const s1Headers = STATE.source1Files[0]?.headers || [];
+      const s2Headers = STATE.source2File?.headers || [];
       
-      if (!s1 || !s2) return; // Need both files
+      if(!s1Headers.length || !s2Headers.length) return;
       
-      const h1 = s1.headers || [];
-      const h2 = s2.headers || [];
-      
-      if (!h1.length || !h2.length) return;
-      
-      // Define columns to map - S2 DOES NOT NEED STATUS FIELD!
-      const cols = [
-        { id: 'appId', lbl: 'App ID', patt: [/app.?id/i, /id/i] },
-        { id: 'amount', lbl: 'Amount', patt: [/amount/i, /total/i] },
-        { id: 'commission', lbl: 'Commission (S1)', patt: [/commiss|tds|fee|charge/i], s2: false },
-        { id: 'date', lbl: 'Date', patt: [/date/i, /timestamp/i, /txn.*date/i, /created/i] },
-        { id: 'status', lbl: 'Status (S1 only)', patt: [/status/i, /state/i, /paid|unpaid|not paid|fail/i], s2: false }
+      // Define columns to map
+      const columns = [
+        {id: 'appId', lbl: 'App ID', pattern: [/app.*id/i, /id/i], required: true},
+        {id: 'amount', lbl: 'Amount', pattern: [/amount/i, /total/i], required: true},
+        {id: 'commission', lbl: 'Commission (S1)', pattern: [/commiss|tds|fee|charge/i], s2: false},
+        {id: 'date', lbl: 'Date', pattern: [/date/i, /timestamp/i], required: true}
       ];
+      
+      // Status is not needed for S2 (always "Paid"), so we exclude it from the UI
       
       let html = `<div class="mapping-group"><strong>Column Mappings</strong>`;
       
-      cols.forEach(c => {
-        html += `<div><label>${c.lbl}:</label>
-                <select id="ms1-${c.id}"><option value="">Select S1</option>${
-                  h1.map((h, i) => `<option value="${i}">${h}</option>`).join('')
+      columns.forEach(col => {
+        html += `<div><label>${col.lbl}:</label>
+                <select id="ms1-${col.id}"><option value="">Select S1</option>${
+                  s1Headers.map((h, i) => `<option value="${i}">${h || `Column ${i+1}`}</option>`).join('')
                 }</select>`;
-                
-        // Only add S2 column select for fields that need it (NOT status or commission)
-        if (c.s2 !== false) {
-          html += `<select id="ms2-${c.id}"><option value="">Select S2</option>${
-                    h2.map((h, i) => `<option value="${i}">${h}</option>`).join('')
+        
+        // Only add S2 mapping for fields that need it (not commission)
+        if (col.s2 !== false) {
+          html += `<select id="ms2-${col.id}"><option value="">Select S2</option>${
+                    s2Headers.map((h, i) => `<option value="${i}">${h || `Column ${i+1}`}</option>`).join('')
                   }</select>`;
         } else {
-          // For S2-less fields, add a disabled placeholder
-          html += `<span style="display:inline-block;width:180px;padding:8px 12px;color:#9ca3af;font-style:italic;">${
-            c.id === 'status' ? 'Always Paid' : 'Not required'
-          }</span>`;
+          html += `<span style="display:inline-block;width:150px;padding:8px;color:#666;font-style:italic;">Not needed for S2</span>`;
         }
         
         html += `</div>`;
@@ -429,54 +409,44 @@
       html += `</div>`;
       DOM.columnMappings.innerHTML = html;
       
-      // Set default values and add event handlers
-      cols.forEach(c => {
-        const s1sel = document.getElementById(`ms1-${c.id}`);
-        if (!s1sel) return;
+      // Set default values based on auto-detection
+      columns.forEach(col => {
+        const s1Select = document.getElementById(`ms1-${col.id}`);
+        const autoDetectS1 = findMatch(s1Headers, col.pattern);
+        if (autoDetectS1 !== '') s1Select.value = autoDetectS1;
         
-        // Auto-detect best column matches
-        const auto1 = findMatch(h1, c.patt);
-        if (auto1 !== '') s1sel.value = auto1;
-        
-        // Only set up S2 selectors for fields that have them
-        if (c.s2 !== false) {
-          const s2sel = document.getElementById(`ms2-${c.id}`);
-          if (s2sel) {
-            const auto2 = findMatch(h2, c.patt);
-            if (auto2 !== '') s2sel.value = auto2;
-            s2sel.onchange = updateColumnMappings;
-          }
+        if (col.s2 !== false) {
+          const s2Select = document.getElementById(`ms2-${col.id}`);
+          const autoDetectS2 = findMatch(s2Headers, col.pattern);
+          if (autoDetectS2 !== '') s2Select.value = autoDetectS2;
+          s2Select.onchange = updateColumnMappings;
         }
         
-        s1sel.onchange = updateColumnMappings;
+        s1Select.onchange = updateColumnMappings;
       });
       
       updateColumnMappings();
     }
-    
+
     function findMatch(headers, patterns) {
-      for (let pattern of patterns) {
-        const idx = headers.findIndex(h => h && pattern.test(h));
-        if (idx !== -1) return idx;
+      for(let pattern of patterns) {
+        const index = headers.findIndex(h => h && pattern.test(h));
+        if(index !== -1) return index;
       }
       return '';
     }
-    
+
     function updateColumnMappings() {
       STATE.columnMappings = {};
       
-      // Required fields for S1: appId, amount, date. S2: appId, amount, date
-      ['appId', 'amount', 'commission', 'date', 'status'].forEach(k => {
-        const s1el = document.getElementById(`ms1-${k}`);
+      ['appId', 'amount', 'commission', 'date'].forEach(id => {
+        const s1Element = document.getElementById(`ms1-${id}`);
+        // Only check s2 elements for fields that have them
+        const s2Element = id !== 'commission' ? document.getElementById(`ms2-${id}`) : null;
         
-        // S2 doesn't need commission or status - they are determined automatically
-        const s2el = k !== 'commission' && k !== 'status' ? document.getElementById(`ms2-${k}`) : null;
-        
-        STATE.columnMappings[k] = {
-          source1: s1el ? s1el.value : "",
-          // For S2, if the field is status, we don't need a mapping (it's always "Paid")
-          // For commission, we don't need a mapping either
-          source2: s2el ? s2el.value : ""
+        STATE.columnMappings[id] = {
+          source1: s1Element ? s1Element.value : "",
+          source2: s2Element ? s2Element.value : ""
         };
       });
       
@@ -484,422 +454,450 @@
     }
 
     function updateAnalyzeBtn() {
-      // For analyze button to be active:
-      // 1. Need at least one S1 file and one S2 file
-      // 2. For S1: need appId, amount, date mappings
-      // 3. For S2: need appId, amount, date mappings (status is automatic)
-      const requiredS1 = ['appId', 'amount', 'date'];
-      const requiredS2 = ['appId', 'amount', 'date'];
+      // Button enabled if we have files and required mappings
+      const requiredMappings = ['appId', 'amount', 'date'];
       
-      const s1Mappings = requiredS1.every(k => STATE.columnMappings[k] && STATE.columnMappings[k].source1);
-      const s2Mappings = requiredS2.every(k => STATE.columnMappings[k] && STATE.columnMappings[k].source2);
+      const s1Valid = STATE.source1Files.length > 0;
+      const s2Valid = STATE.source2File !== null;
       
-      const ok = STATE.source1Files.length > 0 && 
-                 STATE.source2Files.length > 0 &&
-                 s1Mappings && s2Mappings;
-                 
-      DOM.analyzeBtn.disabled = !ok;
-      DOM.analyzeBtn.textContent = ok ? 'Analyze Data' : 'Please select required columns';
+      const mappingsValid = requiredMappings.every(id => {
+        const mapping = STATE.columnMappings[id];
+        return mapping && mapping.source1 !== "" && (id === 'commission' || mapping.source2 !== "");
+      });
+      
+      const allValid = s1Valid && s2Valid && mappingsValid;
+      
+      DOM.analyzeBtn.disabled = !allValid;
+      DOM.analyzeBtn.textContent = allValid ? 'Analyze Data' : 'Select Required Mappings';
     }
 
-    /******* ANALYSIS LOGIC *******/
-    function applyGSTAmount(amount) {
-      // Convert to number first
-      let amt = parseFloat(amount) || 0;
+    // GST calculation
+    function applyGST(amount) {
+      if (!DOM.applyGST.checked) return amount;
       
-      if (DOM.applyGST.checked) {
-        amt = amt * 1.18; // Add 18% GST
+      // Apply 18% GST
+      return amount * 1.18;
+    }
+
+    // STATUS DETECTION
+    // S1: Commission blank/zero = "Unpaid", otherwise "Paid"
+    function getS1Status(row, commissionIndex) {
+      // If commission field exists and has a value, consider "Paid"
+      if (commissionIndex !== undefined && commissionIndex !== null && commissionIndex !== "") {
+        const commValue = row[commissionIndex];
         
-        if (DOM.gstRound.checked) {
-          amt = Math.round(amt); // Round to nearest integer
-        } else {
-          amt = Number(amt.toFixed(2)); // Round to 2 decimal places
+        // Check if commission field is empty or zero
+        if (commValue === undefined || commValue === null || commValue === "" || 
+            Number(commValue) === 0 || 
+            (typeof commValue === "string" && commValue.trim() === "")) {
+          return "Unpaid";
         }
-      }
-      
-      return amt;
-    }
-
-    // S1 Paid/Unpaid detection: commission blank/zero = unpaid, else check status wording
-    function getS1Status(row, headers, commissionIdx, statusIdx) {
-      // Commission is the primary indicator - if missing or zero, it's unpaid
-      const commHeader = commissionIdx !== undefined && commissionIdx !== "" && commissionIdx !== null ? 
-                        headers[commissionIdx] : null;
-                        
-      let commValue = null;
-      if (commHeader && headers.indexOf(commHeader) >= 0) {
-        commValue = row[headers.indexOf(commHeader)];
-      }
-      
-      if (commValue === undefined || commValue === null || commValue === "" || 
-          (typeof commValue === "string" && commValue.trim() === "") || 
-          Number(commValue) === 0) {
+      } else {
+        // No commission column, default to "Unpaid"
         return "Unpaid";
       }
       
-      // If commission exists, check status text if available
-      if (statusIdx !== undefined && statusIdx !== "" && statusIdx !== null) {
-        const statusHeader = headers[statusIdx];
-        let statusText = null;
-        
-        if (statusHeader && headers.indexOf(statusHeader) >= 0) {
-          statusText = row[headers.indexOf(statusHeader)];
-        }
-        
-        if (typeof statusText === "string") {
-          const s = statusText.trim().toLowerCase();
-          
-          // Negative keywords for status
-          if (/unpaid|fail|cancel|not[\s_-]*paid|pending|await|reject|bounce|decline|invalid|hold|error|reversed|dispute|withheld|void/.test(s)) 
-            return "Unpaid";
-            
-          // Positive keywords for status
-          if (/paid|success|completed|done|approved/.test(s)) 
-            return "Paid";
-        }
-      }
-      
-      // Default: if commission exists and no negative status, consider Paid
+      // Has commission value, so status is "Paid"
       return "Paid";
     }
 
-    // S2 status is ALWAYS Paid, no mapping needed!
-    function getS2Status() { 
-      return "Paid"; 
-    }
-
+    // ANALYSIS
     function analyzeData() {
       try {
-        // Validate we have files
-        if (STATE.source1Files.length === 0 || STATE.source2Files.length === 0) {
+        const s1 = STATE.source1Files[0];
+        const s2 = STATE.source2File;
+        
+        // Safety check
+        if (!s1 || !s2) {
           showError("Missing source files");
           return {};
         }
         
-        // Get files and mappings
-        const s1 = STATE.source1Files[0];
-        const s2 = STATE.source2Files[0];
-        const d1 = s1.records;
-        const d2 = s2.records;
-        const m = STATE.columnMappings;
+        const s1Records = s1.records;
+        const s2Records = s2.records;
+        const mappings = STATE.columnMappings;
+        const varianceThreshold = parseFloat(DOM.varianceThreshold.value) || 0.01;
         
-        // Validate basic mappings
-        if (!m.appId || !m.amount || !m.date) {
-          showError("Missing required column mappings");
-          return {};
-        }
+        // Get column indices
+        const s1AppIdIdx = parseInt(mappings.appId.source1);
+        const s1AmountIdx = parseInt(mappings.amount.source1);
+        const s1DateIdx = parseInt(mappings.date.source1);
+        const s1CommissionIdx = mappings.commission ? parseInt(mappings.commission.source1) : null;
         
-        // Index S2 by AppId for fast lookups
-        const map2 = new Map();
-        d2.forEach(r => {
-          const idIdx = parseInt(m.appId.source2);
-          const id = idIdx >= 0 && idIdx < s2.headers.length ? r[idIdx] : null;
-          if (id) map2.set(id.toString(), r);
+        const s2AppIdIdx = parseInt(mappings.appId.source2);
+        const s2AmountIdx = parseInt(mappings.amount.source2);
+        const s2DateIdx = parseInt(mappings.date.source2);
+        
+        // Create result object
+        const results = {
+          matches: 0,
+          mismatches: [],
+          missing: [],
+          redAlerts: [],
+          commissionDeviations: []
+        };
+        
+        // Index S2 by App ID for quick lookup
+        const s2Map = new Map();
+        s2Records.forEach(record => {
+          const appId = record[s2AppIdIdx];
+          if (appId) s2Map.set(String(appId), record);
         });
         
         // Create duplicate maps
         const s1DupMap = {}, s2DupMap = {};
-        d1.forEach(r => { 
-          const idIdx = parseInt(m.appId.source1);
-          const id = idIdx >= 0 && idIdx < s1.headers.length ? r[idIdx] : null;
-          if (id) s1DupMap[id] = (s1DupMap[id]||0)+1; 
+        s1Records.forEach(r => {
+          const id = r[s1AppIdIdx];
+          if (!id) return;
+          s1DupMap[id] = (s1DupMap[id] || 0) + 1;
         });
         
-        d2.forEach(r => { 
-          const idIdx = parseInt(m.appId.source2);
-          const id = idIdx >= 0 && idIdx < s2.headers.length ? r[idIdx] : null;
-          if (id) s2DupMap[id] = (s2DupMap[id]||0)+1; 
+        s2Records.forEach(r => {
+          const id = r[s2AppIdIdx];
+          if (!id) return;
+          s2DupMap[id] = (s2DupMap[id] || 0) + 1;
         });
         
-        // Create buckets for different scenarios
-        const scenarios = {
-          "S1 Paid but missing in S2": [],
-          "S2 Paid but missing in S1": [],
-          "S2 Paid, S1 Unpaid": [],
-          "S2 Paid, S1 Paid but amount different": [],
-          "S2 Paid, S1 Unpaid and amount different": [],
-          "Commission deviation (for S1 Paid)": [],
-          "Duplicates in S1": [],
-          "Duplicates in S2": [],
-          "S1 Paid, S2 Paid but amount different": []
-        };
-        
-        // Get column indices as numbers
-        const s1AppIdIdx = parseInt(m.appId.source1);
-        const s1AmountIdx = parseInt(m.amount.source1);
-        const s1DateIdx = parseInt(m.date.source1);
-        const s1CommissionIdx = m.commission ? parseInt(m.commission.source1) : -1;
-        const s1StatusIdx = m.status ? parseInt(m.status.source1) : -1;
-        
-        const s2AppIdIdx = parseInt(m.appId.source2);
-        const s2AmountIdx = parseInt(m.amount.source2);
-        const s2DateIdx = parseInt(m.date.source2);
-
-        // Process S1 entries
-        d1.forEach(r1 => {
-          const id = s1AppIdIdx >= 0 ? r1[s1AppIdIdx] : null;
-          if (!id) return; // Skip if no App ID
+        // Process S1 records
+        s1Records.forEach(r1 => {
+          const appId = r1[s1AppIdIdx];
+          if (!appId) return; // Skip if no App ID
           
-          // Find matching S2 record
-          const r2 = map2.get(id.toString());
+          const r2 = s2Map.get(String(appId));
+          const s1Status = getS1Status(r1, s1CommissionIdx);
+          const s2Status = "Paid"; // Always "Paid" for S2
           
-          // Determine statuses - S1 by data, S2 always "Paid"
-          const s1status = getS1Status(r1, s1.headers, s1CommissionIdx, s1StatusIdx);
-          const s2status = "Paid"; // Always Paid for S2
+          // Get amounts 
+          let amount1 = parseFloat(r1[s1AmountIdx]) || 0;
+          let amount2 = r2 ? parseFloat(r2[s2AmountIdx]) || 0 : 0;
           
-          // Get and process amounts
-          let a1 = applyGSTAmount(s1AmountIdx >= 0 ? r1[s1AmountIdx] : 0);
-          let a2 = r2 ? applyGSTAmount(s2AmountIdx >= 0 ? r2[s2AmountIdx] : 0) : 0;
-          
-          // Get date and commission values
-          let date1 = s1DateIdx >= 0 && s1DateIdx < r1.length ? r1[s1DateIdx] : '';
-          let comm1 = s1CommissionIdx >= 0 && s1CommissionIdx < r1.length ? r1[s1CommissionIdx] : '';
-          
-          // Scenario 1: S1 Paid but missing in S2
-          if (s1status === "Paid" && !r2) {
-            scenarios["S1 Paid but missing in S2"].push({ 
-              appId: id, 
-              s1Amount: a1, 
-              s1Status: s1status, 
-              date: date1
-            });
+          // Apply GST if needed
+          if (DOM.applyGST.checked) {
+            amount1 = applyGST(amount1);
+            amount2 = applyGST(amount2);
           }
           
-          // Scenario 2: S2 Paid, S1 Unpaid
-          if (r2 && s2status === "Paid" && s1status === "Unpaid") {
-            scenarios["S2 Paid, S1 Unpaid"].push({ 
-              appId: id, 
-              s1Amount: a1, 
-              s2Amount: a2, 
-              s1Status, 
-              s2Status: s2status, 
-              date: date1
-            });
-          }
-          
-          // Scenario 3: S2 Paid, S1 Paid but amount different
-          if (r2 && s2status === "Paid" && s1status === "Paid" && Math.abs(a1 - a2) > 0.01) {
-            scenarios["S2 Paid, S1 Paid but amount different"].push({ 
-              appId: id, 
-              s1Amount: a1, 
-              s2Amount: a2, 
-              s1Status, 
-              s2Status: s2status, 
-              date: date1
-            });
-          }
-          
-          // Scenario 4: S2 Paid, S1 Unpaid and amount different
-          if (r2 && s2status === "Paid" && s1status === "Unpaid" && Math.abs(a1 - a2) > 0.01) {
-            scenarios["S2 Paid, S1 Unpaid and amount different"].push({ 
-              appId: id, 
-              s1Amount: a1, 
-              s2Amount: a2, 
-              s1Status, 
-              s2Status: s2status, 
-              date: date1
-            });
-          }
-          
-          // Scenario 5: S1 Paid, S2 Paid but amount different (duplicate to catch all cases)
-          if (r2 && s1status === "Paid" && s2status === "Paid" && Math.abs(a1 - a2) > 0.01) {
-            scenarios["S1 Paid, S2 Paid but amount different"].push({ 
-              appId: id, 
-              s1Amount: a1, 
-              s2Amount: a2, 
-              s1Status, 
-              s2Status: s2status, 
-              date: date1
-            });
-          }
-          
-          // Scenario 6: Commission deviation (for S1 Paid), if option enabled
-          if (DOM.includeCommission.checked && s1status === "Paid" && s1CommissionIdx >= 0) {
-            let expected = a1 * 0.02; // Expected commission: 2% of amount
-            let commVal = parseFloat(comm1) || 0;
+          // COMPARISON LOGIC
+          if (r2) {
+            // Both S1 and S2 have this record
+            const variance = amount2 - amount1;
+            const absVariance = Math.abs(variance);
             
-            if (Math.abs(commVal - expected) > 0.01) {
-              scenarios["Commission deviation (for S1 Paid)"].push({ 
-                appId: id, 
-                s1Amount: a1, 
-                commission: commVal, 
-                expectedCommission: expected.toFixed(2), 
-                date: date1
+            if (absVariance <= varianceThreshold) {
+              // Amounts match within threshold
+              results.matches++;
+            } else {
+              // Amounts differ beyond threshold
+              const item = {
+                appId: appId,
+                s1Amount: amount1,
+                s2Amount: amount2,
+                variance: variance,
+                s1Status: s1Status,
+                s2Status: s2Status,
+                date: r1[s1DateIdx] || 'N/A'
+              };
+              
+              results.mismatches.push(item);
+              
+              // Different scenarios based on status
+              if (s1Status === "Paid" && s2Status === "Paid") {
+                // Both paid but amounts differ
+                results.redAlerts.push({
+                  ...item,
+                  scenario: "S1 Paid, S2 Paid but amount different"
+                });
+              } else if (s1Status === "Unpaid" && s2Status === "Paid") {
+                // S2 paid but S1 unpaid
+                results.redAlerts.push({
+                  ...item,
+                  scenario: "S2 Paid, S1 Unpaid and amount different"
+                });
+              }
+              
+              // Check commission deviation
+              if (DOM.includeCommission.checked && s1Status === "Paid" && s1CommissionIdx !== null) {
+                const commValue = parseFloat(r1[s1CommissionIdx]) || 0;
+                const expectedCommission = amount1 * 0.02; // 2% commission
+                
+                if (Math.abs(commValue - expectedCommission) > 0.01) {
+                  results.commissionDeviations.push({
+                    appId: appId,
+                    s1Amount: amount1,
+                    commission: commValue,
+                    expectedCommission: expectedCommission,
+                    date: r1[s1DateIdx] || 'N/A'
+                  });
+                }
+              }
+            }
+            
+          } else {
+            // In S1 but missing from S2
+            results.missing.push({
+              appId: appId,
+              amount: amount1,
+              status: s1Status,
+              date: r1[s1DateIdx] || 'N/A',
+              source: 'source1'
+            });
+            
+            // If S1 is paid, it's a red alert when missing from S2
+            if (s1Status === "Paid") {
+              results.redAlerts.push({
+                appId: appId,
+                s1Amount: amount1,
+                s1Status: s1Status,
+                date: r1[s1DateIdx] || 'N/A',
+                scenario: "S1 Paid but missing in S2"
               });
             }
           }
           
-          // Scenario 7: Duplicates in S1
-          if (s1DupMap[id] && s1DupMap[id] > 1) {
-            scenarios["Duplicates in S1"].push({ 
-              appId: id, 
-              s1Amount: a1, 
-              s1Status: s1status, 
-              date: date1
+          // Check for duplicates in S1
+          if (s1DupMap[appId] > 1) {
+            results.redAlerts.push({
+              appId: appId,
+              s1Amount: amount1,
+              s1Status: s1Status,
+              date: r1[s1DateIdx] || 'N/A',
+              scenario: "Duplicates in S1"
             });
           }
         });
         
-        // Process S2 entries for scenarios that start with S2
-        d2.forEach(r2 => {
-          const id = s2AppIdIdx >= 0 ? r2[s2AppIdIdx] : null;
-          if (!id) return; // Skip if no App ID
+        // Process S2 records to find those missing from S1
+        s2Records.forEach(r2 => {
+          const appId = r2[s2AppIdIdx];
+          if (!appId) return;
           
-          // Check if record exists in S1
-          const exists = d1.some(r1 => r1[s1AppIdIdx] == id);
+          // Check if exists in S1
+          const s1HasApp = s1Records.some(r1 => r1[s1AppIdIdx] == appId);
           
-          // Get amount and date
-          let a2 = applyGSTAmount(s2AmountIdx >= 0 ? r2[s2AmountIdx] : 0);
-          let date2 = s2DateIdx >= 0 && s2DateIdx < r2.length ? r2[s2DateIdx] : '';
-          
-          // Scenario 8: S2 Paid but missing in S1
-          if (!exists) {
-            scenarios["S2 Paid but missing in S1"].push({ 
-              appId: id, 
-              s2Amount: a2, 
-              s2Status: "Paid", 
-              date: date2
+          if (!s1HasApp) {
+            // In S2 but missing from S1
+            const amount2 = parseFloat(r2[s2AmountIdx]) || 0;
+            
+            results.missing.push({
+              appId: appId,
+              amount: DOM.applyGST.checked ? applyGST(amount2) : amount2,
+              status: "Paid", // S2 is always Paid
+              date: r2[s2DateIdx] || 'N/A',
+              source: 'source2'
+            });
+            
+            // S2 is always Paid, so missing from S1 is a red alert
+            results.redAlerts.push({
+              appId: appId,
+              s2Amount: DOM.applyGST.checked ? applyGST(amount2) : amount2,
+              s2Status: "Paid",
+              date: r2[s2DateIdx] || 'N/A',
+              scenario: "S2 Paid but missing in S1"
             });
           }
           
-          // Scenario 9: Duplicates in S2
-          if (s2DupMap[id] && s2DupMap[id] > 1) {
-            scenarios["Duplicates in S2"].push({ 
-              appId: id, 
-              s2Amount: a2, 
-              s2Status: "Paid", 
-              date: date2
+          // Check for duplicates in S2
+          if (s2DupMap[appId] > 1) {
+            results.redAlerts.push({
+              appId: appId,
+              s2Amount: DOM.applyGST.checked ? applyGST(parseFloat(r2[s2AmountIdx]) || 0) : (parseFloat(r2[s2AmountIdx]) || 0),
+              s2Status: "Paid",
+              date: r2[s2DateIdx] || 'N/A',
+              scenario: "Duplicates in S2"
             });
           }
         });
         
-        // Success!
-        return scenarios;
-      } catch (err) {
-        console.error("Analysis error:", err);
-        showError("Analysis error: " + err.message);
-        return {}; 
+        // Calculate totals
+        results.redAlertsTotal = results.redAlerts.reduce((sum, item) => 
+          sum + (item.variance || item.s2Amount || item.s1Amount || 0), 0);
+          
+        results.commissionDeviationsTotal = results.commissionDeviations.reduce((sum, item) => 
+          sum + Math.abs((item.commission || 0) - (item.expectedCommission || 0)), 0);
+          
+        results.totalPotentialLoss = results.redAlertsTotal + results.commissionDeviationsTotal;
+        
+        console.log("Analysis complete", results);
+        return results;
+      } catch (error) {
+        console.error("Analysis error:", error);
+        showError(`Analysis error: ${error.message || error}`);
+        return {};
       }
     }
 
-    /******* VISUALIZATION *******/
-    function displayResults(scenarios) {
+    // DISPLAY RESULTS
+    function displayResults(results) {
+      if (!results) {
+        showError("No analysis results available");
+        return;
+      }
+      
       try {
-        // Create title mapping for clarity
-        const titles = {
-          "S1 Paid but missing in S2": "S1 Paid but missing in S2 ⚠️",
-          "S2 Paid but missing in S1": "S2 Paid but missing in S1 🔍",
-          "S2 Paid, S1 Unpaid": "S2 Paid, S1 Unpaid ❗",
-          "S2 Paid, S1 Paid but amount different": "S2 Paid, S1 Paid but amount different 💰",
-          "S2 Paid, S1 Unpaid and amount different": "S2 Paid, S1 Unpaid and amount different 🚨",
-          "Commission deviation (for S1 Paid)": "Commission deviation (for S1 Paid) 💵",
-          "Duplicates in S1": "Duplicates in S1 📝",
-          "Duplicates in S2": "Duplicates in S2 📋",
-          "S1 Paid, S2 Paid but amount different": "Amount mismatch (both paid) 🔢"
-        };
-
-        // Count total items
-        let totalItems = 0;
-        Object.values(scenarios).forEach(arr => { totalItems += arr.length; });
-        
-        if (totalItems === 0) {
-          DOM.results.innerHTML = `<div class="alert-box" style="width:100%;text-align:center;padding:40px;">
-            <div class="alert-title" style="font-size:1.5rem;">No issues found! 🎉</div>
-            <p>All records match perfectly.</p>
+        // Display summary statistics
+        let html = `
+          <div class="results-header">
+            <h2>Analysis Results</h2>
+          </div>
+          
+          <div class="stats-grid">
+            <div class="stat-card">
+              <h3>Total Potential Loss</h3>
+              <div class="stat-value">₹${(results.totalPotentialLoss || 0).toFixed(2)}</div>
+              <div class="stat-subtext">(Red Alerts + Commission Deviations)</div>
+            </div>
+            
+            <div class="stat-card">
+              <h3>Red Alerts</h3>
+              <div class="stat-value">${results.redAlerts ? results.redAlerts.length : 0}</div>
+              <div class="stat-subtext">₹${(results.redAlertsTotal || 0).toFixed(2)}</div>
+            </div>
+            
+            <div class="stat-card">
+              <h3>Commission Deviations</h3>
+              <div class="stat-value">${results.commissionDeviations ? results.commissionDeviations.length : 0}</div>
+              <div class="stat-subtext">₹${(results.commissionDeviationsTotal || 0).toFixed(2)}</div>
+            </div>
+            
+            <div class="stat-card">
+              <h3>Total Records</h3>
+              <div class="stat-value">${(results.matches || 0) + 
+                                      (results.mismatches ? results.mismatches.length : 0) + 
+                                      (results.missing ? results.missing.length : 0)}</div>
+              <div class="stat-subtext">${results.matches || 0} matches, ${results.mismatches ? results.mismatches.length : 0} mismatches, ${results.missing ? results.missing.length : 0} missing</div>
+            </div>
           </div>`;
-          DOM.results.classList.add('show');
-          return;
-        }
-        
-        // Generate HTML for each scenario
-        let html = '<div class="alert-container">';
-        
-        Object.entries(scenarios).forEach(([key, arr]) => {
-          if (!arr.length) return; // Skip empty scenarios
           
-          html += `<div class="alert-box">
-            <div class="alert-title">${titles[key] || key}</div>
-            <div class="alert-count">${arr.length} records</div>
-            <div style="overflow-x:auto">
-              <table class="alert-table"><thead><tr>`;
-          
-          // Get field names from first item
-          let fields = Object.keys(arr[0]);
-          html += fields.map(f => `<th>${f.replace(/([A-Z])/g, ' $1')}</th>`).join('');
-          html += '</tr></thead><tbody>';
-          
-          // Display up to 8 rows per scenario
-          arr.slice(0, 8).forEach(item => {
-            html += '<tr>';
-            fields.forEach(f => {
-              let v = item[f];
-              let cls = '';
-              
-              // Style based on cell content
-              if (f.toLowerCase().includes('status')) 
-                cls = v === "Paid" ? "paid-cell" : "unpaid-cell";
-              if (f.toLowerCase().includes('amount')) 
-                cls = "amount-cell";
-              if (f.toLowerCase().includes('comm')) 
-                cls = "comm-cell";
-              
-              // Format cell
-              html += `<td class="${cls}">${
-                v === undefined ? "-" : 
-                typeof v === 'number' ? (v % 1 === 0 ? v : v.toFixed(2)) : 
-                v
-              }</td>`;
-            });
-            html += '</tr>';
+        // Group red alerts by scenario
+        if (results.redAlerts && results.redAlerts.length > 0) {
+          // Group alerts by scenario
+          const scenarioMap = {};
+          results.redAlerts.forEach(alert => {
+            const scenario = alert.scenario || "Other Alerts";
+            if (!scenarioMap[scenario]) scenarioMap[scenario] = [];
+            scenarioMap[scenario].push(alert);
           });
           
-          html += '</tbody></table>';
+          html += `<h2>Red Alert Scenarios</h2><div class="alert-container">`;
           
-          // Show count if too many rows
-          if (arr.length > 8) 
-            html += `<small>Showing first 8 of ${arr.length} records</small>`;
+          // Display each scenario group
+          Object.entries(scenarioMap).forEach(([scenario, alerts]) => {
+            html += `
+              <div class="alert-box">
+                <div class="alert-title">${scenario}</div>
+                <div class="alert-count">${alerts.length}</div>
+                <table class="alert-table">
+                  <thead><tr>`;
+                  
+            // Determine columns based on first item
+            const firstAlert = alerts[0];
+            const columns = Object.keys(firstAlert).filter(k => k !== 'scenario');
+            
+            html += columns.map(col => `<th>${col.replace(/([A-Z])/g, ' $1')}</th>`).join('');
+            html += `</tr></thead><tbody>`;
+            
+            // Show at most 8 records per scenario
+            alerts.slice(0, 8).forEach(alert => {
+              html += `<tr>`;
+              
+              columns.forEach(col => {
+                let value = alert[col];
+                let cellClass = '';
+                
+                // Style based on column
+                if (col.includes('Status')) {
+                  cellClass = value === 'Paid' ? 'paid-cell' : 'unpaid-cell';
+                } else if (col.includes('Amount')) {
+                  cellClass = 'amount-cell';
+                } else if (col.includes('variance')) {
+                  cellClass = 'variance-cell ' + (value > 0 ? 'positive-variance' : 'negative-variance');
+                }
+                
+                // Format numeric values
+                if (typeof value === 'number') {
+                  value = value.toFixed(2);
+                }
+                
+                html += `<td class="${cellClass}">${value || 'N/A'}</td>`;
+              });
+              
+              html += `</tr>`;
+            });
+            
+            html += `</tbody></table>`;
+            
+            // Show count if more items exist
+            if (alerts.length > 8) {
+              html += `<div style="margin-top:8px;font-size:0.85rem;color:#666;">+ ${alerts.length - 8} more records</div>`;
+            }
+            
+            html += `</div>`;
+          });
           
-          html += `</div></div>`;
-        });
+          html += `</div>`;
+        } else {
+          html += `<div style="margin:24px 0;padding:16px;background:#f0fdf4;border-radius:8px;text-align:center;">
+            <h3 style="color:#059669;margin:0;">No Red Alerts Found</h3>
+          </div>`;
+        }
         
-        html += '</div>';
-        
-        // Set the HTML and show it
+        // Set the HTML and show results
         DOM.results.innerHTML = html;
-        DOM.results.scrollIntoView({ behavior: 'smooth' });
         DOM.results.classList.add('show');
-      } catch (err) {
-        console.error("Display error:", err);
-        showError("Error displaying results: " + err.message);
+        
+        // Scroll to results
+        DOM.results.scrollIntoView({behavior: 'smooth'});
+      } catch (error) {
+        console.error("Display error:", error);
+        showError(`Error displaying results: ${error.message || error}`);
       }
     }
 
-    /******* INITIALIZATION *******/
+    // EVENT HANDLERS
     DOM.analyzeBtn.onclick = () => {
       showLoading();
       
-      // Use setTimeout to allow UI to refresh
+      // Small delay to let UI update
       setTimeout(() => {
         try {
-          const scenarios = analyzeData();
-          displayResults(scenarios);
-        } catch (e) { 
-          console.error(e);
-          showError(e.message || String(e)); 
+          const results = analyzeData();
+          displayResults(results);
+        } catch (error) {
+          showError(`Analysis failed: ${error.message || error}`);
         }
         hideLoading();
       }, 100);
     };
 
+    // INITIALIZATION
     document.addEventListener('DOMContentLoaded', () => {
-      console.log("Application initializing...");
+      // Setup event handlers
       initFileHandlers();
+      
+      // Set initial time
       updateUserInfo();
+      
+      // Update time periodically
       setInterval(updateUserInfo, 15000);
       
-      // Show current time
-      DOM.utcTime.textContent = new Date().toISOString().replace('T', ' ').slice(0, 19);
-      console.log("Application ready!");
+      // Setup analysis option handlers
+      DOM.analysisType.onchange = () => {
+        STATE.analysisOptions.type = DOM.analysisType.value;
+      };
+      
+      DOM.includeCommission.onchange = () => {
+        STATE.analysisOptions.includeCommission = DOM.includeCommission.checked;
+      };
+      
+      DOM.applyGST.onchange = () => {
+        STATE.analysisOptions.applyGST = DOM.applyGST.checked;
+      };
+      
+      DOM.varianceThreshold.onchange = () => {
+        STATE.analysisOptions.varianceThreshold = parseFloat(DOM.varianceThreshold.value) || 0.01;
+      };
+      
+      console.log("App ID Analyzer initialized");
     });
   </script>
 </body>
