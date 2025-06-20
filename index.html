@@ -1,877 +1,368 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>App ID Analyzer (ksismad)</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
-    <style>
-        /* Core styles */
-        html, body { 
-            background: #f3f4f6; 
-            color: #1e293b; 
-            font-family: 'Segoe UI', Arial, sans-serif; 
-            margin: 0; 
-            padding: 0;
-        }
-        .container { 
-            max-width: 1200px; 
-            margin: 36px auto 20px auto; 
-            background: #fff; 
-            border-radius: 18px; 
-            box-shadow: 0 8px 32px rgba(60,60,100,0.11); 
-            overflow: hidden; 
-            padding: 0 0 32px 0;
-        }
-        
-        /* Header styles */
-        .header { 
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); 
-            color: white; 
-            text-align: left; 
-            padding: 32px; 
-            position: relative; 
-            border-radius: 0 0 20px 20px;
-        }
-        .header h1 { 
-            margin: 0 0 8px 0; 
-            font-size: 2.25rem;
-        }
-        .user-info {
-            position: absolute;
-            top: 16px;
-            right: 32px;
-            background: rgba(255,255,255,0.15);
-            padding: 7px 16px;
-            border-radius: 20px;
-            font-size: 0.93rem;
-        }
-        
-        /* Upload section styles */
-        .upload-section {
-            display: flex;
-            gap: 24px;
-            padding: 32px;
-            flex-wrap: wrap;
-        }
-        .upload-box {
-            flex: 1;
-            min-width: 300px;
-            background: #f8fafc;
-            border: 2px dashed #cbd5e1;
-            border-radius: 12px;
-            padding: 24px;
-            position: relative;
-            transition: all 0.3s ease;
-        }
-        .upload-box.source2 {
-            border-color: #059669;
-            background: #f0fdf4;
-        }
-        .upload-box.source2::after {
-            content: "(Paid Source)";
-            color: #059669;
-            font-size: 0.875rem;
-            margin-top: 8px;
-            display: block;
-        }
-        .upload-box.dragover {
-            border-color: #6366f1;
-            background: #f0f7ff;
-        }
-        .file-input { 
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip: rect(0, 0, 0, 0);
-            border: 0;
-        }
-        .upload-btn {
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: transform 0.2s ease;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .upload-btn:hover {
-            transform: translateY(-1px);
-        }
-        .upload-btn:active {
-            transform: translateY(1px);
-        }
-        .upload-btn.source2 {
-            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-        }
-        
-        /* File info and validation styles */
-        .file-info {
-            margin-top: 12px;
-            padding: 8px 16px;
-            background: #d1fae5;
-            color: #059669;
-            border-radius: 6px;
-            display: none;
-            animation: fadeIn 0.3s ease;
-        }
-        .file-info.show { display: inline-block; }
-        
-        /* Column mapping styles */
-        .column-mappings {
-            padding: 0 32px;
-            margin-bottom: 24px;
-            animation: slideIn 0.3s ease;
-        }
-        .mapping-group {
-            margin-bottom: 16px;
-            background: #f8fafc;
-            padding: 16px;
-            border-radius: 12px;
-            border: 1px solid #e2e8f0;
-        }
-        .mapping-label {
-            font-weight: 600;
-            margin-bottom: 12px;
-            color: #4b5563;
-        }
-        .mapping-row {
-            display: flex;
-            gap: 16px;
-            margin-bottom: 8px;
-            align-items: center;
-        }
-        select {
-            padding: 8px 12px;
-            border-radius: 6px;
-            border: 1px solid #cbd5e1;
-            background: white;
-            min-width: 200px;
-            font-size: 0.95rem;
-        }
-        select:focus {
-            outline: none;
-            border-color: #6366f1;
-            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
-        }
-        
-        /* Options section styles */
-        .options-section {
-            padding: 0 32px;
-            animation: slideIn 0.3s ease;
-        }
-        .option-group {
-            margin-bottom: 20px;
-            background: #f8fafc;
-            padding: 16px;
-            border-radius: 12px;
-            border: 1px solid #e2e8f0;
-        }
-        .option-label {
-            font-weight: 600;
-            margin-bottom: 12px;
-            color: #4b5563;
-        }
-        .option-row {
-            display: flex;
-            gap: 24px;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-        
-        /* Checkbox and input styles */
-        .checkbox-label {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-        }
-        input[type="checkbox"] {
-            width: 16px;
-            height: 16px;
-            cursor: pointer;
-        }
-        input[type="number"] {
-            padding: 8px 12px;
-            border-radius: 6px;
-            border: 1px solid #cbd5e1;
-            width: 100px;
-        }
-        input[type="number"]:focus {
-            outline: none;
-            border-color: #6366f1;
-            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
-        }
-        
-        /* Analysis button styles */
-        .analyze-btn {
-            width: calc(100% - 64px);
-            margin: 32px;
-            padding: 16px;
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 1.2rem;
-            font-weight: 700;
-            cursor: pointer;
-            transition: transform 0.2s ease;
-        }
-        .analyze-btn:not(:disabled):hover {
-            transform: translateY(-1px);
-        }
-        .analyze-btn:not(:disabled):active {
-            transform: translateY(1px);
-        }
-        .analyze-btn:disabled {
-            background: #9ca3af;
-            cursor: not-allowed;
-        }
-        
-        /* Results styles */
-        .results {
-            margin: 32px;
-            display: none;
-            animation: fadeIn 0.5s ease;
-        }
-        .results.show { display: block; }
-        .results-header {
-            margin-bottom: 24px;
-            padding: 20px;
-            background: #f8fafc;
-            border-radius: 12px;
-        }
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 16px;
-            margin-bottom: 24px;
-        }
-        .stat-card {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            border: 1px solid #e2e8f0;
-            transition: transform 0.2s ease;
-        }
-        .stat-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        .stat-card h3 {
-            margin: 0 0 8px 0;
-            color: #4b5563;
-            font-size: 1rem;
-        }
-        .stat-value {
-            font-size: 1.75rem;
-            font-weight: 700;
-            color: #1e293b;
-        }
-        .stat-subtext {
-            font-size: 0.875rem;
-            color: #6b7280;
-            margin-top: 4px;
-        }
-        
-        /* Table styles */
-        .table-section {
-            margin-top: 32px;
-            animation: slideIn 0.5s ease;
-        }
-        .table-section h3 {
-            margin-bottom: 16px;
-            color: #4b5563;
-        }
-        .table-container {
-            overflow-x: auto;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            border: 1px solid #e2e8f0;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            padding: 12px 16px;
-            text-align: left;
-            border-bottom: 1px solid #e2e8f0;
-        }
-        th { 
-            background: #f8fafc;
-            font-weight: 600;
-            color: #4b5563;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-        td {
-            color: #1e293b;
-        }
-        tbody tr:hover {
-            background: #f8fafc;
-        }
-        .amount-cell {
-            font-family: monospace;
-            text-align: right;
-        }
-        .amount-cell.paid {
-            color: #059669;
-        }
-        .amount-cell.paid::after {
-            content: " ✓";
-            color: #059669;
-            font-weight: bold;
-        }
-        .variance-cell {
-            font-family: monospace;
-            text-align: right;
-            font-weight: 600;
-        }
-        .positive-variance {
-            color: #dc2626;
-        }
-        .negative-variance {
-            color: #059669;
-        }
-        
-        /* Loading overlay styles */
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(255,255,255,0.9);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease, visibility 0.3s ease;
-        }
-        .loading-overlay.show {
-            opacity: 1;
-            visibility: visible;
-        }
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        
-        /* Error message styles */
-        .error-message {
-            margin: 16px 32px;
-            padding: 12px 16px;
-            background: #fee2e2;
-            color: #b91c1c;
-            border-radius: 8px;
-            display: none;
-            animation: slideIn 0.3s ease;
-        }
-        .error-message.show { 
-            display: block; 
-        }
-        
-        /* Animations */
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        @keyframes slideIn {
-            from { 
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to { 
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>App ID Analyzer (ksismad)</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
+  <style>
+    /* Core styles */
+    html, body { background: #f3f4f6; color: #1e293b; font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; }
+    .container { max-width: 1200px; margin: 36px auto; background: #fff; border-radius: 18px; box-shadow: 0 8px 32px rgba(60,60,100,0.11); overflow: hidden; }
+    .header { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; padding: 32px; position: relative; }
+    .header h1 { margin: 0 0 8px; font-size: 2.25rem; }
+    .user-info { position: absolute; top: 16px; right: 32px; background: rgba(255,255,255,0.15); padding: 7px 16px; border-radius: 20px; font-size: 0.93rem; }
+
+    .upload-section { display: flex; gap: 24px; padding: 32px; flex-wrap: wrap; }
+    .upload-box { flex: 1; min-width: 300px; background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 12px; padding: 24px; position: relative; transition: border-color .2s, background .2s; }
+    .upload-box.source2 { border-color: #059669; background: #f0fdf4; }
+    .upload-box.source2::after { content: "(Paid Source)"; color: #059669; font-size: .875rem; display: block; margin-top:8px; }
+    .upload-box.dragover { border-color: #6366f1; background: #eef4ff; }
+    .file-input { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0; }
+    .upload-btn { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+    .upload-btn.source2 { background: linear-gradient(135deg, #059669, #10b981); }
+    .file-info { margin-top: 12px; padding:8px 16px; background: #d1fae5; color: #059669; border-radius:6px; display:none; }
+    .file-info.show { display:inline-block; }
+
+    .column-mappings, .options-section, .results { padding: 0 32px; }
+    .mapping-group, .option-group { margin-bottom: 24px; }
+    select, input[type="number"] { padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; }
+    .analyze-btn { width: calc(100% - 64px); margin:32px; padding:16px; background: linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; border-radius:12px; font-size:1.2rem; font-weight:700; cursor:pointer; }
+    .analyze-btn:disabled { background:#9ca3af; cursor:not-allowed; }
+
+    .results-header, .stats-grid, .table-section { margin-bottom:24px; }
+    .stat-card { background:#fff; padding:20px; border-radius:12px; box-shadow:0 2px 4px rgba(0,0,0,0.1); }
+    table { width:100%; border-collapse:collapse; }
+    th, td { padding:12px 16px; border-bottom:1px solid #e2e8f0; }
+    th { background:#f8fafc; }
+    .amount-cell { text-align:right; font-family:monospace; }
+    .amount-cell.paid::after { content:" ✓"; color:#059669; }
+    .variance-cell { text-align:right; font-family:monospace; font-weight:600; }
+    .positive-variance { color:#dc2626; }
+    .negative-variance { color:#059669; }
+
+    .loading-overlay { position:fixed; inset:0; background:rgba(255,255,255,0.9); display:flex; align-items:center; justify-content:center; z-index:1000; visibility:hidden; opacity:0; transition:opacity .2s,visibility .2s; }
+    .loading-overlay.show { visibility:visible; opacity:1; }
+    .spinner { width:40px; height:40px; border:4px solid #f3f3f3; border-top:4px solid #3498db; border-radius:50%; animation:spin 1s linear infinite; }
+
+    .error-message { margin:16px 32px; padding:12px 16px; background:#fee2e2; color:#b91c1c; border-radius:8px; display:none; }
+    .error-message.show { display:block; }
+
+    @keyframes spin { 0%{transform:rotate(0);}100%{transform:rotate(360deg);} }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <div class="user-info" id="user-info">User: ksismad | UTC 2025-06-20 14:44:40</div>
-            <h1>🔍 App ID Analyzer</h1>
-            <p>Compare and analyze app transaction data</p>
-        </div>
-        
-        <div class="upload-section">
-            <div class="upload-box">
-                <h3>Source 1 Files</h3>
-                <input type="file" id="file-input-1" class="file-input" multiple accept=".xlsx,.xls" aria-label="Choose Source 1 Files">
-                <button class="upload-btn" id="upload-btn-1">Choose Files</button>
-                <div id="file-info-1" class="file-info"></div>
-            </div>
-            
-            <div class="upload-box source2">
-                <h3>Source 2 File (Paid Source)</h3>
-                <input type="file" id="file-input-2" class="file-input" accept=".xlsx,.xls" aria-label="Choose Source 2 File">
-                <button class="upload-btn source2" id="upload-btn-2">Choose File</button>
-                <div id="file-info-2" class="file-info"></div>
-            </div>
-        </div>
-        
-        <div id="column-mappings" class="column-mappings">
-            <!-- Column mappings will be inserted here -->
-        </div>
-        
-        <div class="options-section">
-            <div class="option-group">
-                <div class="option-label">Analysis Options</div>
-                <div class="option-row">
-                    <select id="analysis-type" aria-label="Analysis Type">
-                        <option value="all">All Records</option>
-                        <option value="mismatches">Only Mismatches</option>
-                        <option value="missing">Only Missing Records</option>
-                    </select>
-                    
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="include-commission" aria-label="Include Commission Analysis">
-                        Include Commission Analysis
-                    </label>
-                    
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="apply-gst" aria-label="Apply GST">
-                        Apply 18% GST
-                    </label>
-                </div>
-            </div>
-            
-            <div class="option-group">
-                <div class="option-label">Variance Threshold</div>
-                <input type="number" 
-                       id="variance-threshold" 
-                       value="0.01" 
-                       step="0.01" 
-                       min="0"
-                       aria-label="Variance Threshold">
-            </div>
-        </div>
-        
-        <div id="error-message" class="error-message" role="alert" aria-live="polite"></div>
-        
-        <button id="analyze-btn" class="analyze-btn" disabled>Please select files</button>
-        
-        <div id="results" class="results" role="region" aria-live="polite">
-            <!-- Results will be dynamically inserted here -->
-        </div>
+  <div class="container">
+    <div class="header">
+      <div class="user-info" id="user-info">User: ksismad | UTC 2025-06-20 14:53:32</div>
+      <h1>🔍 App ID Analyzer</h1>
+      <p>Compare and analyze app transaction data</p>
     </div>
-    
-    <div id="loading-overlay" class="loading-overlay">
-        <div class="spinner" role="status">
-            <span class="sr-only">Loading...</span>
-        </div>
+
+    <div class="upload-section">
+      <div class="upload-box" id="drop1">
+        <h3>Source 1 Files</h3>
+        <input type="file" id="file-input-1" class="file-input" multiple accept=".xlsx,.xls">
+        <button class="upload-btn" id="upload-btn-1">Choose Files</button>
+        <div id="file-info-1" class="file-info"></div>
+      </div>
+      <div class="upload-box source2" id="drop2">
+        <h3>Source 2 File (Paid)</h3>
+        <input type="file" id="file-input-2" class="file-input" accept=".xlsx,.xls">
+        <button class="upload-btn source2" id="upload-btn-2">Choose File</button>
+        <div id="file-info-2" class="file-info"></div>
+      </div>
     </div>
-    
-    <script>
-        // --- STATE MANAGEMENT ---
-        const STATE = {
-            source1Files: [],
-            source2File: null,
-            columnMappings: {},
-            userInfo: {
-                login: 'ksismad',
-                currentUTC: '2025-06-20 14:44:40'
-            },
-            analysisOptions: {
-                type: 'all',
-                includeCommission: false,
-                applyGST: false,
-                varianceThreshold: 0.01
-            }
+
+    <div id="column-mappings" class="column-mappings"></div>
+
+    <div class="options-section">
+      <div class="option-group">
+        <label>Analysis Type:</label>
+        <select id="analysis-type">
+          <option value="all">All Records</option>
+          <option value="mismatches">Only Mismatches</option>
+          <option value="missing">Only Missing Records</option>
+        </select>
+        <label><input type="checkbox" id="include-commission"> Include Commission Analysis</label>
+        <label><input type="checkbox" id="apply-gst"> Apply 18% GST</label>
+      </div>
+      <div class="option-group">
+        <label>Variance Threshold:</label>
+        <input type="number" id="variance-threshold" value="0.01" step="0.01" min="0">
+      </div>
+    </div>
+
+    <div id="error-message" class="error-message"></div>
+    <button id="analyze-btn" class="analyze-btn" disabled>Analyze Data</button>
+    <div id="results" class="results"></div>
+  </div>
+
+  <div id="loading-overlay" class="loading-overlay"><div class="spinner"></div></div>
+
+  <script>
+    // STATE
+    const STATE = {
+      source1Files: [], source2File: null, columnMappings: {},
+      analysisOptions: { type:'all', includeCommission:false, applyGST:false, varianceThreshold:0.01 }
+    };
+    // DOM
+    const DOM = {
+      fileInput1: $('#file-input-1')[0],
+      fileInput2: $('#file-input-2')[0],
+      uploadBtn1: $('#upload-btn-1')[0],
+      uploadBtn2: $('#upload-btn-2')[0],
+      drop1: $('#drop1')[0],
+      drop2: $('#drop2')[0],
+      fileInfo1: $('#file-info-1')[0],
+      fileInfo2: $('#file-info-2')[0],
+      columnMappings: $('#column-mappings')[0],
+      analysisType: $('#analysis-type')[0],
+      includeCommission: $('#include-commission')[0],
+      applyGST: $('#apply-gst')[0],
+      varianceThreshold: $('#variance-threshold')[0],
+      analyzeBtn: $('#analyze-btn')[0],
+      results: $('#results')[0],
+      loadingOverlay: $('#loading-overlay')[0],
+      errorMessage: $('#error-message')[0],
+      userInfo: $('#user-info')[0]
+    };
+
+    // UTIL
+    function showLoading() { DOM.loadingOverlay.classList.add('show'); }
+    function hideLoading() { DOM.loadingOverlay.classList.remove('show'); }
+    function showError(msg) {
+      DOM.errorMessage.textContent = msg;
+      DOM.errorMessage.classList.add('show');
+      setTimeout(()=>DOM.errorMessage.classList.remove('show'),5000);
+    }
+    function updateUserInfo() {
+      const now=new Date().toISOString().replace('T',' ').slice(0,19);
+      DOM.userInfo.textContent=`User: ksismad | UTC ${now}`;
+    }
+
+    // FILE HANDLERS
+    function initFileHandlers() {
+      // click → input
+      DOM.uploadBtn1.onclick = e=>{e.preventDefault(); DOM.fileInput1.value=''; DOM.fileInput1.click();};
+      DOM.uploadBtn2.onclick = e=>{e.preventDefault(); DOM.fileInput2.value=''; DOM.fileInput2.click();};
+      // drag & drop
+      [ {drop:DOM.drop1,src:1}, {drop:DOM.drop2,src:2} ].forEach(o=>{
+        o.drop.ondragover = e=>{e.preventDefault(); o.drop.classList.add('dragover');};
+        o.drop.ondragleave= e=>{e.preventDefault(); o.drop.classList.remove('dragover');};
+        o.drop.ondrop     = e=>{e.preventDefault(); o.drop.classList.remove('dragover');
+          const files=e.dataTransfer.files;
+          if(files.length) handleFileSelection(o.src===1?files:[files[0]],o.src);
         };
+      });
+      // change
+      DOM.fileInput1.onchange = e=>{ if(e.target.files.length) handleFileSelection(e.target.files,1); };
+      DOM.fileInput2.onchange = e=>{ if(e.target.files.length) handleFileSelection([e.target.files[0]],2); };
+    }
 
-        // --- DOM ELEMENTS ---
-        const DOM = {
-            fileInput1: document.getElementById('file-input-1'),
-            fileInput2: document.getElementById('file-input-2'),
-            uploadBtn1: document.getElementById('upload-btn-1'),
-            uploadBtn2: document.getElementById('upload-btn-2'),
-            fileInfo1: document.getElementById('file-info-1'),
-            fileInfo2: document.getElementById('file-info-2'),
-            columnMappings: document.getElementById('column-mappings'),
-            analysisType: document.getElementById('analysis-type'),
-            includeCommission: document.getElementById('include-commission'),
-            applyGST: document.getElementById('apply-gst'),
-            varianceThreshold: document.getElementById('variance-threshold'),
-            analyzeBtn: document.getElementById('analyze-btn'),
-            results: document.getElementById('results'),
-            loadingOverlay: document.getElementById('loading-overlay'),
-            errorMessage: document.getElementById('error-message'),
-            userInfo: document.getElementById('user-info')
+    // PROCESS
+    function handleFileSelection(files,src){
+      if(!files.length){ showError('No files'); return;}
+      showLoading();
+      if(src===1){
+        STATE.source1Files=[]; 
+        Array.from(files).forEach((f,i)=>{
+          processExcelFile(f,(err,data)=>{
+            if(!err){
+              STATE.source1Files.push({file:f,headers:data[0],records:data.slice(1)});
+              DOM.fileInfo1.textContent=Array.from(files).map(x=>x.name).join(', ');
+              DOM.fileInfo1.classList.add('show');
+            } else { showError(err.message); }
+            if(i===files.length-1){ hideLoading(); setupColumnMappings(); updateAnalyzeBtn();}
+          });
+        });
+      } else {
+        const f=files[0];
+        processExcelFile(f,(err,data)=>{
+          if(!err){
+            STATE.source2File={file:f,headers:data[0],records:data.slice(1).map(r=>({...r,isPaid:true}))};
+            DOM.fileInfo2.textContent=f.name; DOM.fileInfo2.classList.add('show');
+            setupColumnMappings(); updateAnalyzeBtn();
+          } else showError(err.message);
+          hideLoading();
+        });
+      }
+    }
+    function processExcelFile(file,cb){
+      const rd=new FileReader();
+      rd.onload=e=>{
+        try{
+          const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+          const js=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1});
+          if(js.length<2) return cb(new Error('No data rows'));
+          cb(null,js);
+        }catch(er){cb(er);}
+      };
+      rd.onerror=()=>cb(new Error('Read error'));
+      rd.readAsArrayBuffer(file);
+    }
+
+    // COLUMN MAP
+    function setupColumnMappings(){
+      const h1=STATE.source1Files[0]?.headers||[],h2=STATE.source2File?.headers||[];
+      if(!h1.length||!h2.length) return;
+      const cols=[{id:'appId',lbl:'App ID',patt:[/app.*id/i,/id/i]},
+                  {id:'amount',lbl:'Amount',patt:[/amount/i,/total/i]},
+                  {id:'date',lbl:'Date',patt:[/date/i,/timestamp/i]},
+                  {id:'status',lbl:'Status',patt:[/status/i,/state/i]}];
+      let html=`<div class="mapping-group"><strong>Column Mappings</strong>`;
+      cols.forEach(c=>{
+        html+=`<div><label>${c.lbl}:</label>
+                <select id="ms1-${c.id}"><option value="">Select S1</option>${
+                  h1.map((h,i)=>`<option value="${i}">${h}</option>`).join('')
+                }</select>
+                <select id="ms2-${c.id}"><option value="">Select S2</option>${
+                  h2.map((h,i)=>`<option value="${i}">${h}</option>`).join('')
+                }</select></div>`;
+      });
+      html+=`</div>`;
+      DOM.columnMappings.innerHTML=html;
+      cols.forEach(c=>{
+        const s1=document.getElementById(`ms1-${c.id}`),
+              s2=document.getElementById(`ms2-${c.id}`);
+        const auto1=findMatch(h1,c.patt), auto2=findMatch(h2,c.patt);
+        if(auto1!='') s1.value=auto1; if(auto2!='') s2.value=auto2;
+        [s1,s2].forEach(el=>el.onchange=updateColumnMappings);
+      });
+      updateColumnMappings();
+    }
+    function findMatch(h,p){
+      for(let r of p){
+        const idx=h.findIndex(x=>x&&r.test(x));
+        if(idx!==-1) return idx;
+      }
+      return '';
+    }
+    function updateColumnMappings(){
+      STATE.columnMappings={};
+      ['appId','amount','date','status'].forEach(k=>{
+        STATE.columnMappings[k]={
+          source1:document.getElementById(`ms1-${k}`).value,
+          source2:document.getElementById(`ms2-${k}`).value
         };
+      });
+      updateAnalyzeBtn();
+    }
 
-        // --- FILE HANDLING ---
-        function initializeFileHandlers() {
-            // File input setup
-            [DOM.fileInput1, DOM.fileInput2].forEach(input => {
-                input.style.display = 'none';
-            });
+    // ANALYZE BUTTON
+    function updateAnalyzeBtn(){
+      const ok=STATE.source1Files.length>0 && STATE.source2File &&
+               Object.values(STATE.columnMappings).every(m=>m.source1&&m.source2);
+      DOM.analyzeBtn.disabled=!ok;
+      DOM.analyzeBtn.textContent=ok?'Analyze Data':'Please select & map columns';
+    }
 
-            // Upload button click handlers with improved handling
-            DOM.uploadBtn1.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                if (DOM.fileInput1) {
-                    DOM.fileInput1.value = '';
-                    DOM.fileInput1.click();
-                }
-            });
-
-            DOM.uploadBtn2.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                if (DOM.fileInput2) {
-                    DOM.fileInput2.value = '';
-                    DOM.fileInput2.click();
-                }
-            });
-
-            // File input change handlers
-            DOM.fileInput1.addEventListener('change', function(e) {
-                if (e.target.files && e.target.files.length > 0) {
-                    handleFileSelection(e.target.files, 1);
-                }
-            });
-
-            DOM.fileInput2.addEventListener('change', function(e) {
-                if (e.target.files && e.target.files.length > 0) {
-                    handleFileSelection(e.target.files, 2);
-                }
-            });
-
-            // Drag and drop handlers
-            [DOM.uploadBtn1.parentElement, DOM.uploadBtn2.parentElement].forEach((dropZone, idx) => {
-                dropZone.addEventListener('dragover', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    this.classList.add('dragover');
-                });
-
-                dropZone.addEventListener('dragleave', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    this.classList.remove('dragover');
-                });
-
-                dropZone.addEventListener('drop', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    this.classList.remove('dragover');
-                    
-                    const files = e.dataTransfer.files;
-                    if (files.length > 0) {
-                        if (idx === 0) {
-                            handleFileSelection(files, 1);
-                        } else {
-                            handleFileSelection([files[0]], 2);
-                        }
-                    }
-                });
-            });
+    // ANALYSIS
+    function analyzeData(){
+      const d1=STATE.source1Files.flatMap(f=>f.records),
+            d2=STATE.source2File.records,
+            m=STATE.columnMappings,
+            thr=parseFloat(DOM.varianceThreshold.value)||0.01;
+      let res={matches:0,mismatches:[],missing:[],redAlerts:[],commissionDeviations:[]};
+      const map2=new Map();
+      d2.forEach(r=>{ const id=r[m.source2.appId]; if(id) map2.set(id.toString(),r); });
+      d1.forEach(r1=>{
+        const id=r1[m.source1.appId]; if(!id) return;
+        const r2=map2.get(id.toString());
+        if(r2){
+          let a1=parseFloat(r1[m.source1.amount])||0, a2=parseFloat(r2[m.source2.amount])||0;
+          if(DOM.applyGST.checked){a1*=1.18;a2*=1.18;}
+          const varc=a2-a1, absVar=Math.abs(varc);
+          if(absVar<=thr){res.matches++;}
+          else {
+            const item={appId:id,amount1:a1,amount2:a2,variance:varc,absVariance:absVar,
+                        status1:r1[m.source1.status],status2:r2[m.source2.status],
+                        date1:r1[m.source1.date],date2:r2[m.source2.date],isPaid:true};
+            res.mismatches.push(item);
+            if(absVar>thr*10) res.redAlerts.push(item);
+            if(DOM.includeCommission.checked && Math.abs(varc/a1)>0.05)
+              res.commissionDeviations.push(item);
+          }
+        } else {
+          res.missing.push({appId:id,amount:parseFloat(r1[m.source1.amount])||0,
+                           status:r1[m.source1.status],date:r1[m.source1.date],
+                           source:'source1',isPaid:false});
         }
+      });
+      d2.forEach(r2=>{
+        const id=r2[m.source2.appId]; if(!id) return;
+        const exists=d1.some(x=>x[m.source1.appId]==id);
+        if(!exists) res.missing.push({appId:id,amount:parseFloat(r2[m.source2.amount])||0,
+                           status:r2[m.source2.status],date:r2[m.source2.date],
+                           source:'source2',isPaid:true});
+      });
+      res.mismatches.sort((a,b)=>b.absVariance-a.absVariance);
+      res.totalPotentialLoss=res.redAlerts.reduce((s,i)=>s+i.absVariance,0);
+      res.redAlertsTotal=res.totalPotentialLoss;
+      res.commissionDeviationsTotal=res.commissionDeviations.reduce((s,i)=>s+i.absVariance,0);
+      return res;
+    }
 
-        function handleFileSelection(files, source) {
-            if (!files || files.length === 0) {
-                showError('No files selected');
-                return;
-            }
+    // DISPLAY
+    function displayResults(r){
+      let html=`<div class="results-header"><h2>Analysis Summary</h2></div>
+        <div class="stats-grid">
+          <div class="stat-card"><h3>Total Potential Loss</h3><div class="stat-value">₹${r.totalPotentialLoss.toFixed(2)}</div><div class="stat-subtext">(Red Alerts + Commission Deviations)</div></div>
+          <div class="stat-card"><h3>Red Alerts</h3><div class="stat-value">${r.redAlerts.length}</div><div class="stat-subtext">₹${r.redAlertsTotal.toFixed(2)}</div></div>
+          <div class="stat-card"><h3>Commission Deviations</h3><div class="stat-value">${r.commissionDeviations.length}</div><div class="stat-subtext">₹${r.commissionDeviationsTotal.toFixed(2)}</div></div>
+          <div class="stat-card"><h3>Total Records</h3>
+            <div class="stat-value">${r.matches + r.mismatches.length + r.missing.length}</div>
+            <div class="stat-subtext">${r.matches} matches, ${r.mismatches.length} mismatches, ${r.missing.length} missing</div>
+          </div>
+        </div>
+        <div class="table-section"><h3>Top Mismatches</h3><div class="table-container">
+        <table><thead><tr><th>App ID</th><th>S1 Amt</th><th>S2 Amt (Paid)</th><th>Var</th><th>Status</th><th>Date</th></tr></thead><tbody>
+        ${r.mismatches.slice(0,10).map(i=>`
+          <tr>
+            <td>${i.appId}</td>
+            <td class="amount-cell">₹${i.amount1.toFixed(2)}</td>
+            <td class="amount-cell paid">₹${i.amount2.toFixed(2)}</td>
+            <td class="variance-cell ${i.variance>0?'positive-variance':'negative-variance'}">₹${i.variance.toFixed(2)}</td>
+            <td>${i.status1}→${i.status2}</td><td>${i.date1}</td>
+          </tr>
+        `).join('')}
+        </tbody></table></div></div>`;
+      if(r.missing.length){
+        html+=`<div class="table-section"><h3>Missing Records</h3><div class="table-container">
+        <table><thead><tr><th>App ID</th><th>Amt</th><th>Status</th><th>Date</th><th>Missing From</th></tr></thead><tbody>
+          ${r.missing.map(i=>`
+            <tr>
+              <td>${i.appId}</td>
+              <td class="amount-cell ${i.isPaid?'paid':''}">₹${i.amount.toFixed(2)}</td>
+              <td>${i.status||'N/A'}</td><td>${i.date||'N/A'}</td>
+              <td>${i.source==='source1'?'Source 2':'Source 1'}</td>
+            </tr>
+          `).join('')}
+        </tbody></table></div></div>`;
+      }
+      DOM.results.innerHTML=html;
+      DOM.results.classList.add('show');
+    }
 
-            // Validate file types
-            const validTypes = [
-                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                'application/vnd.ms-excel'
-            ];
-            
-            const invalidFiles = Array.from(files).filter(file => 
-                !validTypes.includes(file.type) && 
-                !file.name.match(/\.(xlsx|xls)$/i)
-            );
+    // EVENTS
+    DOM.analyzeBtn.onclick = ()=>{
+      showLoading();
+      setTimeout(()=>{
+        try{
+          const res=analyzeData();
+          displayResults(res);
+        }catch(e){ showError(e.message); }
+        hideLoading();
+      },100);
+    };
 
-            if (invalidFiles.length > 0) {
-                showError('Please select only Excel files (.xlsx or .xls)');
-                return;
-            }
-
-            showLoading();
-            
-            if (source === 1) {
-                STATE.source1Files = [];
-                Array.from(files).forEach((file, idx) => {
-                    processExcelFile(file, (err, data) => {
-                        if (!err) {
-                            STATE.source1Files.push({
-                                file: file,
-                                data: data,
-                                headers: data[0],
-                                records: data.slice(1)
-                            });
-                            updateFileInfo(1, files);
-                            if (STATE.source1Files.length === files.length) {
-                                setupColumnMappings();
-                            }
-                        } else {
-                            showError(`Error processing file ${file.name}: ${err.message}`);
-                        }
-                        if (idx === files.length - 1) {
-                            hideLoading();
-                            updateAnalyzeButton();
-                        }
-                    });
-                });
-            } else {
-                const file = files[0];
-                processExcelFile(file, (err, data) => {
-                    if (!err) {
-                        STATE.source2File = {
-                            file: file,
-                            data: data,
-                            headers: data[0],
-                            records: data.slice(1).map(record => ({ ...record, isPaid: true }))
-                        };
-                        updateFileInfo(2, [file]);
-                        setupColumnMappings();
-                    } else {
-                        showError(`Error processing file ${file.name}: ${err.message}`);
-                    }
-                    hideLoading();
-                    updateAnalyzeButton();
-                });
-            }
-        }
-
-        function processExcelFile(file, callback) {
-            const reader = new FileReader();
-            
-            reader.onload = function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, {type: 'array'});
-                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
-                    
-                    if (jsonData.length < 2) {
-                        callback(new Error('File contains no data rows'));
-                        return;
-                    }
-                    
-                    callback(null, jsonData);
-                } catch (err) {
-                    callback(err);
-                }
-            };
-            
-            reader.onerror = function() {
-                callback(new Error('Error reading file'));
-            };
-            
-            reader.readAsArrayBuffer(file);
-        }
-
-        // --- COLUMN MAPPING ---
-        function setupColumnMappings() {
-            const headers1 = STATE.source1Files[0]?.headers || [];
-            const headers2 = STATE.source2File?.headers || [];
-            
-            if (!headers1.length || !headers2.length) return;
-            
-            const requiredColumns = [
-                { 
-                    id: 'appId', 
-                    label: 'App ID',
-                    patterns: [/app.*id/i, /application.*id/i, /id/i]
-                },
-                { 
-                    id: 'amount', 
-                    label: 'Amount',
-                    patterns: [/amount/i, /total/i, /value/i, /payment/i]
-                },
-                { 
-                    id: 'date', 
-                    label: 'Date',
-                    patterns: [/date/i, /timestamp/i, /time/i]
-                },
-                { 
-                    id: 'status', 
-                    label: 'Status',
-                    patterns: [/status/i, /state/i, /condition/i]
-                }
-            ];
-            
-            const mappingHTML = `
-                <div class="mapping-group">
-                    <div class="mapping-label">Column Mappings</div>
-                    ${requiredColumns.map(col => `
-                        <div class="mapping-row">
-                            <label for="mapping-source1-${col.id}">${col.label}:</label>
-                            <select id="mapping-source1-${col.id}" aria-label="Source 1 ${col.label}">
-                                <option value="">-- Select Source 1 Column --</option>
-                                ${headers1.map((h, i) => `
-                                    <option value="${i}">${h}</option>
-                                `).join('')}
-                            </select>
-                            <select id="mapping-source2-${col.id}" aria-label="Source 2 ${col.label}">
-                                <option value="">-- Select Source 2 Column --</option>
-                                ${headers2.map((h, i) => `
-                                    <option value="${i}">${h}</option>
-                                `).join('')}
-                            </select>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-            
-            DOM.columnMappings.innerHTML = mappingHTML;
-            
-            // Auto-detect columns
-            requiredColumns.forEach(col => {
-                const source1Select = document.getElementById(`mapping-source1-${col.id}`);
-                const source2Select = document.getElementById(`mapping-source2-${col.id}`);
-                
-                // Try to find matches using patterns
-                let source1Match = findBestMatch(headers1, col.patterns);
-                let source2Match = findBestMatch(headers2, col.patterns);
-                
-                if (source1Match !== '') {
-                    source1Select.value = source1Match;
-                }
-                if (source2Match !== '') {
-                    source2Select.value = source2Match;
-                }
-                
-                source1Select.addEventListener('change', updateColumnMappings);
-                source2Select.addEventListener('change', updateColumnMappings);
-            });
-            
-            updateColumnMappings();
-        }
-
-        function findBestMatch(headers, patterns) {
-            for (const pattern of patterns) {
-                const index = headers.findIndex(header => 
-                    header && pattern.test(header.toString())
-                );
-                if (index !== -1) return index;
-            }
-            return '';
-        }
-
-        function updateColumnMappings() {
-            STATE.columnMappings = {};
-            const requiredColumns = ['appId', 'amount', 'date', 'status'];
-            
-            requiredColumns.forEach(col => {
-                STATE.columnMappings[col] = {
-                    source1: document.getElementById(`mapping-source1-${col}`).value,
-                    source2: document.getElementById(`mapping-source2-${col}`).value
-                };
-            });
-            
-            updateAnalyzeButton();
-        }
-
-        // --- ANALYSIS ---
-        function analyzeData() {
-            const source1Data = STATE.source1Files.flatMap(file => file.records);
-            const source2Data = STATE.source2File.records;
-            
-            const mappings = STATE.columnMappings;
-            const threshold = parseFloat(DOM.varianceThreshold.value) || 0.01;
-            
-            const results = {
-                matches: 0,
-                mismatches: [],
-                missing: [],
-                redAlerts: [],
-                commissionDeviations: []
-            };
-            
-            // Create lookup map for source2 data
-            const source2Map = new Map();
-            source2Data.forEach(record => {
-                const appId = record[mappings.appId.source2];
-                if (appId) {
-                    record.isPaid = true; // Mark source 2 as paid
-                    source2Map.set(appId.toString(), record);
-                }
-            });
-            
-            // Analyze each record from source1
-            source1Data.forEach(record1 => {
-                const appId = record1[mappings.appId.source1];
-                if (!appId) return;
-                
-                const record2 = source2Map.get(appId.toString());
-                
-                if (record2) {
-                    const amount1 = parseFloat(record1[mappings.amount.source1]) || 0;
-                    const amount2 = parseFloat(record2[mappings.amount.source2]) || 0;
-                    
-                    if (DOM.applyGST.checked) {
-                        amount1 *= 1.18;
-                        amount2 *= 1.18;
-                    }
-                    
-                    const variance = amount2 - amount1;
-                    const absVariance = Math.abs(variance);
-                    
-                    if (absVariance <= threshold) {
-                        results.matches++;
-                    } else {
-                        const mismatch = {
-                            appId,
-                            amount1,
-                            amount2,
-                            variance,
-                            absVariance,
-                            status1: record1[mappings.status.source1],
-                            status2: record2[mappings.status.source2],
-                            date1: record1[mappings.date.source1],
-                            date2: record2[mappings.date.source2],
-                            isPaid: true // Mark as paid since it's from source 2
-                        };
-                        
-                        results.mismatches.push(mismatch);
-                        
-                        // Check for red alerts (high variance)
-                        if (absVariance > threshold * 10) {
-                            results.redAlerts.push(mismatch);
-                        }
-                        
-                        // Check for commission deviations
-                        if (DOM.includeCommission.checked && 
-                            Math.abs(variance / amount1) > 0.05) { // 5% threshold
-                            results.commissionDeviations.push(mismatch);
-                        }
-                    }
-                } else {
-                    results.missing.push({
-                        appId,
-                        amount: parseFloat(record1[mappings.amount.source1]) || 0,
-                        status: record1[mappings.status.source1],
-                        date: record1[mappings.date.source1],
-                        source: 'source1',
-                        isPaid: false
+    // INIT
+    document.addEventListener('DOMContentLoaded',()=>{
+      initFileHandlers();
+      updateUserInfo();
+      setInterval(updateUserInfo,15000);
+    });
+  </script>
+</body>
+</html>
