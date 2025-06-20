@@ -33,6 +33,7 @@
     select, input[type="number"] { padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:1rem;}
     .analyze-btn { width: 100%; margin:28px 0 18px 0; padding:16px; background: linear-gradient(100deg, #10b981, #059669 70%); color:#fff; border:none; border-radius:10px; font-size:1.18rem; font-weight:700; cursor:pointer; transition: background .2s;}
     .analyze-btn:disabled { background:#9ca3af; cursor:not-allowed; }
+    .download-btn { width: 100%; margin:0 0 18px 0; padding:14px; background: linear-gradient(100deg, #6366f1, #8b5cf6 70%); color:#fff; border:none; border-radius:10px; font-size:1.09rem; font-weight:700; cursor:pointer; }
 
     .results-header, .stats-grid, .table-section { margin-bottom:18px; }
     .stats-grid { display: grid; grid-template-columns: repeat(2,1fr); gap:18px; }
@@ -50,9 +51,6 @@
     th { background:#f8fafc; font-size:1.01rem; }
     .amount-cell { text-align:right; font-family:monospace; }
     .amount-cell.paid::after { content:" ✓"; color:#059669; }
-    .variance-cell { text-align:right; font-family:monospace; font-weight:700; }
-    .positive-variance { color:#dc2626; }
-    .negative-variance { color:#059669; }
     .red-row { background: #fee2e2 !important; }
     .commission-row { background:#fef9c3 !important; }
     .missing-row { background: #fff7ed; }
@@ -63,16 +61,15 @@
 
     .error-message { margin:16px 32px; padding:12px 16px; background:#fee2e2; color:#b91c1c; border-radius:8px; display:none; }
     .error-message.show { display:block; }
-
     @keyframes spin { 0%{transform:rotate(0);}100%{transform:rotate(360deg);} }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <div class="user-info" id="user-info">User: ksismad | UTC 2025-06-20 14:53:32</div>
+      <div class="user-info" id="user-info">User: ksismad | UTC 2025-06-20 19:19:38</div>
       <h1>🔍 App ID Analyzer</h1>
-      <p>Compare and analyze app transaction data, including commission/TDS and loss, with auto-detection and permanent paid status for Source 2.</p>
+      <p>Advanced red alert analysis for app transaction data, with Excel export of all records and scenario highlights.</p>
     </div>
 
     <div class="upload-section">
@@ -97,22 +94,19 @@
         <label>Analysis Type:</label>
         <select id="analysis-type">
           <option value="all">All Records</option>
-          <option value="mismatches">Only Mismatches</option>
-          <option value="missing">Only Missing Records</option>
+          <option value="redalerts">Red Alerts Only</option>
         </select>
         <label><input type="checkbox" id="include-commission"> Include Commission Analysis</label>
-        <label><input type="checkbox" id="apply-gst"> Apply 18% GST</label>
       </div>
       <div class="option-group">
-        <label>Variance Threshold:</label>
-        <input type="number" id="variance-threshold" value="0.01" step="0.01" min="0">
-        <label style="margin-left:32px;">TDS % (for S1):</label>
+        <label>TDS % (for S1):</label>
         <input type="number" id="tds-percent" value="2" step="0.01" min="0" max="100" style="width:60px;">
       </div>
     </div>
 
     <div id="error-message" class="error-message"></div>
     <button id="analyze-btn" class="analyze-btn" disabled>Analyze Data</button>
+    <button id="download-btn" class="download-btn" style="display:none;">Download All Records as Excel</button>
     <div id="results" class="results"></div>
   </div>
 
@@ -124,7 +118,8 @@
     // STATE
     const STATE = {
       source1Files: [], source2File: null, columnMappings: {},
-      analysisOptions: { type:'all', includeCommission:false, applyGST:false, varianceThreshold:0.01, tdsPercent:2 }
+      analysisOptions: { type:'all', includeCommission:false, tdsPercent:2 },
+      allRecordsForExport: []
     };
     // DOM
     const DOM = {
@@ -139,10 +134,9 @@
       columnMappings: $('#column-mappings')[0],
       analysisType: $('#analysis-type')[0],
       includeCommission: $('#include-commission')[0],
-      applyGST: $('#apply-gst')[0],
-      varianceThreshold: $('#variance-threshold')[0],
       tdsPercent: $('#tds-percent')[0],
       analyzeBtn: $('#analyze-btn')[0],
+      downloadBtn: $('#download-btn')[0],
       results: $('#results')[0],
       loadingOverlay: $('#loading-overlay')[0],
       errorMessage: $('#error-message')[0],
@@ -161,7 +155,6 @@
       DOM.userInfo.textContent = `User: ksismad | UTC ${now}`;
     }
 
-    // FILE HANDLERS
     function initFileHandlers() {
       DOM.uploadBtn1.onclick = e=>{e.preventDefault(); DOM.fileInput1.value=''; DOM.fileInput1.click();};
       DOM.uploadBtn2.onclick = e=>{e.preventDefault(); DOM.fileInput2.value=''; DOM.fileInput2.click();};
@@ -179,7 +172,6 @@
       DOM.fileInput2.onchange = e=>{ if(e.target.files.length) handleFileSelection([e.target.files[0]],2); };
     }
 
-    // PROCESS
     function handleFileSelection(files,src){
       if(!files.length){ showError('No files'); return;}
       showLoading();
@@ -189,25 +181,39 @@
         Array.from(files).forEach((f,i)=>{
           processExcelFile(f,(err,data)=>{
             if(!err){
-              // Robust headers (trim, deduplicate)
               let headers = data[0].map(x => x ? String(x).trim() : "");
               let commissionIdx = headers.findIndex(h=>/commiss|tds|fee|charge/i.test(h));
-              // If no commission column, add one!
               if(commissionIdx === -1) {
                 headers.push("Commission (Auto)");
                 commissionIdx = headers.length-1;
               }
-              // Map rows with commission auto-calculated if missing
+              let statusIdx = headers.findIndex(h=>/stat(us)?|paid|unpaid|payment/i.test(h));
+              if(statusIdx === -1) {
+                headers.push("Status (Auto)");
+                statusIdx = headers.length-1;
+              }
               const recs = data.slice(1).map(row=>{
                 let rec={};
                 headers.forEach((h,idx)=>{
                   rec[h]= row[idx] !== undefined ? row[idx] : "";
                 });
-                // If commission was missing, auto-calc (Amount * tds%)
                 if(row.length < headers.length) {
                   let amt = parseFloat(row[headers.findIndex(h2=>/amount/i.test(h2))])||0;
                   let tds = parseFloat(DOM.tdsPercent.value)||2;
                   rec["Commission (Auto)"] = (amt*tds/100).toFixed(2);
+                  let statusVal = row[statusIdx];
+                  if(statusVal===undefined||statusVal==="") {
+                    rec["Status (Auto)"] = amt>0 ? "Paid" : "Unpaid";
+                  }
+                } else {
+                  let statusVal = rec[headers[statusIdx]];
+                  if(!statusVal || typeof statusVal!=="string" || !statusVal.trim()) {
+                    let amt = parseFloat(rec[headers.findIndex(h2=>/amount/i.test(h2))]||0);
+                    rec[headers[statusIdx]] = amt>0 ? "Paid" : "Unpaid";
+                  } else {
+                    statusVal=statusVal.toLowerCase();
+                    rec[headers[statusIdx]] = /paid/.test(statusVal) ? "Paid" : /unpaid/.test(statusVal) ? "Unpaid" : statusVal;
+                  }
                 }
                 return rec;
               });
@@ -215,7 +221,8 @@
                 file:f,
                 headers,
                 records:recs,
-                commissionIdx
+                commissionIdx,
+                statusIdx
               });
               DOM.fileInfo1.textContent=Array.from(files).map(x=>x.name).join(', ');
               DOM.fileInfo1.classList.add('show');
@@ -228,18 +235,16 @@
         const f=files[0];
         processExcelFile(f,(err,data)=>{
           if(!err){
-            // Source 2 status is always "Paid"
             const headers = data[0].map(x=>x?x.trim():"");
-            const statusIdx = headers.findIndex(h=>/status|payment/i.test(h));
             STATE.source2File = {
               file:f,
               headers,
               records: data.slice(1).map(row=>{
                 let rec={};
                 headers.forEach((h,idx)=>{
-                  if(statusIdx===idx) rec[h] = "Paid";
-                  else rec[h] = row[idx];
+                  rec[h] = row[idx];
                 });
+                rec["Status (Auto)"] = "Paid";
                 rec.isPaid = true;
                 return rec;
               })
@@ -265,7 +270,6 @@
       rd.readAsArrayBuffer(file);
     }
 
-    // COLUMN MAP
     function setupColumnMappings(){
       const h1=STATE.source1Files[0]?.headers||[], h2=STATE.source2File?.headers||[];
       if(!h1.length||!h2.length) return;
@@ -274,8 +278,7 @@
         {id:'amount',lbl:'Amount',patt:[/amount/i,/total/i,/value/i]},
         {id:'commission',lbl:'Commission',patt:[/commiss|tds|fee|charge/i]},
         {id:'date',lbl:'Date',patt:[/date/i,/timestamp/i,/txn.?date/i,/created/i]},
-        // No status for S2! Always Paid
-        {id:'status',lbl:'Status (S1 only)',patt:[/status/i,/state/i]}
+        {id:'status',lbl:'Status',patt:[/stat(us)?|paid|unpaid|payment/i]}
       ];
       let html=`<div class="mapping-group"><strong>Column Mappings (Auto-detected where possible)</strong>`;
       cols.forEach(c=>{
@@ -287,8 +290,6 @@
           html+=`<select id="ms2-${c.id}"><option value="">Select S2</option>${
                     h2.map((h,i)=>`<option value="${i}">${h}</option>`).join('')
                 }</select>`;
-        if (c.id==='commission')
-          html+=` <input type="number" id="tds-percent-map" min="0" max="100" step="0.01" value="${DOM.tdsPercent.value}" style="width:60px;display:inline-block;"> <span style="font-size:0.95em;">TDS %</span>`;
         html+=`</div>`;
       });
       html+=`</div>`;
@@ -304,23 +305,6 @@
         const auto1=findMatch(STATE.source1Files[0].headers,c.patt);
         if(auto1!=='') s1.value=auto1;
         s1.onchange=updateColumnMappings;
-        // Commission % sync
-        if (c.id==='commission') {
-          let tdsInput = document.getElementById('tds-percent-map');
-          tdsInput.oninput = function() {
-            DOM.tdsPercent.value = tdsInput.value;
-            STATE.analysisOptions.tdsPercent = parseFloat(tdsInput.value)||2;
-            // update commission column in STATE.source1Files
-            STATE.source1Files.forEach(sf=>{
-              let amtIdx = s1.value;
-              let commIdx = tdsInput.value;
-              sf.records.forEach(r=>{
-                let amt = parseFloat(r[sf.headers[amtIdx]])||0;
-                r[sf.headers[s1.value]] = (amt*STATE.analysisOptions.tdsPercent/100).toFixed(2);
-              });
-            });
-          }
-        }
       });
       updateColumnMappings();
     }
@@ -346,116 +330,14 @@
     }
 
     function updateAnalyzeBtn(){
-      // Only require S1 commission, not S2 status
       const ok=STATE.source1Files.length>0 && STATE.source2File &&
-        Object.values(STATE.columnMappings).every(m=>m.source1!=="" || (m.source2!=="" && m.source2!==undefined));
+        Object.values(STATE.columnMappings).every(m=>m.source1!==""
+          || (m.source2!=="" && m.source2!==undefined));
       DOM.analyzeBtn.disabled=!ok;
       DOM.analyzeBtn.textContent=ok?'Analyze Data':'Please select & map columns';
     }
 
-    // ANALYSIS
-    function analyzeData(){
-      const s1Files = STATE.source1Files;
-      const s2File = STATE.source2File;
-      const m = STATE.columnMappings;
-      const thr = parseFloat(DOM.varianceThreshold.value)||0.01;
-      const includeCommission = DOM.includeCommission.checked;
-      const applyGST = DOM.applyGST.checked;
-      const tdsPercent = parseFloat(DOM.tdsPercent.value)||2;
-      const analysisType = DOM.analysisType.value;
-
-      let res={matches:0,mismatches:[],missing:[],redAlerts:[],commissionDeviations:[], commissionTotals:[]};
-      // For each file in S1, calculate total commission
-      s1Files.forEach(sf=>{
-        let commIdx = m.commission.source1;
-        let amtIdx = m.amount.source1;
-        let totalCommission = 0;
-        sf.records.forEach(r=>{
-          let comm = parseFloat(r[sf.headers[commIdx]])||0;
-          totalCommission += comm;
-        });
-        res.commissionTotals.push({
-          file: sf.file.name,
-          totalCommission: totalCommission
-        });
-      });
-
-      // Map S2 by appId
-      const map2 = new Map();
-      s2File.records.forEach(r=>{
-        const id = getField(r, m.appId.source2, s2File.headers);
-        if(id !== undefined && id !== null && id !== "") map2.set(id.toString(),r);
-      });
-
-      // Analyze records
-      s1Files.forEach(sf=>{
-        sf.records.forEach(r1=>{
-          const id = getField(r1, m.appId.source1, sf.headers);
-          if(id === undefined || id === null || id === "") return;
-          const r2 = map2.get(id.toString());
-          if(r2){
-            let a1 = parseFloat(getField(r1, m.amount.source1, sf.headers))||0;
-            let a2 = parseFloat(getField(r2, m.amount.source2, s2File.headers))||0;
-            let comm = parseFloat(getField(r1, m.commission.source1, sf.headers))||0;
-            if(applyGST){a1*=1.18;a2*=1.18;}
-            const varc=a2-a1, absVar=Math.abs(varc);
-            const isRed = (absVar>thr*10) || (varc<0 && absVar>thr);
-            const isCommission = includeCommission && a1>0 && Math.abs(varc/a1)>0.05;
-            if(absVar<=thr){
-              if(analysisType==="all") res.matches++;
-            } else {
-              const item={
-                appId:id,
-                amount1:a1,
-                amount2:a2,
-                commission:comm,
-                variance:varc,
-                absVariance:absVar,
-                status1:getField(r1, m.status.source1, sf.headers),
-                date1:getField(r1, m.date.source1, sf.headers),
-                date2:getField(r2, m.date.source2, s2File.headers),
-                isPaid:true,
-                isRed,
-                isCommission
-              };
-              if(analysisType==="all" || analysisType==="mismatches") res.mismatches.push(item);
-              if(isRed) res.redAlerts.push(item);
-              if(isCommission) res.commissionDeviations.push(item);
-            }
-          } else {
-            if(analysisType==="all" || analysisType==="missing") {
-              res.missing.push({appId:id,amount:parseFloat(getField(r1, m.amount.source1, sf.headers))||0,
-                                commission:parseFloat(getField(r1, m.commission.source1, sf.headers))||0,
-                                status:getField(r1, m.status.source1, sf.headers),
-                                date:getField(r1, m.date.source1, sf.headers),
-                                source:'source1',isPaid:false});
-            }
-          }
-        });
-      });
-      s2File.records.forEach(r2=>{
-        const id = getField(r2, m.appId.source2, s2File.headers);
-        if(id === undefined || id === null || id === "") return;
-        // check in all s1 files
-        let exists = false;
-        for(let sf of s1Files){
-          if(sf.records.some(x=>getField(x, m.appId.source1, sf.headers)==id)){ exists=true; break;}
-        }
-        if(!exists && (analysisType==="all" || analysisType==="missing")) {
-          res.missing.push({appId:id,amount:parseFloat(getField(r2, m.amount.source2, s2File.headers))||0,
-                            commission:0, // S2 has no commission
-                            status:"Paid",
-                            date:getField(r2, m.date.source2, s2File.headers),
-                            source:'source2',isPaid:true});
-        }
-      });
-
-      res.mismatches.sort((a,b)=>b.absVariance-a.absVariance);
-      res.totalPotentialLoss=res.redAlerts.reduce((s,i)=>s+i.absVariance,0);
-      res.redAlertsTotal=res.totalPotentialLoss;
-      res.commissionDeviationsTotal=res.commissionDeviations.reduce((s,i)=>s+i.absVariance,0);
-      return res;
-    }
+    // --- RED ALERT LOGIC + ALL RECORDS ---
     function getField(record, colIdx, headers) {
       if (colIdx === undefined || colIdx === null || colIdx === "") return "";
       const idx = parseInt(colIdx);
@@ -463,76 +345,268 @@
       const key = headers[idx];
       return record[key];
     }
+    function normalizeStatus(val) {
+      if(!val) return "Unpaid";
+      let v = String(val).toLowerCase();
+      return /paid/.test(v) ? "Paid" : /unpaid/.test(v) ? "Unpaid" : (parseFloat(val)>0 ? "Paid":"Unpaid");
+    }
 
-    function displayResults(r){
-      let html=`<div class="results-header"><h2>Analysis Summary</h2></div>
-        <div class="stats-grid">
-          <div class="stat-card"><h3>Total Potential Loss</h3><div class="stat-value">₹${r.totalPotentialLoss.toFixed(2)}</div><div class="stat-subtext">(Red Alerts + Commission Deviations)</div></div>
-          <div class="stat-card"><h3>Red Alerts <span class="alert-badge">${r.redAlerts.length}</span></h3><div class="stat-value">₹${r.redAlertsTotal.toFixed(2)}</div></div>
-          <div class="stat-card"><h3>Commission Deviations</h3><div class="stat-value">${r.commissionDeviations.length}</div><div class="stat-subtext">₹${r.commissionDeviationsTotal.toFixed(2)}</div></div>
-          <div class="stat-card"><h3>Total Records</h3>
-            <div class="stat-value">${r.matches + r.mismatches.length + r.missing.length}</div>
-            <div class="stat-subtext">${r.matches} matches, ${r.mismatches.length} mismatches, ${r.missing.length} missing</div>
-          </div>
-          <div class="stat-card"><h3>Commission Deducted (per file)</h3>
-            <div class="stat-value" style="font-size:.98em;">
-              ${r.commissionTotals.map(ct=>`${ct.file}: ₹${ct.totalCommission.toFixed(2)}`).join('<br>')}
-            </div>
-            <div class="stat-subtext">TDS at ${DOM.tdsPercent.value}%</div>
-          </div>
-        </div>
-        <div class="table-section"><h3>Top Mismatches</h3><div class="table-container">
-        <table><thead><tr><th>App ID</th><th>S1 Amt</th><th>S1 Comm</th><th>S2 Amt (Paid)</th><th>Var</th><th>Status</th><th>Date</th></tr></thead><tbody>
-        ${r.mismatches.slice(0,12).map(i=>`
-          <tr class="${i.isRed?'red-row':''} ${i.isCommission?'commission-row':''}">
-            <td>${i.appId}</td>
-            <td class="amount-cell">₹${i.amount1.toFixed(2)}</td>
-            <td class="amount-cell">${i.commission!==undefined?('₹'+parseFloat(i.commission).toFixed(2)):"-"}</td>
-            <td class="amount-cell paid">₹${i.amount2.toFixed(2)}</td>
-            <td class="variance-cell ${i.variance>0?'positive-variance':'negative-variance'}">${i.variance>0?'+':''}₹${i.variance.toFixed(2)}${i.isRed?' <span class="alert-badge">Red</span>':''}</td>
-            <td>${i.status1||'-'}</td><td>${i.date1||'-'}</td>
-          </tr>
-        `).join('')}
-        </tbody></table></div></div>`;
-      if(r.missing.length){
-        html+=`<div class="table-section"><h3>Missing Records</h3><div class="table-container">
-        <table><thead><tr><th>App ID</th><th>Amt</th><th>Comm</th><th>Status</th><th>Date</th><th>Missing From</th></tr></thead><tbody>
-          ${r.missing.map(i=>`
-            <tr class="missing-row">
-              <td>${i.appId}</td>
-              <td class="amount-cell ${i.isPaid?'paid':''}">₹${i.amount.toFixed(2)}</td>
-              <td class="amount-cell">${i.commission!==undefined?('₹'+parseFloat(i.commission).toFixed(2)):"-"}</td>
-              <td>${i.status||'N/A'}</td><td>${i.date||'N/A'}</td>
-              <td>${i.source==='source1'?'Source 2':'Source 1'}</td>
-            </tr>
-          `).join('')}
-        </tbody></table></div></div>`;
+    // Returns { redAlertsByScenario, allRecordsFlat }
+    function analyzeDataAndAllRecords(){
+      const s1Files = STATE.source1Files;
+      const s2File = STATE.source2File;
+      const m = STATE.columnMappings;
+      const includeCommission = DOM.includeCommission.checked;
+      const tdsPercent = parseFloat(DOM.tdsPercent.value)||2;
+
+      let redAlertsByScenario = {
+        "S1 Paid but missing in S2": [],
+        "S2 Paid but missing in S1": [],
+        "S2 Paid, S1 Unpaid": [],
+        "S2 Paid, S1 Paid but amount different": [],
+        "S2 Paid, S1 Unpaid and amount different": [],
+        "Commission deviation (for S1 Paid)": [],
+        "Duplicates in S1": [],
+        "Duplicates in S2": [],
+        "S1 Paid, S2 Paid but amount different": []
+      };
+
+      // Index S1 and S2 records by appId for easy lookup, and detect duplicates
+      let s1AppIdMap = new Map(), s2AppIdMap = new Map(), s1Duplicates = [], s2Duplicates = [];
+      let allS1Ids = [], allS2Ids = [];
+
+      s1Files.forEach(sf=>{
+        sf.records.forEach(r=>{
+          const id=getField(r,m.appId.source1,sf.headers);
+          if(!id) return;
+          allS1Ids.push(id);
+          const stat = normalizeStatus(getField(r,m.status.source1,sf.headers));
+          if(s1AppIdMap.has(id)) s1Duplicates.push({appId:id, r1:s1AppIdMap.get(id), r2:r});
+          else s1AppIdMap.set(id,{rec:r,stat,headers:sf.headers});
+        });
+      });
+      s2File.records.forEach(r=>{
+        const id=getField(r,m.appId.source2,s2File.headers);
+        if(!id) return;
+        allS2Ids.push(id);
+        if(s2AppIdMap.has(id)) s2Duplicates.push({appId:id, r1:s2AppIdMap.get(id), r2:r});
+        else s2AppIdMap.set(id,{rec:r,stat:"Paid",headers:s2File.headers});
+      });
+
+      // Red alert logic as before...
+      s1AppIdMap.forEach((val,id)=>{
+        if(val.stat==="Paid" && !s2AppIdMap.has(id)){
+          redAlertsByScenario["S1 Paid but missing in S2"].push({
+            appId: id,
+            s1Amount: getField(val.rec,m.amount.source1,val.headers),
+            s1Status: val.stat
+          });
+        }
+      });
+      s2AppIdMap.forEach((val,id)=>{
+        if(val.stat==="Paid" && !s1AppIdMap.has(id)){
+          redAlertsByScenario["S2 Paid but missing in S1"].push({
+            appId: id,
+            s2Amount: getField(val.rec,m.amount.source2,val.headers),
+            s2Status: val.stat
+          });
+        }
+      });
+      s2AppIdMap.forEach((val,id)=>{
+        let s1 = s1AppIdMap.get(id);
+        if(val.stat==="Paid" && s1 && s1.stat==="Unpaid"){
+          redAlertsByScenario["S2 Paid, S1 Unpaid"].push({
+            appId: id,
+            s1Status: s1.stat,
+            s2Status: val.stat
+          });
+        }
+      });
+      s2AppIdMap.forEach((val,id)=>{
+        let s1 = s1AppIdMap.get(id);
+        if(val.stat==="Paid" && s1 && s1.stat==="Paid"){
+          let s1Amount = parseFloat(getField(s1.rec,m.amount.source1,s1.headers))||0;
+          let s2Amount = parseFloat(getField(val.rec,m.amount.source2,val.headers))||0;
+          if(Math.abs(s1Amount-s2Amount) > 0.01){
+            redAlertsByScenario["S2 Paid, S1 Paid but amount different"].push({
+              appId: id,
+              s1Amount, s2Amount,
+              s1Status: s1.stat, s2Status: val.stat
+            });
+            redAlertsByScenario["S1 Paid, S2 Paid but amount different"].push({
+              appId: id,
+              s1Amount, s2Amount,
+              s1Status: s1.stat, s2Status: val.stat
+            });
+          }
+        }
+      });
+      s2AppIdMap.forEach((val,id)=>{
+        let s1 = s1AppIdMap.get(id);
+        if(val.stat==="Paid" && s1 && s1.stat==="Unpaid"){
+          let s1Amount = parseFloat(getField(s1.rec,m.amount.source1,s1.headers))||0;
+          let s2Amount = parseFloat(getField(val.rec,m.amount.source2,val.headers))||0;
+          if(Math.abs(s1Amount-s2Amount) > 0.01){
+            redAlertsByScenario["S2 Paid, S1 Unpaid and amount different"].push({
+              appId: id,
+              s1Amount, s2Amount,
+              s1Status: s1.stat, s2Status: val.stat
+            });
+          }
+        }
+      });
+      if(includeCommission){
+        s1AppIdMap.forEach((val,id)=>{
+          if(val.stat==="Paid"){
+            let comm = parseFloat(getField(val.rec,m.commission.source1,val.headers))||0;
+            let amt = parseFloat(getField(val.rec,m.amount.source1,val.headers))||0;
+            let expectedComm = amt*tdsPercent/100;
+            if(Math.abs(comm-expectedComm) > 0.01){
+              redAlertsByScenario["Commission deviation (for S1 Paid)"].push({
+                appId: id, s1Amount: amt, s1Commission: comm, expectedCommission: expectedComm
+              });
+            }
+          }
+        });
       }
-      DOM.results.innerHTML=html;
+      s1Duplicates.forEach(d=>redAlertsByScenario["Duplicates in S1"].push({
+        appId: d.appId,
+        rec1: d.r1, rec2: d.r2
+      }));
+      s2Duplicates.forEach(d=>redAlertsByScenario["Duplicates in S2"].push({
+        appId: d.appId,
+        rec1: d.r1, rec2: d.r2
+      }));
+
+      // ALL RECORDS FLAT: create a flat, scenario-annotated export
+      let allRecordsFlat = [];
+      let s1Exported = new Set(), s2Exported = new Set();
+
+      // Export from S1
+      s1Files.forEach(sf=>{
+        sf.records.forEach(r=>{
+          const id=getField(r,m.appId.source1,sf.headers);
+          if(!id) return;
+          const stat = normalizeStatus(getField(r,m.status.source1,sf.headers));
+          let s2 = s2AppIdMap.get(id);
+          let scenario = [];
+          if(stat==="Paid" && !s2) scenario.push("S1 Paid but missing in S2");
+          if(s2 && s2.stat==="Paid" && stat==="Unpaid") scenario.push("S2 Paid, S1 Unpaid");
+          if(s2 && stat==="Paid" && s2.stat==="Paid" && Math.abs((parseFloat(getField(r,m.amount.source1,sf.headers))||0)-(parseFloat(getField(s2.rec,m.amount.source2,s2.headers))||0))>0.01)
+            scenario.push("S2 Paid, S1 Paid but amount different");
+          if(s2 && s2.stat==="Paid" && stat==="Unpaid" &&
+            Math.abs((parseFloat(getField(r,m.amount.source1,sf.headers))||0)-(parseFloat(getField(s2.rec,m.amount.source2,s2.headers))||0))>0.01)
+            scenario.push("S2 Paid, S1 Unpaid and amount different");
+          if(includeCommission && stat==="Paid"){
+            let comm = parseFloat(getField(r,m.commission.source1,sf.headers))||0;
+            let amt = parseFloat(getField(r,m.amount.source1,sf.headers))||0;
+            let expectedComm = amt*tdsPercent/100;
+            if(Math.abs(comm-expectedComm) > 0.01) scenario.push("Commission deviation (for S1 Paid)");
+          }
+          if(allS1Ids.filter(x=>x===id).length>1) scenario.push("Duplicates in S1");
+          if(s2 && stat==="Paid" && s2.stat==="Paid" && Math.abs((parseFloat(getField(r,m.amount.source1,sf.headers))||0)-(parseFloat(getField(s2.rec,m.amount.source2,s2.headers))||0))>0.01)
+            scenario.push("S1 Paid, S2 Paid but amount different");
+          allRecordsFlat.push({
+            "Record Source": "S1",
+            "File": sf.file.name,
+            "App ID": id,
+            "S1 Amount": getField(r,m.amount.source1,sf.headers),
+            "S1 Commission": getField(r,m.commission.source1,sf.headers),
+            "S1 Status": stat,
+            "S1 Date": getField(r,m.date.source1,sf.headers),
+            "S2 Amount": s2 ? getField(s2.rec,m.amount.source2,s2.headers) : "",
+            "S2 Status": s2 ? s2.stat : "",
+            "S2 Date": s2 ? getField(s2.rec,m.date.source2,s2.headers) : "",
+            "Red Alert Scenario": scenario.join("; ")
+          });
+          s1Exported.add(id);
+        });
+      });
+      // Export from S2 not in S1
+      s2File.records.forEach(r=>{
+        const id=getField(r,m.appId.source2,s2File.headers);
+        if(!id || s1Exported.has(id)) return;
+        let stat = "Paid";
+        let scenario = [];
+        if(stat==="Paid" && !s1AppIdMap.has(id)) scenario.push("S2 Paid but missing in S1");
+        if(allS2Ids.filter(x=>x===id).length>1) scenario.push("Duplicates in S2");
+        allRecordsFlat.push({
+          "Record Source": "S2",
+          "File": s2File.file.name,
+          "App ID": id,
+          "S1 Amount": "",
+          "S1 Commission": "",
+          "S1 Status": "",
+          "S1 Date": "",
+          "S2 Amount": getField(r,m.amount.source2,s2File.headers),
+          "S2 Status": stat,
+          "S2 Date": getField(r,m.date.source2,s2File.headers),
+          "Red Alert Scenario": scenario.join("; ")
+        });
+        s2Exported.add(id);
+      });
+
+      return {redAlertsByScenario, allRecordsFlat};
+    }
+
+    function displayResults(redAlertsByScenario){
+      let html = `<div class="results-header"><h2>Red Alert Scenarios</h2>
+        <div style="font-size:1.05em;margin-bottom:14px;"><strong>Legend:</strong> <span style="color:#dc2626;">Red Alerts</span> are mismatches or critical problems according to the business rules you specified.</div></div>`;
+      Object.entries(redAlertsByScenario).forEach(([scenario, arr])=>{
+        if(!arr.length) return;
+        html += `<div class="table-section"><h3>${scenario} <span class="alert-badge">${arr.length}</span></h3><div class="table-container"><table><thead><tr>`;
+        let fields = Object.keys(arr[0]);
+        html += fields.map(f=>`<th>${f.replace(/([A-Z])/g,' $1')}</th>`).join('');
+        html += `</tr></thead><tbody>`;
+        arr.forEach(item=>{
+          html += `<tr class="red-row">`;
+          fields.forEach(f=>{
+            let v = item[f];
+            if(typeof v === "object" && v!==null) v = JSON.stringify(v);
+            html += `<td>${v===undefined?"-":v}</td>`;
+          });
+          html += `</tr>`;
+        });
+        html += `</tbody></table></div></div>`;
+      });
+      DOM.results.innerHTML = html;
       DOM.results.classList.add('show');
     }
 
+    function exportAllRecordsToExcel(allRecords){
+      // Compose worksheet
+      if(!allRecords.length) return showError("Nothing to export");
+      const ws = XLSX.utils.json_to_sheet(allRecords);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "All Records");
+      XLSX.writeFile(wb, "all_app_records_with_red_alerts.xlsx");
+    }
+
+    // EVENT: analyze & show results (and enable download)
     DOM.analyzeBtn.onclick = ()=>{
       showLoading();
       setTimeout(()=>{
         try{
-          const res=analyzeData();
-          displayResults(res);
+          const {redAlertsByScenario, allRecordsFlat} = analyzeDataAndAllRecords();
+          STATE.allRecordsForExport = allRecordsFlat;
+          displayResults(redAlertsByScenario);
+          DOM.downloadBtn.style.display = "block";
         }catch(e){ showError(e.message); }
         hideLoading();
       },100);
+    };
+
+    DOM.downloadBtn.onclick = ()=>{
+      exportAllRecordsToExcel(STATE.allRecordsForExport);
     };
 
     document.addEventListener('DOMContentLoaded',()=>{
       initFileHandlers();
       updateUserInfo();
       setInterval(updateUserInfo,15000);
-      // Sync options state
-      DOM.analysisType.onchange = DOM.includeCommission.onchange = DOM.applyGST.onchange = DOM.varianceThreshold.oninput = DOM.tdsPercent.oninput = function() {
+      DOM.analysisType.onchange = DOM.includeCommission.onchange = DOM.tdsPercent.oninput = function() {
         STATE.analysisOptions.type = DOM.analysisType.value;
         STATE.analysisOptions.includeCommission = DOM.includeCommission.checked;
-        STATE.analysisOptions.applyGST = DOM.applyGST.checked;
-        STATE.analysisOptions.varianceThreshold = parseFloat(DOM.varianceThreshold.value)||0.01;
         STATE.analysisOptions.tdsPercent = parseFloat(DOM.tdsPercent.value)||2;
       };
     });
