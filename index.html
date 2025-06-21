@@ -3,9 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Advanced App ID Analyzer</title>
+  <title>Advanced App ID Analyzer Pro</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pivot-table@1.0.0/dist/pivot.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/pivot-table@1.0.0/dist/pivot.min.css" rel="stylesheet">
   <style>
     :root {
       --primary: #6366f1;
@@ -15,6 +17,7 @@
       --danger: #dc2626;
       --warning: #f59e0b;
       --info: #3b82f6;
+      --gray-50: #f9fafb;
       --gray-100: #f3f4f6;
       --gray-200: #e5e7eb;
       --gray-300: #d1d5db;
@@ -573,6 +576,101 @@
       margin-top: 1rem;
     }
 
+    /* Pivot table styles */
+    .pivot-section {
+      margin-top: 2rem;
+      border: 1px solid var(--gray-200);
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      background: white;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .pivot-controls {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .pivot-container {
+      overflow-x: auto;
+      margin-top: 1rem;
+    }
+
+    .pivot-table {
+      min-width: 100%;
+      border-collapse: collapse;
+    }
+
+    .pivot-table th, .pivot-table td {
+      padding: 0.5rem 0.75rem;
+      border: 1px solid var(--gray-200);
+      text-align: left;
+    }
+
+    .pivot-table th {
+      background-color: var(--gray-50);
+      font-weight: 600;
+    }
+
+    .pivot-table tr:nth-child(even) {
+      background-color: var(--gray-50);
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--gray-200);
+      margin-bottom: 1.5rem;
+    }
+
+    .tab {
+      padding: 0.75rem 1.5rem;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      font-weight: 600;
+      color: var(--gray-600);
+      transition: all 0.2s ease;
+    }
+
+    .tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+      background-color: rgba(99, 102, 241, 0.05);
+    }
+
+    .tab:hover:not(.active) {
+      color: var(--primary-dark);
+      background-color: rgba(99, 102, 241, 0.05);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Source file info in results */
+    .source-file-info {
+      font-size: 0.85rem;
+      color: var(--gray-500);
+      margin-bottom: 0.5rem;
+    }
+
+    /* Enhanced commission display */
+    .commission-badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background-color: rgba(5, 150, 105, 0.1);
+      color: var(--secondary-dark);
+    }
+
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
@@ -599,6 +697,10 @@
       .alert-container {
         grid-template-columns: 1fr;
       }
+      
+      .pivot-controls {
+        flex-direction: column;
+      }
     }
   </style>
 </head>
@@ -606,8 +708,8 @@
   <div class="container">
     <div class="header">
       <div class="user-info" id="user-info">User: ksismad | UTC 2025-06-20 20:51:09</div>
-      <h1>🔍 Advanced App ID Analyzer</h1>
-      <p>Comprehensive Payment Reconciliation Tool</p>
+      <h1>🔍 Advanced App ID Analyzer Pro</h1>
+      <p>Comprehensive Payment Reconciliation & Analysis Tool</p>
     </div>
 
     <div class="content-section">
@@ -657,10 +759,69 @@
       <button id="analyze-btn" class="btn btn-secondary analyze-btn" disabled>Analyze Data</button>
 
       <div id="results-section" style="display: none;">
-        <h2 class="section-title">Analysis Results</h2>
-        <div class="stats-grid" id="stats-grid"></div>
-        <div id="results" class="alert-container"></div>
-        <button id="export-btn" class="btn btn-primary export-btn">Export Results as Excel</button>
+        <div class="tabs">
+          <div class="tab active" data-tab="summary">Summary View</div>
+          <div class="tab" data-tab="detailed">Detailed Results</div>
+          <div class="tab" data-tab="pivot">Pivot Analysis</div>
+          <div class="tab" data-tab="merged">Merged Data</div>
+        </div>
+
+        <div id="summary-view" class="tab-content active">
+          <h2 class="section-title">Analysis Summary</h2>
+          <div class="stats-grid" id="stats-grid"></div>
+          <div id="results" class="alert-container"></div>
+        </div>
+
+        <div id="detailed-view" class="tab-content">
+          <h2 class="section-title">Detailed Results</h2>
+          <div id="detailed-results"></div>
+        </div>
+
+        <div id="pivot-view" class="tab-content">
+          <h2 class="section-title">Pivot Analysis</h2>
+          <div class="pivot-controls">
+            <div>
+              <label>Rows:</label>
+              <select id="pivot-rows" class="pivot-select">
+                <option value="Scenario">Scenario</option>
+                <option value="Status">Status</option>
+              </select>
+            </div>
+            <div>
+              <label>Columns:</label>
+              <select id="pivot-cols" class="pivot-select">
+                <option value="">-- None --</option>
+                <option value="Status">Status</option>
+              </select>
+            </div>
+            <div>
+              <label>Values:</label>
+              <select id="pivot-vals" class="pivot-select">
+                <option value="Count">Count</option>
+                <option value="Amount">Amount</option>
+              </select>
+            </div>
+            <div>
+              <label>Aggregator:</label>
+              <select id="pivot-agg" class="pivot-select">
+                <option value="Count">Count</option>
+                <option value="Sum" selected>Sum</option>
+                <option value="Average">Average</option>
+              </select>
+            </div>
+          </div>
+          <div class="pivot-container" id="pivot-container"></div>
+        </div>
+
+        <div id="merged-view" class="tab-content">
+          <h2 class="section-title">Merged Data View</h2>
+          <div id="merged-results"></div>
+        </div>
+
+        <div class="export-buttons">
+          <button id="export-btn" class="btn btn-primary export-btn">Export Results as Excel</button>
+          <button id="export-merged-btn" class="btn btn-secondary export-btn">Export Merged Data</button>
+        </div>
       </div>
     </div>
   </div>
@@ -681,7 +842,9 @@
           applyGST: false,
           gstRound: false
         },
-        analysisResults: null
+        analysisResults: null,
+        mergedData: null,
+        pivotData: null
       };
 
       const validateState = () => {
@@ -708,7 +871,11 @@
           state = { ...state, ...newState }; 
           return validateState();
         },
-        resetAnalysis: () => { state.analysisResults = null; },
+        resetAnalysis: () => { 
+          state.analysisResults = null;
+          state.mergedData = null;
+          state.pivotData = null;
+        },
         isValid: validateState
       };
     })();
@@ -737,7 +904,17 @@
       errorMessage: document.getElementById('error-message'),
       successMessage: document.getElementById('success-message'),
       userInfo: document.getElementById('user-info'),
-      exportBtn: document.getElementById('export-btn')
+      exportBtn: document.getElementById('export-btn'),
+      exportMergedBtn: document.getElementById('export-merged-btn'),
+      detailedResults: document.getElementById('detailed-results'),
+      pivotContainer: document.getElementById('pivot-container'),
+      pivotRows: document.getElementById('pivot-rows'),
+      pivotCols: document.getElementById('pivot-cols'),
+      pivotVals: document.getElementById('pivot-vals'),
+      pivotAgg: document.getElementById('pivot-agg'),
+      mergedResults: document.getElementById('merged-results'),
+      tabs: document.querySelectorAll('.tab'),
+      tabContents: document.querySelectorAll('.tab-content')
     };
 
     // Utility Functions with enhanced error handling
@@ -798,6 +975,15 @@
           return parseFloat(cleaned) || 0;
         }
         return 0;
+      },
+      
+      calculateCommissionPercentage: (amount, commission) => {
+        if (!amount || !commission) return 0;
+        return (Utils.safeParseFloat(commission) / Utils.safeParseFloat(amount)) * 100;
+      },
+      
+      generateUniqueId: () => {
+        return Date.now().toString(36) + Math.random().toString(36).substr(2);
       }
     };
 
@@ -917,7 +1103,9 @@
               successfulFiles.push({
                 file: result.file,
                 headers: result.data[0],
-                records: result.data.slice(1)
+                records: result.data.slice(1),
+                fileId: Utils.generateUniqueId(),
+                fileName: result.file.name
               });
             }
           });
@@ -1144,16 +1332,25 @@
       analyzeData: () => {
         try {
           const { source1Files, source2Files, columnMappings, analysisOptions } = AppState.getState();
-          const s1 = source1Files[0];
           const s2 = source2Files[0];
           
-          if (!s1 || !s2) { 
+          if (source1Files.length === 0 || !s2) { 
             Utils.showError("Missing source files"); 
             return {}; 
           }
           
-          const { records: s1Records } = s1;
-          const { records: s2Records } = s2;
+          // Combine all Source 1 records from all files
+          const combinedS1Records = [];
+          source1Files.forEach(file => {
+            file.records.forEach(record => {
+              combinedS1Records.push({
+                ...record,
+                sourceFile: file.fileName
+              });
+            });
+          });
+          
+          const s2Records = s2.records;
           
           // Validate column mappings
           const idx = {
@@ -1202,17 +1399,20 @@
           });
           
           const s1AppIds = new Set();
-          s1Records.forEach(r => {
+          combinedS1Records.forEach(r => {
             const appId = String(r[idx.s1.appId]);
             if (appId) s1AppIds.add(appId);
           });
           
           // Count duplicates
-          const s1DupMap = _.countBy(s1Records, r => r[idx.s1.appId]);
+          const s1DupMap = _.countBy(combinedS1Records, r => r[idx.s1.appId]);
           const s2DupMap = _.countBy(s2Records, r => r[idx.s2.appId]);
           
-          // Process S1 records
-          s1Records.forEach(r1 => {
+          // Prepare merged data for export
+          const mergedData = [];
+          
+          // Process combined S1 records
+          combinedS1Records.forEach(r1 => {
             const appId = r1[idx.s1.appId];
             if (!appId) return;
             
@@ -1220,7 +1420,26 @@
             const s1Status = Utils.getS1Status(r1, idx.s1.commission);
             
             let amount1 = Utils.safeParseFloat(r1[idx.s1.amount]);
+            const preGSTAmount = amount1; // Store pre-GST amount for commission calculation
             amount1 = Utils.applyGSTToS1(amount1);
+            
+            // Add to merged data
+            const mergedRecord = {
+              AppID: appId,
+              Source: 'S1',
+              Status: s1Status,
+              Amount: amount1,
+              PreGSTAmount: preGSTAmount,
+              Date: r1[idx.s1.date],
+              File: r1.sourceFile,
+              Commission: idx.s1.commission !== null ? Utils.safeParseFloat(r1[idx.s1.commission]) : null
+            };
+            
+            if (mergedRecord.Commission !== null) {
+              mergedRecord.CommissionPercentage = Utils.calculateCommissionPercentage(preGSTAmount, mergedRecord.Commission);
+            }
+            
+            mergedData.push(mergedRecord);
             
             if (r2) {
               let amount2 = Utils.safeParseFloat(r2[idx.s2.amount]);
@@ -1233,20 +1452,27 @@
                     S2_Amount: amount2,
                     Difference: (amount2 - amount1),
                     S1_Date: r1[idx.s1.date],
-                    S2_Date: r2[idx.s2.date]
+                    S2_Date: r2[idx.s2.date],
+                    S1_File: r1.sourceFile,
+                    S2_File: s2.fileName,
+                    Status: s1Status
                   });
                 }
                 
                 if (analysisOptions.includeCommission && idx.s1.commission !== null) {
                   const commValue = Utils.safeParseFloat(r1[idx.s1.commission]);
-                  const expectedComm = amount1 * 0.02;
+                  const expectedComm = preGSTAmount * 0.02; // Calculate expected commission on pre-GST amount
                   if (Math.abs(commValue - expectedComm) > 0.01) {
                     scenarios["Commission deviation (for S1 Paid)"].push({ 
                       AppID: appId, 
                       Actual: commValue, 
                       Expected: expectedComm,
                       Difference: (commValue - expectedComm),
-                      Percentage: (commValue - expectedComm) / expectedComm * 100
+                      Percentage: (commValue - expectedComm) / expectedComm * 100,
+                      S1_Amount: amount1,
+                      S1_PreGSTAmount: preGSTAmount,
+                      S1_File: r1.sourceFile,
+                      Status: s1Status
                     });
                   }
                 }
@@ -1259,14 +1485,19 @@
                     S2_Amount: amount2,
                     Difference: (amount2 - amount1),
                     S1_Date: r1[idx.s1.date],
-                    S2_Date: r2[idx.s2.date]
+                    S2_Date: r2[idx.s2.date],
+                    S1_File: r1.sourceFile,
+                    S2_File: s2.fileName,
+                    Status: s1Status
                   });
               }
             } else if (s1Status === "Paid") {
               scenarios["S1 Paid but missing in S2"].push({ 
                 AppID: appId, 
                 S1_Amount: amount1,
-                S1_Date: r1[idx.s1.date]
+                S1_Date: r1[idx.s1.date],
+                S1_File: r1.sourceFile,
+                Status: s1Status
               });
             }
             
@@ -1274,7 +1505,9 @@
               scenarios["Duplicates in S1"].push({ 
                 AppID: appId, 
                 Count: s1DupMap[appId],
-                Sample_Date: r1[idx.s1.date]
+                Sample_Date: r1[idx.s1.date],
+                S1_File: r1.sourceFile,
+                Status: s1Status
               });
             }
           });
@@ -1284,11 +1517,23 @@
             const appId = r2[idx.s2.appId];
             if (!appId) return;
             
+            // Add to merged data
+            mergedData.push({
+              AppID: appId,
+              Source: 'S2',
+              Status: 'Paid',
+              Amount: Utils.safeParseFloat(r2[idx.s2.amount]),
+              Date: r2[idx.s2.date],
+              File: s2.fileName
+            });
+            
             if (!s1AppIds.has(String(appId))) {
               scenarios["S2 Paid but missing in S1"].push({ 
                 AppID: appId, 
                 S2_Amount: Utils.safeParseFloat(r2[idx.s2.amount]),
-                S2_Date: r2[idx.s2.date]
+                S2_Date: r2[idx.s2.date],
+                S2_File: s2.fileName,
+                Status: 'Paid'
               });
             }
             
@@ -1296,7 +1541,9 @@
               scenarios["Duplicates in S2"].push({ 
                 AppID: appId, 
                 Count: s2DupMap[appId],
-                Sample_Date: r2[idx.s2.date]
+                Sample_Date: r2[idx.s2.date],
+                S2_File: s2.fileName,
+                Status: 'Paid'
               });
             }
           });
@@ -1304,6 +1551,27 @@
           // Deduplicate duplicate lists
           scenarios["Duplicates in S1"] = _.uniqBy(scenarios["Duplicates in S1"], 'AppID');
           scenarios["Duplicates in S2"] = _.uniqBy(scenarios["Duplicates in S2"], 'AppID');
+          
+          // Prepare pivot data
+          const pivotData = [];
+          Object.entries(scenarios).forEach(([scenario, records]) => {
+            records.forEach(record => {
+              pivotData.push({
+                Scenario: scenario,
+                Status: record.Status || 'Unknown',
+                Count: 1,
+                Amount: record.S1_Amount || record.S2_Amount || 0,
+                Difference: record.Difference || 0,
+                File: record.S1_File || record.S2_File || 'Unknown'
+              });
+            });
+          });
+          
+          // Store merged and pivot data
+          AppState.setState({ 
+            mergedData: mergedData,
+            pivotData: pivotData
+          });
           
           return scenarios;
         } catch (error) {
@@ -1374,7 +1642,7 @@
           </div>
         `;
         
-        // Display detailed results
+        // Display detailed results in summary view
         let html = '';
         orderedScenarios.forEach(scenarioName => {
           const records = scenarios[scenarioName] || [];
@@ -1395,7 +1663,7 @@
           
           if (!isEmpty) {
             html += `<table class="alert-table"><thead><tr>`;
-            const headers = Object.keys(records[0]);
+            const headers = Object.keys(records[0]).filter(h => !['S1_File', 'S2_File', 'Status'].includes(h));
             headers.forEach(h => { 
               const displayName = h.replace(/_/g, ' ').replace('S1 ', 'S1 ').replace('S2 ', 'S2 ');
               html += `<th>${displayName}</th>`; 
@@ -1409,7 +1677,7 @@
                 let cellClass = '';
                 
                 if (typeof value === 'number') {
-                  value = h.includes('Amount') || h.includes('Difference') || h.includes('Percentage') ? 
+                  value = h.includes('Amount') || h.includes('Difference') || h === 'Percentage' ? 
                     Utils.formatNumber(value) : 
                     value.toString();
                   
@@ -1444,6 +1712,110 @@
         });
         
         DOM.results.innerHTML = html;
+        
+        // Display full detailed results in detailed view
+        let detailedHtml = '';
+        orderedScenarios.forEach(scenarioName => {
+          const records = scenarios[scenarioName] || [];
+          if (records.length === 0) return;
+          
+          detailedHtml += `<h3 style="margin-top:2rem;color:var(--gray-700);">${scenarioName} (${records.length} records)</h3>`;
+          detailedHtml += `<div class="source-file-info">Source files: ${_.uniq(records.map(r => r.S1_File || r.S2_File)).join(', ')}</div>`;
+          detailedHtml += `<div style="overflow-x:auto;"><table class="alert-table"><thead><tr>`;
+          
+          const headers = Object.keys(records[0]);
+          headers.forEach(h => { 
+            const displayName = h.replace(/_/g, ' ').replace('S1 ', 'S1 ').replace('S2 ', 'S2 ');
+            detailedHtml += `<th>${displayName}</th>`; 
+          });
+          
+          detailedHtml += `</tr></thead><tbody>`;
+          
+          records.forEach(record => {
+            detailedHtml += `<tr>`;
+            headers.forEach(h => {
+              let value = record[h];
+              let cellClass = '';
+              
+              if (typeof value === 'number') {
+                value = h.includes('Amount') || h.includes('Difference') || h === 'Percentage' ? 
+                  Utils.formatNumber(value) : 
+                  value.toString();
+                
+                if (h === 'Difference' || h === 'Percentage') {
+                  cellClass = 'amount-cell' + (value < 0 ? ' negative' : ' positive');
+                } else if (h.includes('Amount')) {
+                  cellClass = 'amount-cell';
+                }
+              }
+              
+              if (h === 'Status') {
+                cellClass = value === 'Paid' ? 'paid-cell' : 'unpaid-cell';
+              }
+              
+              if (h === 'AppID') {
+                value = value || 'N/A';
+              }
+              
+              detailedHtml += `<td class="${cellClass}">${value || 'N/A'}</td>`;
+            });
+            detailedHtml += `</tr>`;
+          });
+          
+          detailedHtml += `</tbody></table></div>`;
+        });
+        
+        DOM.detailedResults.innerHTML = detailedHtml;
+        
+        // Display merged data view
+        const { mergedData } = AppState.getState();
+        if (mergedData && mergedData.length > 0) {
+          let mergedHtml = `<div style="margin-bottom:1rem;">
+                              <strong>Total Records:</strong> ${mergedData.length} 
+                              (S1: ${mergedData.filter(d => d.Source === 'S1').length}, 
+                              S2: ${mergedData.filter(d => d.Source === 'S2').length})
+                            </div>`;
+          
+          mergedHtml += `<div style="overflow-x:auto;"><table class="alert-table"><thead><tr>
+                          <th>App ID</th>
+                          <th>Source</th>
+                          <th>Status</th>
+                          <th>Amount</th>
+                          <th>Date</th>
+                          <th>File</th>
+                          <th>Commission</th>
+                          <th>Commission %</th>
+                        </tr></thead><tbody>`;
+          
+          mergedData.slice(0, 100).forEach(record => {
+            mergedHtml += `<tr>
+                            <td>${record.AppID || 'N/A'}</td>
+                            <td>${record.Source}</td>
+                            <td class="${record.Status === 'Paid' ? 'paid-cell' : 'unpaid-cell'}">${record.Status}</td>
+                            <td class="amount-cell">${Utils.formatNumber(record.Amount)}</td>
+                            <td>${record.Date || 'N/A'}</td>
+                            <td>${record.File || 'N/A'}</td>
+                            <td class="amount-cell">${record.Commission !== null ? Utils.formatNumber(record.Commission) : 'N/A'}</td>
+                            <td class="amount-cell">${record.CommissionPercentage !== undefined ? Utils.formatNumber(record.CommissionPercentage) + '%' : 'N/A'}</td>
+                          </tr>`;
+          });
+          
+          if (mergedData.length > 100) {
+            mergedHtml += `<tr>
+                            <td colspan="8" style="text-align:center;padding:1rem;color:var(--gray-500);">
+                              + ${mergedData.length - 100} more records
+                            </td>
+                          </tr>`;
+          }
+          
+          mergedHtml += `</tbody></table></div>`;
+          DOM.mergedResults.innerHTML = mergedHtml;
+        }
+        
+        // Update pivot view
+        Analyzer.updatePivotView();
+        
+        // Show results section
         DOM.resultsSection.style.display = 'block';
         DOM.resultsSection.scrollIntoView({ behavior: 'smooth' });
         
@@ -1452,8 +1824,37 @@
         Utils.showSuccess("Analysis completed successfully");
       },
       
+      updatePivotView: () => {
+        const { pivotData } = AppState.getState();
+        if (!pivotData || pivotData.length === 0) return;
+        
+        const rows = DOM.pivotRows.value;
+        const cols = DOM.pivotCols.value || null;
+        const vals = DOM.pivotVals.value;
+        const aggregator = DOM.pivotAgg.value.toLowerCase();
+        
+        const pivotConfig = {
+          rows: [rows],
+          cols: cols ? [cols] : [],
+          vals: [vals],
+          aggregator: aggregator,
+          rendererName: "Table",
+          derivedAttributes: {
+            "Amount Difference": record => record.Difference
+          }
+        };
+        
+        try {
+          DOM.pivotContainer.innerHTML = '';
+          pivotUI(pivotData, pivotConfig, DOM.pivotContainer);
+        } catch (error) {
+          console.error("Pivot table error:", error);
+          DOM.pivotContainer.innerHTML = `<div class="error-message show">Error generating pivot table: ${error.message}</div>`;
+        }
+      },
+      
       exportResults: () => {
-        const { analysisResults } = AppState.getState();
+        const { analysisResults, mergedData } = AppState.getState();
         if (!analysisResults) {
           Utils.showError("No analysis results to export");
           return;
@@ -1462,6 +1863,7 @@
         try {
           const wb = XLSX.utils.book_new();
           
+          // Export analysis results by scenario
           Object.entries(analysisResults).forEach(([scenario, records]) => {
             if (records.length > 0) {
               // Format numbers before export
@@ -1485,7 +1887,8 @@
           // Add summary sheet
           const summaryData = Object.entries(analysisResults).map(([scenario, records]) => ({
             Scenario: scenario,
-            Count: records.length
+            Count: records.length,
+            Source_Files: _.uniq(records.map(r => r.S1_File || r.S2_File)).join(', ')
           }));
           
           if (summaryData.length > 0) {
@@ -1493,10 +1896,75 @@
             XLSX.utils.book_append_sheet(wb, ws, "Summary");
           }
           
+          // Add merged data sheet if available
+          if (mergedData && mergedData.length > 0) {
+            const formattedMerged = mergedData.map(record => ({
+              ...record,
+              Amount: Utils.formatNumber(record.Amount),
+              Commission: record.Commission !== null ? Utils.formatNumber(record.Commission) : null,
+              CommissionPercentage: record.CommissionPercentage !== undefined ? 
+                Utils.formatNumber(record.CommissionPercentage) + '%' : null
+            }));
+            
+            const ws = XLSX.utils.json_to_sheet(formattedMerged);
+            XLSX.utils.book_append_sheet(wb, ws, "Merged_Data");
+          }
+          
           const now = new Date();
           const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
           XLSX.writeFile(wb, `AppID_Analysis_${timestamp}.xlsx`);
           Utils.showSuccess("Results exported successfully");
+        } catch (error) {
+          Utils.showError(`Export failed: ${error.message}`);
+          console.error(error);
+        }
+      },
+      
+      exportMergedData: () => {
+        const { mergedData } = AppState.getState();
+        if (!mergedData || mergedData.length === 0) {
+          Utils.showError("No merged data to export");
+          return;
+        }
+        
+        try {
+          const wb = XLSX.utils.book_new();
+          
+          // Format merged data with proper number formatting
+          const formattedMerged = mergedData.map(record => ({
+            AppID: record.AppID,
+            Source: record.Source,
+            Status: record.Status,
+            Amount: record.Amount,
+            PreGSTAmount: record.PreGSTAmount || '',
+            Date: record.Date,
+            File: record.File,
+            Commission: record.Commission,
+            CommissionPercentage: record.CommissionPercentage !== undefined ? 
+              `${Utils.formatNumber(record.CommissionPercentage)}%` : null
+          }));
+          
+          const ws = XLSX.utils.json_to_sheet(formattedMerged);
+          XLSX.utils.book_append_sheet(wb, ws, "Merged_Data");
+          
+          // Add summary sheet
+          const summaryData = [
+            { Metric: "Total Records", Value: mergedData.length },
+            { Metric: "S1 Records", Value: mergedData.filter(d => d.Source === 'S1').length },
+            { Metric: "S2 Records", Value: mergedData.filter(d => d.Source === 'S2').length },
+            { Metric: "Paid Records", Value: mergedData.filter(d => d.Status === 'Paid').length },
+            { Metric: "Unpaid Records", Value: mergedData.filter(d => d.Status === 'Unpaid').length },
+            { Metric: "Total Amount (S1)", Value: mergedData.filter(d => d.Source === 'S1').reduce((sum, r) => sum + r.Amount, 0) },
+            { Metric: "Total Amount (S2)", Value: mergedData.filter(d => d.Source === 'S2').reduce((sum, r) => sum + r.Amount, 0) }
+          ];
+          
+          const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+          XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
+          
+          const now = new Date();
+          const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
+          XLSX.writeFile(wb, `AppID_Merged_Data_${timestamp}.xlsx`);
+          Utils.showSuccess("Merged data exported successfully");
         } catch (error) {
           Utils.showError(`Export failed: ${error.message}`);
           console.error(error);
@@ -1525,15 +1993,59 @@
         });
         
         DOM.exportBtn.addEventListener('click', () => {
+          Utils.showLoading();
           try {
             Analyzer.exportResults();
           } catch (error) {
             Utils.showError(`Export failed: ${error.message}`);
             console.error(error);
+          } finally {
+            Utils.hideLoading();
           }
         });
         
-        console.log("Advanced App ID Analyzer Initialized");
+        DOM.exportMergedBtn.addEventListener('click', () => {
+          Utils.showLoading();
+          try {
+            Analyzer.exportMergedData();
+          } catch (error) {
+            Utils.showError(`Export failed: ${error.message}`);
+            console.error(error);
+          } finally {
+            Utils.hideLoading();
+          }
+        });
+        
+        // Tab switching
+        DOM.tabs.forEach(tab => {
+          tab.addEventListener('click', () => {
+            const tabName = tab.getAttribute('data-tab');
+            
+            // Update active tab
+            DOM.tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            
+            // Show corresponding content
+            DOM.tabContents.forEach(content => {
+              content.classList.remove('active');
+              if (content.id === `${tabName}-view`) {
+                content.classList.add('active');
+              }
+            });
+            
+            // Update pivot view if pivot tab is selected
+            if (tabName === 'pivot') {
+              Analyzer.updatePivotView();
+            }
+          });
+        });
+        
+        // Pivot controls change handlers
+        [DOM.pivotRows, DOM.pivotCols, DOM.pivotVals, DOM.pivotAgg].forEach(control => {
+          control.addEventListener('change', Analyzer.updatePivotView);
+        });
+        
+        console.log("Advanced App ID Analyzer Pro Initialized");
       } catch (error) {
         console.error("Initialization error:", error);
         Utils.showError(`Application initialization failed: ${error.message}`);
