@@ -670,7 +670,7 @@
   </div>
 
   <script>
-    // Enhanced AppState management
+    // Enhanced AppState management with validation
     const AppState = (() => {
       let state = {
         source1Files: [],
@@ -684,10 +684,32 @@
         analysisResults: null
       };
 
+      const validateState = () => {
+        const { source1Files, source2Files, columnMappings } = state;
+        const required = ['appId', 'amount', 'date'];
+        
+        // Validate files
+        if (source1Files.length === 0 || source2Files.length === 0) {
+          return false;
+        }
+        
+        // Validate column mappings
+        return required.every(id => {
+          const mapping = columnMappings[id];
+          return mapping && 
+                 mapping.source1 !== undefined && mapping.source1 !== "" && 
+                 (id === 'commission' || (mapping.source2 !== undefined && mapping.source2 !== ""));
+        });
+      };
+
       return {
         getState: () => ({ ...state }),
-        setState: (newState) => { state = { ...state, ...newState }; },
-        resetAnalysis: () => { state.analysisResults = null; }
+        setState: (newState) => { 
+          state = { ...state, ...newState }; 
+          return validateState();
+        },
+        resetAnalysis: () => { state.analysisResults = null; },
+        isValid: validateState
       };
     })();
 
@@ -718,7 +740,7 @@
       exportBtn: document.getElementById('export-btn')
     };
 
-    // Utility Functions
+    // Utility Functions with enhanced error handling
     const Utils = {
       showLoading: () => DOM.loadingOverlay.classList.add('show'),
       hideLoading: () => DOM.loadingOverlay.classList.remove('show'),
@@ -746,8 +768,9 @@
       },
       
       findMatch: (headers, patterns) => {
+        if (!headers || !patterns) return '';
         for (let pattern of patterns) {
-          const index = headers.findIndex(h => h && pattern.test(h));
+          const index = headers.findIndex(h => h && pattern.test(String(h)));
           if (index !== -1) return index;
         }
         return '';
@@ -760,16 +783,28 @@
       },
       
       applyGSTToS1: (amount) => {
+        if (typeof amount !== 'number') amount = parseFloat(amount) || 0;
         const { applyGST, gstRound } = AppState.getState().analysisOptions;
         if (!applyGST) return amount;
         let result = amount * 1.18;
         return gstRound ? Math.round(result) : result;
+      },
+      
+      safeParseFloat: (value) => {
+        if (typeof value === 'number') return value;
+        if (typeof value === 'string') {
+          // Remove any non-numeric characters except decimal point and minus sign
+          const cleaned = value.replace(/[^\d.-]/g, '');
+          return parseFloat(cleaned) || 0;
+        }
+        return 0;
       }
     };
 
-    // File Handling
+    // File Handling with improved error handling and parallel processing
     const FileHandler = {
       init: () => {
+        // Initialize event handlers
         DOM.applyGST.onchange = function() {
           DOM.gstRound.disabled = !this.checked;
           if (!this.checked) DOM.gstRound.checked = false;
@@ -781,6 +816,7 @@
               gstRound: DOM.gstRound.checked
             }
           });
+          Analyzer.updateAnalyzeBtn();
         };
         
         DOM.gstRound.onchange = () => {
@@ -803,121 +839,206 @@
           });
         };
         
+        // File input handlers
         DOM.uploadBtn1.onclick = e => { e.preventDefault(); DOM.fileInput1.value = ''; DOM.fileInput1.click(); };
         DOM.uploadBtn2.onclick = e => { e.preventDefault(); DOM.fileInput2.value = ''; DOM.fileInput2.click(); };
         
         DOM.fileInput1.onchange = e => { if (e.target.files.length) FileHandler.handleFileSelection(e.target.files, 1); };
         DOM.fileInput2.onchange = e => { if (e.target.files.length) FileHandler.handleFileSelection(e.target.files, 2); };
         
+        // Drag and drop handlers
         [{ drop: DOM.drop1, src: 1 }, { drop: DOM.drop2, src: 2 }].forEach(o => {
-          o.drop.ondragover = e => { e.preventDefault(); e.stopPropagation(); o.drop.classList.add('dragover'); };
-          o.drop.ondragleave = e => { e.preventDefault(); e.stopPropagation(); o.drop.classList.remove('dragover'); };
+          o.drop.ondragover = e => { 
+            e.preventDefault(); 
+            e.stopPropagation(); 
+            o.drop.classList.add('dragover'); 
+          };
+          
+          o.drop.ondragleave = e => { 
+            e.preventDefault(); 
+            e.stopPropagation(); 
+            o.drop.classList.remove('dragover'); 
+          };
+          
           o.drop.ondrop = e => { 
             e.preventDefault(); 
             e.stopPropagation();
             o.drop.classList.remove('dragover');
-            FileHandler.handleFileSelection(e.dataTransfer.files, o.src);
+            if (e.dataTransfer.files.length) {
+              FileHandler.handleFileSelection(e.dataTransfer.files, o.src);
+            }
           };
         });
         
         DOM.mergeBtn1.onclick = FileHandler.showMergeDialog;
       },
       
-      handleFileSelection: (files, src) => {
-        if (!files || files.length === 0) { Utils.showError('No files selected'); return; }
+      handleFileSelection: async (files, src) => {
+        if (!files || files.length === 0) { 
+          Utils.showError('No files selected'); 
+          return; 
+        }
+        
+        // Validate file count for source 2 (only 1 file allowed)
+        if (src === 2 && files.length > 1) {
+          Utils.showError('Source 2 can only accept one file');
+          return;
+        }
+        
         Utils.showLoading();
         
-        const fileArray = Array.from(files);
-        const targetState = src === 1 ? 'source1Files' : 'source2Files';
-        const fileListDOM = src === 1 ? DOM.fileList1 : null;
-        const fileInfoDOM = src === 1 ? DOM.fileInfo1 : DOM.fileInfo2;
-        
-        AppState.setState({ [targetState]: [] });
-        if (fileListDOM) fileListDOM.innerHTML = '';
-        
-        let loadedCount = 0;
-        const processNextFile = (index) => {
-          if (index >= fileArray.length) {
-            fileInfoDOM.textContent = `${fileArray.length} file(s) loaded.`;
-            fileInfoDOM.classList.add('show');
-            if (src === 1) DOM.mergeBtn1.style.display = fileArray.length > 1 ? 'inline-flex' : 'none';
-            Utils.hideLoading();
-            ColumnMapper.setupColumnMappings();
-            Analyzer.updateAnalyzeBtn();
-            return;
-          }
+        try {
+          const fileArray = Array.from(files);
+          const targetState = src === 1 ? 'source1Files' : 'source2Files';
+          const fileListDOM = src === 1 ? DOM.fileList1 : null;
+          const fileInfoDOM = src === 1 ? DOM.fileInfo1 : DOM.fileInfo2;
           
-          const file = fileArray[index];
-          FileHandler.processExcelFile(file, (err, data) => {
-            if (!err) {
-              const state = AppState.getState();
-              const updatedFiles = [...state[targetState], { file, headers: data[0], records: data.slice(1) }];
-              AppState.setState({ [targetState]: updatedFiles });
-              
-              if (fileListDOM) {
-                const li = document.createElement('li');
-                li.innerHTML = `
-                  <span>${file.name}</span>
-                  <span>${data.length - 1} rows</span>
-                `;
-                fileListDOM.appendChild(li);
-              }
+          // Reset previous files for this source
+          AppState.setState({ [targetState]: [] });
+          if (fileListDOM) fileListDOM.innerHTML = '';
+          
+          // Process files in parallel
+          const processPromises = fileArray.map(file => 
+            FileHandler.processExcelFile(file)
+              .then(data => ({ file, data }))
+              .catch(err => ({ file, error: err }))
+          );
+          
+          const results = await Promise.all(processPromises);
+          
+          // Process results
+          const successfulFiles = [];
+          const failedFiles = [];
+          
+          results.forEach(result => {
+            if (result.error) {
+              failedFiles.push({ file: result.file, error: result.error });
             } else {
-              Utils.showError(`${file.name}: ${err.message}`);
-            }
-            
-            loadedCount++;
-            if (loadedCount === fileArray.length) {
-              processNextFile(index + 1);
+              successfulFiles.push({
+                file: result.file,
+                headers: result.data[0],
+                records: result.data.slice(1)
+              });
             }
           });
-        };
-        
-        processNextFile(0);
+          
+          // Handle failed files
+          if (failedFiles.length > 0) {
+            const errorMessages = failedFiles.map(f => `${f.file.name}: ${f.error.message || 'Unknown error'}`);
+            Utils.showError(`Failed to process ${failedFiles.length} file(s):\n${errorMessages.join('\n')}`);
+          }
+          
+          // Update state with successful files
+          if (successfulFiles.length > 0) {
+            AppState.setState({ [targetState]: successfulFiles });
+            
+            // Update UI
+            if (fileListDOM) {
+              successfulFiles.forEach(fileData => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                  <span>${fileData.file.name}</span>
+                  <span>${fileData.records.length} rows</span>
+                `;
+                fileListDOM.appendChild(li);
+              });
+            }
+            
+            fileInfoDOM.textContent = `${successfulFiles.length} file(s) loaded`;
+            fileInfoDOM.classList.add('show');
+            
+            if (src === 1) {
+              DOM.mergeBtn1.style.display = successfulFiles.length > 1 ? 'inline-flex' : 'none';
+            }
+          }
+          
+          // Setup column mappings if we have both sources
+          ColumnMapper.setupColumnMappings();
+          Analyzer.updateAnalyzeBtn();
+          
+        } catch (error) {
+          Utils.showError(`Unexpected error: ${error.message}`);
+        } finally {
+          Utils.hideLoading();
+        }
       },
       
-      processExcelFile: (file, cb) => {
-        const reader = new FileReader();
-        reader.onload = e => {
-          try {
-            const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
-            const ws = wb.Sheets[wb.SheetNames[0]];
-            const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
-            if (data.length < 2) return cb(new Error('File has no data rows'));
-            cb(null, data);
-          } catch (err) { cb(err); }
-        };
-        reader.onerror = () => cb(new Error('Error reading file'));
-        reader.readAsArrayBuffer(file);
+      processExcelFile: (file) => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          
+          reader.onload = (e) => {
+            try {
+              const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+              const ws = wb.Sheets[wb.SheetNames[0]];
+              const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
+              
+              if (!data || data.length < 2) {
+                reject(new Error('File has no data rows or is improperly formatted'));
+                return;
+              }
+              
+              // Clean data - remove empty rows and trim strings
+              const cleanedData = data
+                .filter(row => row.some(cell => cell !== undefined && cell !== null && cell !== ''))
+                .map(row => row.map(cell => typeof cell === 'string' ? cell.trim() : cell));
+              
+              if (cleanedData.length < 2) {
+                reject(new Error('File has no valid data rows after cleaning'));
+                return;
+              }
+              
+              resolve(cleanedData);
+            } catch (err) {
+              reject(new Error(`Error parsing file: ${err.message}`));
+            }
+          };
+          
+          reader.onerror = () => {
+            reject(new Error('Error reading file'));
+          };
+          
+          reader.readAsArrayBuffer(file);
+        });
       },
       
       showMergeDialog: () => {
         const { source1Files } = AppState.getState();
         if (source1Files.length < 2) return;
         
-        const fileNames = source1Files.map((f, i) => `${i + 1}. ${f.file.name}`);
-        const srcIdx = parseInt(prompt(`Select source file to merge FROM:\n\n${fileNames.join('\n')}`)) - 1;
-        if (isNaN(srcIdx)) return;
+        const fileNames = source1Files.map((f, i) => `${i + 1}. ${f.file.name} (${f.records.length} rows)`);
+        const srcIdx = parseInt(prompt(`Select source file to merge FROM (1-${fileNames.length}):\n\n${fileNames.join('\n')}`)) - 1;
+        if (isNaN(srcIdx) || srcIdx < 0 || srcIdx >= source1Files.length) {
+          Utils.showError("Invalid source file selection");
+          return;
+        }
         
-        const tgtIdx = parseInt(prompt(`Select target file to merge INTO:\n\n${fileNames.join('\n')}`)) - 1;
-        if (isNaN(tgtIdx)) return;
-        
-        if (srcIdx < 0 || tgtIdx < 0 || srcIdx >= source1Files.length || tgtIdx >= source1Files.length || srcIdx === tgtIdx) {
-          Utils.showError("Invalid file selection"); return;
+        const tgtIdx = parseInt(prompt(`Select target file to merge INTO (1-${fileNames.length}):\n\n${fileNames.join('\n')}`)) - 1;
+        if (isNaN(tgtIdx) || tgtIdx < 0 || tgtIdx >= source1Files.length || srcIdx === tgtIdx) {
+          Utils.showError("Invalid target file selection");
+          return;
         }
         
         const sourceFile = source1Files[srcIdx];
         const targetFile = source1Files[tgtIdx];
         
         if (sourceFile.headers.join(',') !== targetFile.headers.join(',')) {
-          Utils.showError("Files have different headers and cannot be merged."); return;
+          Utils.showError("Files have different headers and cannot be merged.");
+          return;
         }
         
+        // Confirm merge
+        if (!confirm(`Merge ${sourceFile.records.length} records from ${sourceFile.file.name} into ${targetFile.file.name}?`)) {
+          return;
+        }
+        
+        // Perform merge
         targetFile.records.push(...sourceFile.records);
         const updatedFiles = [...source1Files];
         updatedFiles.splice(srcIdx, 1);
         AppState.setState({ source1Files: updatedFiles });
         
+        // Update UI
         DOM.fileList1.innerHTML = '';
         updatedFiles.forEach(f => {
           const li = document.createElement('li');
@@ -930,33 +1051,41 @@
         
         DOM.mergeBtn1.style.display = updatedFiles.length > 1 ? 'inline-flex' : 'none';
         ColumnMapper.setupColumnMappings();
+        Utils.showSuccess(`Successfully merged files. ${targetFile.file.name} now has ${targetFile.records.length} records.`);
       }
     };
 
-    // Column Mapping
+    // Column Mapping with improved validation
     const ColumnMapper = {
       setupColumnMappings: () => {
         const { source1Files, source2Files } = AppState.getState();
         const s1Headers = source1Files[0]?.headers || [];
         const s2Headers = source2Files[0]?.headers || [];
-        if (!s1Headers.length || !s2Headers.length) return;
+        
+        if (s1Headers.length === 0 || s2Headers.length === 0) {
+          DOM.mappingFields.innerHTML = '<p>Please load both source files to configure column mappings.</p>';
+          return;
+        }
         
         const columns = [
-          { id: 'appId', label: 'App ID', patterns: [/app.*id/i, /id/i], required: true },
-          { id: 'amount', label: 'Amount', patterns: [/amount/i, /total/i], required: true },
-          { id: 'commission', label: 'Commission (S1)', patterns: [/commiss|tds|fee|charge/i], s2: false },
-          { id: 'date', label: 'Date', patterns: [/date/i, /timestamp/i], required: true }
+          { id: 'appId', label: 'App ID', patterns: [/app.*id/i, /id/i, /application/i], required: true },
+          { id: 'amount', label: 'Amount', patterns: [/amount/i, /total/i, /value/i, /payment/i], required: true },
+          { id: 'commission', label: 'Commission (S1)', patterns: [/commiss|tds|fee|charge|deduction/i], s2: false },
+          { id: 'date', label: 'Date', patterns: [/date/i, /timestamp/i, /time/i], required: true }
         ];
         
         let html = '';
         columns.forEach(col => {
+          const s1Selected = Utils.findMatch(s1Headers, col.patterns);
+          const s2Selected = col.s2 !== false ? Utils.findMatch(s2Headers, col.patterns) : null;
+          
           html += `
             <div class="mapping-row">
               <label>${col.label}:</label>
               <select id="ms1-${col.id}" class="source-select" data-col="${col.id}" data-src="1">
                 <option value="">Select S1 Column</option>
                 ${s1Headers.map((h, i) => `
-                  <option value="${i}" ${Utils.findMatch([h], col.patterns) !== '' ? 'selected' : ''}>
+                  <option value="${i}" ${s1Selected === i ? 'selected' : ''}>
                     ${h || `Column ${i + 1}`}
                   </option>
                 `).join('')}
@@ -965,7 +1094,7 @@
                 <select id="ms2-${col.id}" class="source-select" data-col="${col.id}" data-src="2">
                   <option value="">Select S2 Column</option>
                   ${s2Headers.map((h, i) => `
-                    <option value="${i}" ${Utils.findMatch([h], col.patterns) !== '' ? 'selected' : ''}>
+                    <option value="${i}" ${s2Selected === i ? 'selected' : ''}>
                       ${h || `Column ${i + 1}`}
                     </option>
                   `).join('')}
@@ -1004,22 +1133,12 @@
       }
     };
 
-    // Analysis
+    // Analysis with improved data validation
     const Analyzer = {
       updateAnalyzeBtn: () => {
-        const { source1Files, source2Files, columnMappings } = AppState.getState();
-        const required = ['appId', 'amount', 'date'];
-        
-        const s1Valid = source1Files.length > 0;
-        const s2Valid = source2Files.length > 0;
-        const mappingsValid = required.every(id => {
-          const mapping = columnMappings[id];
-          return mapping && mapping.source1 !== "" && (id === 'commission' || mapping.source2 !== "");
-        });
-        
-        const allValid = s1Valid && s2Valid && mappingsValid;
-        DOM.analyzeBtn.disabled = !allValid;
-        DOM.analyzeBtn.textContent = allValid ? 'Analyze Data' : 'Select Files & Required Mappings';
+        const isValid = AppState.isValid();
+        DOM.analyzeBtn.disabled = !isValid;
+        DOM.analyzeBtn.textContent = isValid ? 'Analyze Data' : 'Select Files & Required Mappings';
       },
       
       analyzeData: () => {
@@ -1028,11 +1147,15 @@
           const s1 = source1Files[0];
           const s2 = source2Files[0];
           
-          if (!s1 || !s2) { Utils.showError("Missing source files"); return {}; }
+          if (!s1 || !s2) { 
+            Utils.showError("Missing source files"); 
+            return {}; 
+          }
           
           const { records: s1Records } = s1;
           const { records: s2Records } = s2;
           
+          // Validate column mappings
           const idx = {
             s1: {
               appId: parseInt(columnMappings.appId.source1),
@@ -1047,6 +1170,19 @@
             }
           };
           
+          // Validate indices
+          for (const [key, val] of Object.entries(idx.s1)) {
+            if (val === null || isNaN(val)) {
+              throw new Error(`Invalid S1 column mapping for ${key}`);
+            }
+          }
+          
+          for (const [key, val] of Object.entries(idx.s2)) {
+            if (val === null || isNaN(val)) {
+              throw new Error(`Invalid S2 column mapping for ${key}`);
+            }
+          }
+          
           const scenarios = {
             "S1 Paid but missing in S2": [],
             "S2 Paid but missing in S1": [],
@@ -1058,11 +1194,24 @@
             "Duplicates in S2": []
           };
           
-          const s2Map = new Map(s2Records.map(r => [String(r[idx.s2.appId]), r]));
-          const s1AppIds = new Set(s1Records.map(r => String(r[idx.s1.appId])));
+          // Create maps for faster lookup
+          const s2Map = new Map();
+          s2Records.forEach(r => {
+            const appId = String(r[idx.s2.appId]);
+            if (appId) s2Map.set(appId, r);
+          });
+          
+          const s1AppIds = new Set();
+          s1Records.forEach(r => {
+            const appId = String(r[idx.s1.appId]);
+            if (appId) s1AppIds.add(appId);
+          });
+          
+          // Count duplicates
           const s1DupMap = _.countBy(s1Records, r => r[idx.s1.appId]);
           const s2DupMap = _.countBy(s2Records, r => r[idx.s2.appId]);
           
+          // Process S1 records
           s1Records.forEach(r1 => {
             const appId = r1[idx.s1.appId];
             if (!appId) return;
@@ -1070,10 +1219,11 @@
             const r2 = s2Map.get(String(appId));
             const s1Status = Utils.getS1Status(r1, idx.s1.commission);
             
-            let amount1 = Utils.applyGSTToS1(parseFloat(r1[idx.s1.amount]) || 0);
+            let amount1 = Utils.safeParseFloat(r1[idx.s1.amount]);
+            amount1 = Utils.applyGSTToS1(amount1);
             
             if (r2) {
-              let amount2 = parseFloat(r2[idx.s2.amount]) || 0;
+              let amount2 = Utils.safeParseFloat(r2[idx.s2.amount]);
               
               if (s1Status === "Paid") {
                 if (Math.abs(amount2 - amount1) > 0.001) {
@@ -1081,20 +1231,22 @@
                     AppID: appId, 
                     S1_Amount: amount1, 
                     S2_Amount: amount2,
+                    Difference: (amount2 - amount1),
                     S1_Date: r1[idx.s1.date],
                     S2_Date: r2[idx.s2.date]
                   });
                 }
                 
                 if (analysisOptions.includeCommission && idx.s1.commission !== null) {
-                  const commValue = parseFloat(r1[idx.s1.commission]) || 0;
+                  const commValue = Utils.safeParseFloat(r1[idx.s1.commission]);
                   const expectedComm = amount1 * 0.02;
                   if (Math.abs(commValue - expectedComm) > 0.01) {
                     scenarios["Commission deviation (for S1 Paid)"].push({ 
                       AppID: appId, 
                       Actual: commValue, 
                       Expected: expectedComm,
-                      Difference: (commValue - expectedComm)
+                      Difference: (commValue - expectedComm),
+                      Percentage: (commValue - expectedComm) / expectedComm * 100
                     });
                   }
                 }
@@ -1105,6 +1257,7 @@
                     AppID: appId, 
                     S1_Amount: amount1, 
                     S2_Amount: amount2,
+                    Difference: (amount2 - amount1),
                     S1_Date: r1[idx.s1.date],
                     S2_Date: r2[idx.s2.date]
                   });
@@ -1126,6 +1279,7 @@
             }
           });
           
+          // Process S2 records
           s2Records.forEach(r2 => {
             const appId = r2[idx.s2.appId];
             if (!appId) return;
@@ -1133,7 +1287,7 @@
             if (!s1AppIds.has(String(appId))) {
               scenarios["S2 Paid but missing in S1"].push({ 
                 AppID: appId, 
-                S2_Amount: parseFloat(r2[idx.s2.amount]) || 0,
+                S2_Amount: Utils.safeParseFloat(r2[idx.s2.amount]),
                 S2_Date: r2[idx.s2.date]
               });
             }
@@ -1154,6 +1308,7 @@
           return scenarios;
         } catch (error) {
           Utils.showError(`Analysis failed: ${error.message}`);
+          console.error(error);
           return {};
         }
       },
@@ -1175,7 +1330,8 @@
           totalAlerts: 0,
           totalAmountDiscrepancies: 0,
           totalMissingRecords: 0,
-          totalDuplicates: 0
+          totalDuplicates: 0,
+          totalAmountDifference: 0
         };
         
         orderedScenarios.forEach(scenario => {
@@ -1184,6 +1340,9 @@
           
           if (scenario.includes("amount different")) {
             stats.totalAmountDiscrepancies += records.length;
+            if (records[0]?.Difference) {
+              stats.totalAmountDifference += records.reduce((sum, r) => sum + (r.Difference || 0), 0);
+            }
           } else if (scenario.includes("missing")) {
             stats.totalMissingRecords += records.length;
           } else if (scenario.includes("Duplicates")) {
@@ -1208,10 +1367,10 @@
             <div class="stat-value">${stats.totalMissingRecords}</div>
             <div class="stat-subtext">Records in one source only</div>
           </div>
-          <div class="stat-card">
-            <h3>Duplicate Entries</h3>
-            <div class="stat-value">${stats.totalDuplicates}</div>
-            <div class="stat-subtext">Potential duplicate records</div>
+          <div class="stat-card ${stats.totalAmountDifference >= 0 ? 'success' : 'danger'}">
+            <h3>Net Amount Difference</h3>
+            <div class="stat-value">${Utils.formatNumber(stats.totalAmountDifference)}</div>
+            <div class="stat-subtext">S2 vs S1 total difference</div>
           </div>
         `;
         
@@ -1250,13 +1409,14 @@
                 let cellClass = '';
                 
                 if (typeof value === 'number') {
-                  value = h.includes('Amount') || h.includes('Difference') ? 
+                  value = h.includes('Amount') || h.includes('Difference') || h.includes('Percentage') ? 
                     Utils.formatNumber(value) : 
                     value.toString();
-                  cellClass = 'amount-cell';
                   
-                  if (h === 'Difference') {
-                    cellClass += value < 0 ? ' negative' : ' positive';
+                  if (h === 'Difference' || h === 'Percentage') {
+                    cellClass = 'amount-cell' + (value < 0 ? ' negative' : ' positive');
+                  } else if (h.includes('Amount')) {
+                    cellClass = 'amount-cell';
                   }
                 }
                 
@@ -1304,10 +1464,34 @@
           
           Object.entries(analysisResults).forEach(([scenario, records]) => {
             if (records.length > 0) {
-              const ws = XLSX.utils.json_to_sheet(records);
+              // Format numbers before export
+              const formattedRecords = records.map(record => {
+                const formatted = { ...record };
+                Object.keys(formatted).forEach(key => {
+                  if (typeof formatted[key] === 'number') {
+                    if (key.includes('Amount') || key.includes('Difference') || key === 'Percentage') {
+                      formatted[key] = Utils.formatNumber(formatted[key]);
+                    }
+                  }
+                });
+                return formatted;
+              });
+              
+              const ws = XLSX.utils.json_to_sheet(formattedRecords);
               XLSX.utils.book_append_sheet(wb, ws, scenario.substring(0, 31)); // Sheet name max 31 chars
             }
           });
+          
+          // Add summary sheet
+          const summaryData = Object.entries(analysisResults).map(([scenario, records]) => ({
+            Scenario: scenario,
+            Count: records.length
+          }));
+          
+          if (summaryData.length > 0) {
+            const ws = XLSX.utils.json_to_sheet(summaryData);
+            XLSX.utils.book_append_sheet(wb, ws, "Summary");
+          }
           
           const now = new Date();
           const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
@@ -1315,32 +1499,45 @@
           Utils.showSuccess("Results exported successfully");
         } catch (error) {
           Utils.showError(`Export failed: ${error.message}`);
+          console.error(error);
         }
       }
     };
 
-    // Initialize the application
+    // Initialize the application with error handling
     document.addEventListener('DOMContentLoaded', () => {
-      FileHandler.init();
-      Utils.updateUserInfo();
-      setInterval(Utils.updateUserInfo, 15000);
-      
-      DOM.analyzeBtn.addEventListener('click', () => {
-        Utils.showLoading();
-        setTimeout(() => {
+      try {
+        FileHandler.init();
+        Utils.updateUserInfo();
+        setInterval(Utils.updateUserInfo, 15000);
+        
+        DOM.analyzeBtn.addEventListener('click', async () => {
+          Utils.showLoading();
           try {
             const results = Analyzer.analyzeData();
             Analyzer.displayResults(results);
           } catch (error) {
             Utils.showError(`Analysis failed: ${error.message}`);
+            console.error(error);
+          } finally {
+            Utils.hideLoading();
           }
-          Utils.hideLoading();
-        }, 100);
-      });
-      
-      DOM.exportBtn.addEventListener('click', Analyzer.exportResults);
-      
-      console.log("Advanced App ID Analyzer Initialized");
+        });
+        
+        DOM.exportBtn.addEventListener('click', () => {
+          try {
+            Analyzer.exportResults();
+          } catch (error) {
+            Utils.showError(`Export failed: ${error.message}`);
+            console.error(error);
+          }
+        });
+        
+        console.log("Advanced App ID Analyzer Initialized");
+      } catch (error) {
+        console.error("Initialization error:", error);
+        Utils.showError(`Application initialization failed: ${error.message}`);
+      }
     });
   </script>
 </body>
