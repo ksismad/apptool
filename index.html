@@ -6,8 +6,6 @@
   <title>Advanced App ID Analyzer Pro</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/pivot-table@1.0.0/dist/pivot.min.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/pivot-table@1.0.0/dist/pivot.min.css" rel="stylesheet">
   <style>
     :root {
       --primary: #6366f1;
@@ -86,8 +84,37 @@
       font-weight: 500;
     }
 
+    .nav-menu {
+      background: var(--gray-800);
+      display: flex;
+      padding: 0 2rem;
+    }
+
+    .nav-item {
+      padding: 1rem 1.5rem;
+      color: white;
+      text-decoration: none;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      border-bottom: 3px solid transparent;
+    }
+
+    .nav-item:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .nav-item.active {
+      background: rgba(255, 255, 255, 0.05);
+      border-bottom-color: var(--primary);
+    }
+
     .content-section {
       padding: 2rem;
+      display: none;
+    }
+
+    .content-section.active {
+      display: block;
     }
 
     .section-title {
@@ -334,6 +361,26 @@
       margin-right: 0.5rem;
     }
 
+    .commission-input {
+      margin-top: 1rem;
+      background: rgba(5, 150, 105, 0.05);
+      border-left: 4px solid var(--secondary);
+      padding: 1rem;
+      border-radius: 0.5rem;
+    }
+
+    .commission-input h4 {
+      margin-top: 0;
+      margin-bottom: 0.75rem;
+      font-size: 1.1rem;
+      color: var(--gray-700);
+    }
+
+    .commission-input input {
+      width: 100px;
+      margin-right: 0.5rem;
+    }
+
     .analyze-btn {
       width: 100%;
       padding: 1rem;
@@ -576,46 +623,75 @@
       margin-top: 1rem;
     }
 
-    /* Pivot table styles */
-    .pivot-section {
+    /* Manual Calculation Section */
+    .manual-compare-section {
       margin-top: 2rem;
-      border: 1px solid var(--gray-200);
+    }
+
+    .manual-compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    .manual-compare-box {
+      background: var(--gray-50);
       border-radius: 0.75rem;
       padding: 1.5rem;
-      background: white;
       box-shadow: var(--shadow-sm);
     }
 
-    .pivot-controls {
-      display: flex;
-      gap: 1rem;
+    .manual-compare-box h3 {
+      margin-top: 0;
       margin-bottom: 1rem;
-      flex-wrap: wrap;
+      color: var(--gray-700);
     }
 
-    .pivot-container {
-      overflow-x: auto;
+    .manual-compare-textarea {
+      width: 100%;
+      min-height: 200px;
+      padding: 0.75rem;
+      border: 1px solid var(--gray-300);
+      border-radius: 0.5rem;
+      font-family: 'Roboto Mono', monospace;
+      font-size: 0.875rem;
+    }
+
+    .manual-compare-btn {
+      margin-top: 1rem;
+      width: 100%;
+    }
+
+    .manual-compare-results {
+      margin-top: 2rem;
+      background: white;
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .manual-compare-results h3 {
+      margin-top: 0;
+      margin-bottom: 1rem;
+      color: var(--gray-700);
+    }
+
+    .result-table {
+      width: 100%;
+      border-collapse: collapse;
       margin-top: 1rem;
     }
 
-    .pivot-table {
-      min-width: 100%;
-      border-collapse: collapse;
-    }
-
-    .pivot-table th, .pivot-table td {
-      padding: 0.5rem 0.75rem;
-      border: 1px solid var(--gray-200);
+    .result-table th, .result-table td {
+      padding: 0.75rem;
       text-align: left;
+      border-bottom: 1px solid var(--gray-200);
     }
 
-    .pivot-table th {
-      background-color: var(--gray-50);
+    .result-table th {
+      background: var(--gray-50);
+      color: var(--gray-700);
       font-weight: 600;
-    }
-
-    .pivot-table tr:nth-child(even) {
-      background-color: var(--gray-50);
     }
 
     /* Tabs */
@@ -643,14 +719,6 @@
     .tab:hover:not(.active) {
       color: var(--primary-dark);
       background-color: rgba(99, 102, 241, 0.05);
-    }
-
-    .tab-content {
-      display: none;
-    }
-
-    .tab-content.active {
-      display: block;
     }
 
     /* Source file info in results */
@@ -698,8 +766,8 @@
         grid-template-columns: 1fr;
       }
       
-      .pivot-controls {
-        flex-direction: column;
+      .manual-compare-grid {
+        grid-template-columns: 1fr;
       }
     }
   </style>
@@ -712,7 +780,13 @@
       <p>Comprehensive Payment Reconciliation & Analysis Tool</p>
     </div>
 
-    <div class="content-section">
+    <nav class="nav-menu">
+      <a href="#" class="nav-item active" data-content="main-analysis">Main Analysis</a>
+      <a href="#" class="nav-item" data-content="manual-comparison">Manual Comparison</a>
+    </nav>
+
+    <!-- Main Analysis Section -->
+    <div id="main-analysis" class="content-section active">
       <h2 class="section-title">Data Sources</h2>
       <div class="upload-section">
         <div class="upload-box" id="drop1">
@@ -751,6 +825,14 @@
             <label><input type="checkbox" id="apply-gst"> Apply 18% GST to S1 amounts</label>
             <label><input type="checkbox" id="gst-round" disabled> Round GST amounts</label>
           </div>
+
+          <div class="commission-input" id="commission-input" style="display: none;">
+            <h4>Commission Analysis</h4>
+            <label>
+              Desired Commission Percentage:
+              <input type="number" id="desired-commission" min="0" max="100" step="0.01" value="2.00"> %
+            </label>
+          </div>
         </div>
       </div>
 
@@ -762,7 +844,6 @@
         <div class="tabs">
           <div class="tab active" data-tab="summary">Summary View</div>
           <div class="tab" data-tab="detailed">Detailed Results</div>
-          <div class="tab" data-tab="pivot">Pivot Analysis</div>
           <div class="tab" data-tab="merged">Merged Data</div>
         </div>
 
@@ -775,57 +856,47 @@
         <div id="detailed-view" class="tab-content">
           <h2 class="section-title">Detailed Results</h2>
           <div id="detailed-results"></div>
-        </div>
-
-        <div id="pivot-view" class="tab-content">
-          <h2 class="section-title">Pivot Analysis</h2>
-          <div class="pivot-controls">
-            <div>
-              <label>Rows:</label>
-              <select id="pivot-rows" class="pivot-select">
-                <option value="Scenario">Scenario</option>
-                <option value="Status">Status</option>
-                <option value="File">Source File</option>
-              </select>
-            </div>
-            <div>
-              <label>Columns:</label>
-              <select id="pivot-cols" class="pivot-select">
-                <option value="">-- None --</option>
-                <option value="Status">Status</option>
-                <option value="Scenario">Scenario</option>
-              </select>
-            </div>
-            <div>
-              <label>Values:</label>
-              <select id="pivot-vals" class="pivot-select">
-                <option value="Count">Count</option>
-                <option value="Amount">Amount</option>
-                <option value="Difference">Amount Difference</option>
-              </select>
-            </div>
-            <div>
-              <label>Aggregator:</label>
-              <select id="pivot-agg" class="pivot-select">
-                <option value="Count">Count</option>
-                <option value="Sum" selected>Sum</option>
-                <option value="Average">Average</option>
-                <option value="Min">Minimum</option>
-                <option value="Max">Maximum</option>
-              </select>
-            </div>
-          </div>
-          <div class="pivot-container" id="pivot-container"></div>
+          <button id="export-detailed-btn" class="btn btn-primary export-btn">Export Detailed Report</button>
         </div>
 
         <div id="merged-view" class="tab-content">
           <h2 class="section-title">Merged Data View</h2>
           <div id="merged-results"></div>
-        </div>
-
-        <div class="export-buttons">
-          <button id="export-btn" class="btn btn-primary export-btn">Export Results as Excel</button>
           <button id="export-merged-btn" class="btn btn-secondary export-btn">Export Merged Data</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Manual Comparison Section -->
+    <div id="manual-comparison" class="content-section">
+      <h2 class="section-title">App ID Comparison</h2>
+      <p>Enter App IDs to compare between Source 1 and Source 2</p>
+      
+      <div class="manual-compare-grid">
+        <div class="manual-compare-box">
+          <h3>Source 1 App IDs</h3>
+          <textarea id="manual-s1-data" class="manual-compare-textarea" placeholder="Enter App IDs (one per line or comma separated)
+Example:
+APP123
+APP456
+APP789"></textarea>
+          <button id="compare-manual-btn" class="btn btn-primary manual-compare-btn">Compare App IDs</button>
+        </div>
+        
+        <div class="manual-compare-box">
+          <h3>Source 2 App IDs</h3>
+          <textarea id="manual-s2-data" class="manual-compare-textarea" placeholder="Enter App IDs (one per line or comma separated)
+Example:
+APP123
+APP456
+APP789"></textarea>
+        </div>
+      </div>
+      
+      <div class="manual-compare-results">
+        <h3>Comparison Results</h3>
+        <div id="manual-results-container">
+          <p>Enter App IDs in both boxes and click "Compare App IDs" to see results</p>
         </div>
       </div>
     </div>
@@ -845,11 +916,11 @@
         analysisOptions: {
           includeCommission: false,
           applyGST: false,
-          gstRound: false
+          gstRound: false,
+          desiredCommission: 2.0
         },
         analysisResults: null,
         mergedData: null,
-        pivotData: null,
         rawData: null
       };
 
@@ -880,7 +951,6 @@
         resetAnalysis: () => { 
           state.analysisResults = null;
           state.mergedData = null;
-          state.pivotData = null;
           state.rawData = null;
         },
         isValid: validateState
@@ -889,6 +959,7 @@
 
     // DOM References
     const DOM = {
+      // Main Analysis
       fileInput1: document.getElementById('file-input-1'),
       fileInput2: document.getElementById('file-input-2'),
       uploadBtn1: document.getElementById('upload-btn-1'),
@@ -903,6 +974,8 @@
       includeCommission: document.getElementById('include-commission'),
       applyGST: document.getElementById('apply-gst'),
       gstRound: document.getElementById('gst-round'),
+      desiredCommission: document.getElementById('desired-commission'),
+      commissionInput: document.getElementById('commission-input'),
       analyzeBtn: document.getElementById('analyze-btn'),
       resultsSection: document.getElementById('results-section'),
       results: document.getElementById('results'),
@@ -911,15 +984,22 @@
       errorMessage: document.getElementById('error-message'),
       successMessage: document.getElementById('success-message'),
       userInfo: document.getElementById('user-info'),
-      exportBtn: document.getElementById('export-btn'),
+      exportDetailedBtn: document.getElementById('export-detailed-btn'),
       exportMergedBtn: document.getElementById('export-merged-btn'),
       detailedResults: document.getElementById('detailed-results'),
-      pivotContainer: document.getElementById('pivot-container'),
-      pivotRows: document.getElementById('pivot-rows'),
-      pivotCols: document.getElementById('pivot-cols'),
-      pivotVals: document.getElementById('pivot-vals'),
-      pivotAgg: document.getElementById('pivot-agg'),
       mergedResults: document.getElementById('merged-results'),
+      
+      // Manual Comparison
+      manualS1Data: document.getElementById('manual-s1-data'),
+      manualS2Data: document.getElementById('manual-s2-data'),
+      compareManualBtn: document.getElementById('compare-manual-btn'),
+      manualResultsContainer: document.getElementById('manual-results-container'),
+      
+      // Navigation
+      navItems: document.querySelectorAll('.nav-item'),
+      contentSections: document.querySelectorAll('.content-section'),
+      
+      // Tabs
       tabs: document.querySelectorAll('.tab'),
       tabContents: document.querySelectorAll('.tab-content')
     };
@@ -991,6 +1071,20 @@
       
       generateUniqueId: () => {
         return Date.now().toString(36) + Math.random().toString(36).substr(2);
+      },
+      
+      parseAppIds: (text) => {
+        // Split by new lines or commas, trim whitespace, and filter out empty strings
+        return text.split(/[\n,]/)
+          .map(id => id.trim())
+          .filter(id => id.length > 0);
+      },
+      
+      countOccurrences: (arr) => {
+        return arr.reduce((acc, val) => {
+          acc[val] = (acc[val] || 0) + 1;
+          return acc;
+        }, {});
       }
     };
 
@@ -1022,12 +1116,24 @@
           });
         };
         
-        DOM.includeCommission.onchange = () => {
+        DOM.includeCommission.onchange = function() {
           const state = AppState.getState();
           AppState.setState({
             analysisOptions: {
               ...state.analysisOptions,
-              includeCommission: DOM.includeCommission.checked
+              includeCommission: this.checked
+            }
+          });
+          DOM.commissionInput.style.display = this.checked ? 'block' : 'none';
+          Analyzer.updateAnalyzeBtn();
+        };
+        
+        DOM.desiredCommission.onchange = () => {
+          const state = AppState.getState();
+          AppState.setState({
+            analysisOptions: {
+              ...state.analysisOptions,
+              desiredCommission: parseFloat(DOM.desiredCommission.value) || 0
             }
           });
         };
@@ -1393,7 +1499,8 @@
             "S2 Paid, S1 Unpaid": [],
             "S2 Paid, S1 Paid but amount different": [],
             "S2 Paid, S1 Unpaid and amount different": [],
-            "Commission deviation (for S1 Paid)": [],
+            "Commission received higher than desired": [],
+            "Commission received lower than desired": [],
             "Duplicates in S1": [],
             "Duplicates in S2": []
           };
@@ -1405,10 +1512,15 @@
             if (appId) s2Map.set(appId, r);
           });
           
-          const s1AppIds = new Set();
+          const s1Map = new Map();
           combinedS1Records.forEach(r => {
             const appId = String(r[idx.s1.appId]);
-            if (appId) s1AppIds.add(appId);
+            if (appId) {
+              if (!s1Map.has(appId)) {
+                s1Map.set(appId, []);
+              }
+              s1Map.get(appId).push(r);
+            }
           });
           
           // Count duplicates
@@ -1445,6 +1557,36 @@
             
             if (mergedRecord.Commission !== null) {
               mergedRecord.CommissionPercentage = Utils.calculateCommissionPercentage(preGSTAmount, mergedRecord.Commission);
+              
+              // Commission analysis
+              if (analysisOptions.includeCommission && s1Status === "Paid") {
+                const desiredCommission = (analysisOptions.desiredCommission / 100) * preGSTAmount;
+                const commissionDiff = mergedRecord.Commission - desiredCommission;
+                
+                if (commissionDiff > 0.01) { // Higher than desired
+                  scenarios["Commission received higher than desired"].push({
+                    AppID: appId,
+                    Amount: preGSTAmount,
+                    CommissionReceived: mergedRecord.Commission,
+                    CommissionDesired: desiredCommission,
+                    Difference: commissionDiff,
+                    Percentage: (commissionDiff / desiredCommission) * 100,
+                    S1_File: r1.sourceFile,
+                    Status: s1Status
+                  });
+                } else if (commissionDiff < -0.01) { // Lower than desired
+                  scenarios["Commission received lower than desired"].push({
+                    AppID: appId,
+                    Amount: preGSTAmount,
+                    CommissionReceived: mergedRecord.Commission,
+                    CommissionDesired: desiredCommission,
+                    Difference: commissionDiff,
+                    Percentage: (commissionDiff / desiredCommission) * 100,
+                    S1_File: r1.sourceFile,
+                    Status: s1Status
+                  });
+                }
+              }
             }
             
             mergedData.push(mergedRecord);
@@ -1479,29 +1621,11 @@
                   };
                   scenarios["S2 Paid, S1 Paid but amount different"].push(scenarioRecord);
                   
-                  // Update raw record for pivot
+                  // Update raw record
                   rawRecord.Scenario = "S2 Paid, S1 Paid but amount different";
                   rawRecord.Difference = amount2 - amount1;
                   rawRecord.S2_Amount = amount2;
                   rawRecord.S2_Date = r2[idx.s2.date];
-                }
-                
-                if (analysisOptions.includeCommission && idx.s1.commission !== null) {
-                  const commValue = Utils.safeParseFloat(r1[idx.s1.commission]);
-                  const expectedComm = preGSTAmount * 0.02; // Calculate expected commission on pre-GST amount
-                  if (Math.abs(commValue - expectedComm) > 0.01) {
-                    scenarios["Commission deviation (for S1 Paid)"].push({ 
-                      AppID: appId, 
-                      Actual: commValue, 
-                      Expected: expectedComm,
-                      Difference: (commValue - expectedComm),
-                      Percentage: (commValue - expectedComm) / expectedComm * 100,
-                      S1_Amount: amount1,
-                      S1_PreGSTAmount: preGSTAmount,
-                      S1_File: r1.sourceFile,
-                      Status: s1Status
-                    });
-                  }
                 }
               } else { // S1 Unpaid
                 const scenarioName = Math.abs(amount2 - amount1) > 0.001 ? 
@@ -1509,23 +1633,23 @@
                   "S2 Paid, S1 Unpaid";
                   
                 const scenarioRecord = { 
-                  AppID: appId, 
-                  S1_Amount: amount1, 
-                  S2_Amount: amount2,
-                  Difference: (amount2 - amount1),
-                  S1_Date: r1[idx.s1.date],
-                  S2_Date: r2[idx.s2.date],
-                  S1_File: r1.sourceFile,
-                  S2_File: s2.fileName,
-                  Status: s1Status
-                };
-                scenarios[scenarioName].push(scenarioRecord);
-                
-                // Update raw record for pivot
-                rawRecord.Scenario = scenarioName;
-                rawRecord.Difference = amount2 - amount1;
-                rawRecord.S2_Amount = amount2;
-                rawRecord.S2_Date = r2[idx.s2.date];
+                    AppID: appId, 
+                    S1_Amount: amount1, 
+                    S2_Amount: amount2,
+                    Difference: (amount2 - amount1),
+                    S1_Date: r1[idx.s1.date],
+                    S2_Date: r2[idx.s2.date],
+                    S1_File: r1.sourceFile,
+                    S2_File: s2.fileName,
+                    Status: s1Status
+                  };
+                  scenarios[scenarioName].push(scenarioRecord);
+                  
+                  // Update raw record
+                  rawRecord.Scenario = scenarioName;
+                  rawRecord.Difference = amount2 - amount1;
+                  rawRecord.S2_Amount = amount2;
+                  rawRecord.S2_Date = r2[idx.s2.date];
               }
             } else if (s1Status === "Paid") {
               const scenarioRecord = { 
@@ -1537,7 +1661,7 @@
               };
               scenarios["S1 Paid but missing in S2"].push(scenarioRecord);
               
-              // Update raw record for pivot
+              // Update raw record
               rawRecord.Scenario = "S1 Paid but missing in S2";
             }
             
@@ -1551,7 +1675,7 @@
               };
               scenarios["Duplicates in S1"].push(scenarioRecord);
               
-              // Update raw record for pivot
+              // Update raw record
               rawRecord.Scenario = "Duplicates in S1";
             }
             
@@ -1573,7 +1697,7 @@
               File: s2.fileName
             });
             
-            // Add to raw data for pivot
+            // Add to raw data
             const rawRecord = {
               AppID: appId,
               Source: 'S2',
@@ -1585,7 +1709,7 @@
               Difference: 0
             };
             
-            if (!s1AppIds.has(String(appId))) {
+            if (!s1Map.has(String(appId))) {
               const scenarioRecord = { 
                 AppID: appId, 
                 S2_Amount: Utils.safeParseFloat(r2[idx.s2.amount]),
@@ -1595,7 +1719,7 @@
               };
               scenarios["S2 Paid but missing in S1"].push(scenarioRecord);
               
-              // Update raw record for pivot
+              // Update raw record
               rawRecord.Scenario = "S2 Paid but missing in S1";
             }
             
@@ -1609,7 +1733,7 @@
               };
               scenarios["Duplicates in S2"].push(scenarioRecord);
               
-              // Update raw record for pivot
+              // Update raw record
               rawRecord.Scenario = "Duplicates in S2";
             }
             
@@ -1620,10 +1744,9 @@
           scenarios["Duplicates in S1"] = _.uniqBy(scenarios["Duplicates in S1"], 'AppID');
           scenarios["Duplicates in S2"] = _.uniqBy(scenarios["Duplicates in S2"], 'AppID');
           
-          // Store merged and pivot data
+          // Store merged and raw data
           AppState.setState({ 
             mergedData: mergedData,
-            pivotData: rawData,
             rawData: rawData
           });
           
@@ -1642,7 +1765,8 @@
           "S2 Paid, S1 Unpaid",
           "S2 Paid, S1 Paid but amount different", 
           "S2 Paid, S1 Unpaid and amount different",
-          "Commission deviation (for S1 Paid)", 
+          "Commission received higher than desired",
+          "Commission received lower than desired",
           "Duplicates in S1", 
           "Duplicates in S2"
         ];
@@ -1653,7 +1777,8 @@
           totalAmountDiscrepancies: 0,
           totalMissingRecords: 0,
           totalDuplicates: 0,
-          totalAmountDifference: 0
+          totalAmountDifference: 0,
+          totalCommissionDifference: 0
         };
         
         orderedScenarios.forEach(scenario => {
@@ -1669,6 +1794,10 @@
             stats.totalMissingRecords += records.length;
           } else if (scenario.includes("Duplicates")) {
             stats.totalDuplicates += records.length;
+          } else if (scenario.includes("Commission")) {
+            if (records[0]?.Difference) {
+              stats.totalCommissionDifference += records.reduce((sum, r) => sum + (r.Difference || 0), 0);
+            }
           }
         });
         
@@ -1694,6 +1823,13 @@
             <div class="stat-value">${Utils.formatNumber(stats.totalAmountDifference)}</div>
             <div class="stat-subtext">S2 vs S1 total difference</div>
           </div>
+          ${stats.totalCommissionDifference !== 0 ? `
+          <div class="stat-card ${stats.totalCommissionDifference >= 0 ? 'danger' : 'success'}">
+            <h3>Net Commission Difference</h3>
+            <div class="stat-value">${Utils.formatNumber(stats.totalCommissionDifference)}</div>
+            <div class="stat-subtext">Received vs Desired difference</div>
+          </div>
+          ` : ''}
         `;
         
         // Display detailed results in summary view
@@ -1866,9 +2002,6 @@
           DOM.mergedResults.innerHTML = mergedHtml;
         }
         
-        // Update pivot view
-        Analyzer.updatePivotView();
-        
         // Show results section
         DOM.resultsSection.style.display = 'block';
         DOM.resultsSection.scrollIntoView({ behavior: 'smooth' });
@@ -1878,37 +2011,8 @@
         Utils.showSuccess("Analysis completed successfully");
       },
       
-      updatePivotView: () => {
-        const { pivotData } = AppState.getState();
-        if (!pivotData || pivotData.length === 0) return;
-        
-        const rows = DOM.pivotRows.value;
-        const cols = DOM.pivotCols.value || null;
-        const vals = DOM.pivotVals.value;
-        const aggregator = DOM.pivotAgg.value.toLowerCase();
-        
-        const pivotConfig = {
-          rows: [rows],
-          cols: cols ? [cols] : [],
-          vals: [vals],
-          aggregator: aggregator,
-          rendererName: "Table",
-          derivedAttributes: {
-            "Amount Difference": record => record.Difference
-          }
-        };
-        
-        try {
-          DOM.pivotContainer.innerHTML = '';
-          pivotUI(pivotData, pivotConfig, DOM.pivotContainer);
-        } catch (error) {
-          console.error("Pivot table error:", error);
-          DOM.pivotContainer.innerHTML = `<div class="error-message show">Error generating pivot table: ${error.message}</div>`;
-        }
-      },
-      
-      exportResults: () => {
-        const { analysisResults, mergedData, rawData } = AppState.getState();
+      exportDetailedResults: () => {
+        const { analysisResults } = AppState.getState();
         if (!analysisResults) {
           Utils.showError("No analysis results to export");
           return;
@@ -1952,36 +2056,10 @@
             XLSX.utils.book_append_sheet(wb, ws, "Summary");
           }
           
-          // Add merged data sheet if available
-          if (mergedData && mergedData.length > 0) {
-            const formattedMerged = mergedData.map(record => ({
-              ...record,
-              Amount: Utils.formatNumber(record.Amount),
-              Commission: record.Commission !== null ? Utils.formatNumber(record.Commission) : null,
-              CommissionPercentage: record.CommissionPercentage !== undefined ? 
-                Utils.formatNumber(record.CommissionPercentage) + '%' : null
-            }));
-            
-            const ws = XLSX.utils.json_to_sheet(formattedMerged);
-            XLSX.utils.book_append_sheet(wb, ws, "Merged_Data");
-          }
-          
-          // Add raw data for pivot analysis
-          if (rawData && rawData.length > 0) {
-            const formattedRaw = rawData.map(record => ({
-              ...record,
-              Amount: Utils.formatNumber(record.Amount),
-              Difference: Utils.formatNumber(record.Difference)
-            }));
-            
-            const ws = XLSX.utils.json_to_sheet(formattedRaw);
-            XLSX.utils.book_append_sheet(wb, ws, "Raw_Data");
-          }
-          
           const now = new Date();
           const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
-          XLSX.writeFile(wb, `AppID_Analysis_${timestamp}.xlsx`);
-          Utils.showSuccess("Results exported successfully");
+          XLSX.writeFile(wb, `AppID_Detailed_Report_${timestamp}.xlsx`);
+          Utils.showSuccess("Detailed report exported successfully");
         } catch (error) {
           Utils.showError(`Export failed: ${error.message}`);
           console.error(error);
@@ -2046,6 +2124,196 @@
       }
     };
 
+    // Manual Comparison Module
+    const ManualComparison = {
+      compareAppIds: () => {
+        const s1Text = DOM.manualS1Data.value.trim();
+        const s2Text = DOM.manualS2Data.value.trim();
+        
+        if (!s1Text && !s2Text) {
+          Utils.showError("Please enter App IDs in at least one source");
+          return;
+        }
+        
+        try {
+          // Parse the App IDs from both sources
+          const s1AppIds = Utils.parseAppIds(s1Text);
+          const s2AppIds = Utils.parseAppIds(s2Text);
+          
+          // Count occurrences of each App ID to find duplicates
+          const s1Counts = Utils.countOccurrences(s1AppIds);
+          const s2Counts = Utils.countOccurrences(s2AppIds);
+          
+          // Find all unique App IDs from both sources
+          const allAppIds = [...new Set([...s1AppIds, ...s2AppIds])];
+          
+          // Prepare results
+          const results = {
+            "Duplicates in Source 1": [],
+            "Duplicates in Source 2": [],
+            "Only in Source 1": [],
+            "Only in Source 2": [],
+            "Common App IDs": []
+          };
+          
+          // Analyze each App ID
+          allAppIds.forEach(appId => {
+            const s1Count = s1Counts[appId] || 0;
+            const s2Count = s2Counts[appId] || 0;
+            
+            if (s1Count > 1) {
+              results["Duplicates in Source 1"].push({
+                AppID: appId,
+                Count: s1Count
+              });
+            }
+            
+            if (s2Count > 1) {
+              results["Duplicates in Source 2"].push({
+                AppID: appId,
+                Count: s2Count
+              });
+            }
+            
+            if (s1Count > 0 && s2Count === 0) {
+              results["Only in Source 1"].push({
+                AppID: appId,
+                Count: s1Count
+              });
+            } else if (s2Count > 0 && s1Count === 0) {
+              results["Only in Source 2"].push({
+                AppID: appId,
+                Count: s2Count
+              });
+            } else if (s1Count > 0 && s2Count > 0) {
+              results["Common App IDs"].push({
+                AppID: appId,
+                S1_Count: s1Count,
+                S2_Count: s2Count
+              });
+            }
+          });
+          
+          // Sort results for better presentation
+          Object.values(results).forEach(group => {
+            group.sort((a, b) => a.AppID.localeCompare(b.AppID));
+          });
+          
+          // Display results
+          ManualComparison.displayResults(results);
+          
+        } catch (error) {
+          Utils.showError(`Error comparing App IDs: ${error.message}`);
+          console.error(error);
+        }
+      },
+      
+      displayResults: (results) => {
+        let html = '';
+        const scenarios = [
+          "Duplicates in Source 1",
+          "Duplicates in Source 2",
+          "Only in Source 1",
+          "Only in Source 2",
+          "Common App IDs"
+        ];
+        
+        scenarios.forEach(scenario => {
+          const records = results[scenario] || [];
+          if (records.length === 0) return;
+          
+          let boxClass = 'alert-box';
+          if (scenario.includes("Duplicates")) boxClass += ' warning';
+          else if (scenario.includes("Only in Source 1")) boxClass += ' danger';
+          else if (scenario.includes("Only in Source 2")) boxClass += ' info';
+          else boxClass += ' success';
+          
+          html += `<div class="${boxClass}">
+                     <div class="alert-title">${scenario}</div>
+                     <div class="alert-count">${records.length} App IDs</div>
+                     <table class="result-table"><thead><tr>`;
+          
+          // Custom headers for each scenario
+          if (scenario.includes("Duplicates")) {
+            html += `<th>App ID</th><th>Occurrences</th>`;
+          } else if (scenario.includes("Only in")) {
+            html += `<th>App ID</th><th>Count</th>`;
+          } else {
+            html += `<th>App ID</th><th>S1 Count</th><th>S2 Count</th>`;
+          }
+          
+          html += `</tr></thead><tbody>`;
+          
+          records.forEach(record => {
+            html += `<tr><td>${record.AppID}</td>`;
+            
+            if (scenario.includes("Duplicates")) {
+              html += `<td>${record.Count}</td>`;
+            } else if (scenario.includes("Only in")) {
+              html += `<td>${record.Count}</td>`;
+            } else {
+              html += `<td>${record.S1_Count}</td><td>${record.S2_Count}</td>`;
+            }
+            
+            html += `</tr>`;
+          });
+          
+          html += `</tbody></table>`;
+          
+          if (records.length > 10) {
+            html += `<div style="margin-top:0.5rem;font-size:0.85rem;color:var(--gray-500);">
+                      Showing 10 of ${records.length} App IDs
+                    </div>`;
+          }
+          
+          html += `</div>`;
+        });
+        
+        // Add summary statistics
+        const totalS1 = Object.keys(results).reduce((sum, key) => {
+          return sum + (key.includes("Source 1") || key === "Common App IDs" ? results[key].length : 0);
+        }, 0);
+        
+        const totalS2 = Object.keys(results).reduce((sum, key) => {
+          return sum + (key.includes("Source 2") || key === "Common App IDs" ? results[key].length : 0);
+        }, 0);
+        
+        const commonCount = results["Common App IDs"].length;
+        const onlyS1Count = results["Only in Source 1"].length;
+        const onlyS2Count = results["Only in Source 2"].length;
+        const s1Duplicates = results["Duplicates in Source 1"].length;
+        const s2Duplicates = results["Duplicates in Source 2"].length;
+        
+        html = `
+          <div class="stats-grid">
+            <div class="stat-card info">
+              <h3>Source 1 App IDs</h3>
+              <div class="stat-value">${totalS1}</div>
+              <div class="stat-subtext">${onlyS1Count} unique to S1, ${commonCount} common</div>
+            </div>
+            <div class="stat-card info">
+              <h3>Source 2 App IDs</h3>
+              <div class="stat-value">${totalS2}</div>
+              <div class="stat-subtext">${onlyS2Count} unique to S2, ${commonCount} common</div>
+            </div>
+            <div class="stat-card ${s1Duplicates > 0 ? 'warning' : 'success'}">
+              <h3>S1 Duplicates</h3>
+              <div class="stat-value">${s1Duplicates}</div>
+              <div class="stat-subtext">App IDs with multiple entries</div>
+            </div>
+            <div class="stat-card ${s2Duplicates > 0 ? 'warning' : 'success'}">
+              <h3>S2 Duplicates</h3>
+              <div class="stat-value">${s2Duplicates}</div>
+              <div class="stat-subtext">App IDs with multiple entries</div>
+            </div>
+          </div>
+          ${html}
+        `;
+        
+        DOM.manualResultsContainer.innerHTML = html;
+      }
+    };
+
     // Initialize the application with error handling
     document.addEventListener('DOMContentLoaded', () => {
       try {
@@ -2053,6 +2321,7 @@
         Utils.updateUserInfo();
         setInterval(Utils.updateUserInfo, 15000);
         
+        // Main analysis event listeners
         DOM.analyzeBtn.addEventListener('click', async () => {
           Utils.showLoading();
           try {
@@ -2066,11 +2335,33 @@
           }
         });
         
-        DOM.exportBtn.addEventListener('click', Analyzer.exportResults);
-        
+        DOM.exportDetailedBtn.addEventListener('click', Analyzer.exportDetailedResults);
         DOM.exportMergedBtn.addEventListener('click', Analyzer.exportMergedData);
         
-        // Tab switching
+        // Manual comparison event listener
+        DOM.compareManualBtn.addEventListener('click', ManualComparison.compareAppIds);
+        
+        // Navigation menu handling
+        DOM.navItems.forEach(item => {
+          item.addEventListener('click', (e) => {
+            e.preventDefault();
+            const contentId = item.getAttribute('data-content');
+            
+            // Update active nav item
+            DOM.navItems.forEach(navItem => navItem.classList.remove('active'));
+            item.classList.add('active');
+            
+            // Show corresponding content section
+            DOM.contentSections.forEach(section => {
+              section.classList.remove('active');
+              if (section.id === contentId) {
+                section.classList.add('active');
+              }
+            });
+          });
+        });
+        
+        // Tab switching within sections
         DOM.tabs.forEach(tab => {
           tab.addEventListener('click', () => {
             const tabName = tab.getAttribute('data-tab');
@@ -2080,23 +2371,16 @@
             tab.classList.add('active');
             
             // Show corresponding content
-            DOM.tabContents.forEach(content => {
-              content.classList.remove('active');
-              if (content.id === `${tabName}-view`) {
-                content.classList.add('active');
-              }
-            });
-            
-            // Update pivot view if pivot tab is selected
-            if (tabName === 'pivot') {
-              Analyzer.updatePivotView();
+            const parentSection = tab.closest('.content-section');
+            if (parentSection) {
+              parentSection.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+                if (content.id === `${tabName}-view`) {
+                  content.classList.add('active');
+                }
+              });
             }
           });
-        });
-        
-        // Pivot controls change handlers
-        [DOM.pivotRows, DOM.pivotCols, DOM.pivotVals, DOM.pivotAgg].forEach(control => {
-          control.addEventListener('change', Analyzer.updatePivotView);
         });
         
         console.log("Advanced App ID Analyzer Pro Initialized");
